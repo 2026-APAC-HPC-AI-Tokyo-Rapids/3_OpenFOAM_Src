@@ -92,7 +92,7 @@ bool Foam::calculatedProcessorFvPatchField<Type>::ready() const
     if
     (
         this->outstandingSendRequest_ >= 0
-     && this->outstandingSendRequest_ < UPstream::nRequests()
+     && this->outstandingSendRequest_ < Pstream::nRequests()
     )
     {
         if (!UPstream::finishedRequest(this->outstandingSendRequest_))
@@ -105,7 +105,7 @@ bool Foam::calculatedProcessorFvPatchField<Type>::ready() const
     if
     (
         this->outstandingRecvRequest_ >= 0
-     && this->outstandingRecvRequest_ < UPstream::nRequests()
+     && this->outstandingRecvRequest_ < Pstream::nRequests()
     )
     {
         if (!UPstream::finishedRequest(this->outstandingRecvRequest_))
@@ -201,7 +201,7 @@ void Foam::calculatedProcessorFvPatchField<Type>::evaluate
         if
         (
             outstandingRecvRequest_ >= 0
-         && outstandingRecvRequest_ < UPstream::nRequests()
+         && outstandingRecvRequest_ < Pstream::nRequests()
         )
         {
             UPstream::waitRequest(outstandingRecvRequest_);
@@ -327,7 +327,7 @@ void Foam::calculatedProcessorFvPatchField<Type>::updateInterfaceMatrix
     if
     (
         outstandingRecvRequest_ >= 0
-     && outstandingRecvRequest_ < UPstream::nRequests()
+     && outstandingRecvRequest_ < Pstream::nRequests()
     )
     {
         UPstream::waitRequest(outstandingRecvRequest_);

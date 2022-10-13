@@ -1,16 +1,10 @@
-#------------------------------------------------------------------------------
-# gcc compiler
-#------------------------------------------------------------------------------
-SUFFIXES   += .c
+SUFFIXES += .c
 
-cc         := gcc$(COMPILER_VERSION)
+cc          = gcc$(COMPILER_VERSION)
 
-cARCH      :=
-cDBUG      :=
-cOPT       := -O2
-cWARN      := -Wall
-
-# Tuning
-sinclude $(GENERAL_RULES)/common/c$(WM_COMPILE_OPTION)
+cARCH       =
+cDBUG       =
+cOPT        = -O2
+cWARN       = -Wall
 
 #------------------------------------------------------------------------------

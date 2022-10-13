@@ -27,101 +27,8 @@ License
 
 #include "polyMesh.H"
 #include "rawIOField.H"
-#include "clockTime.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-template<class Type>
-Foam::PatchFunction1Types::MappedFile<Type>::MappedFile
-(
-    const bool dictConstructed,
-    const polyPatch& pp,
-    const word& entryName,
-    const dictionary& dict,
-    const word& fieldTableName,
-    const bool faceValues
-)
-:
-    PatchFunction1<Type>(pp, entryName, dict, faceValues),
-    dictConstructed_(dictConstructed),
-    setAverage_(dict.getOrDefault("setAverage", false)),
-    perturb_(dict.getOrDefault<scalar>("perturb", 1e-5)),
-    fieldTableName_(fieldTableName),
-    pointsName_(dict.getOrDefault<word>("points", "points")),
-    mapMethod_(),
-    filterRadius_(dict.getOrDefault<scalar>("filterRadius", 0)),
-    filterSweeps_(dict.getOrDefault<label>("filterSweeps", 0)),
-    filterFieldPtr_(nullptr),
-    readerFormat_(),
-    readerFile_(),
-    readerPtr_(nullptr),
-    mapperPtr_(nullptr),
-    sampleTimes_(),
-    sampleIndex_(-1, -1),
-    sampleAverage_(Zero, Zero),
-    sampleValues_(),
-    offset_(Function1<Type>::NewIfPresent("offset", dict))
-{
-    if (fieldTableName_.empty())
-    {
-        fieldTableName_ = entryName;
-    }
-
-    // Simple sanity check
-    if ((filterSweeps_ < 1) || (filterRadius_ <= VSMALL))
-    {
-        filterRadius_ = 0;
-        filterSweeps_ = 0;
-    }
-
-    if (dict.readIfPresent("sampleFormat", readerFormat_))
-    {
-        dict.readEntry("sampleFile", readerFile_);
-
-        fileName fName(readerFile_);
-        fName.expand();
-
-        readerPtr_ = surfaceReader::New
-        (
-            readerFormat_,
-            fName,
-            surfaceReader::formatOptions(dict, readerFormat_, "readOptions")
-        );
-    }
-
-    if (debug)
-    {
-        Info<< "mappedFile:" << nl;
-        if (readerFormat_.empty())
-        {
-            Info<< "    boundary format" << nl;
-        }
-        else
-        {
-            Info<< "    format:" << readerFormat_
-                << " file:" << readerFile_ << nl;
-        }
-
-        Info<< "    filter radius=" << filterRadius_
-            << " sweeps=" << filterSweeps_ << endl;
-    }
-
-    if
-    (
-        dict.readIfPresent("mapMethod", mapMethod_)
-     && !mapMethod_.empty()
-     && mapMethod_ != "nearest"
-     && !mapMethod_.starts_with("planar")
-    )
-    {
-        FatalIOErrorInFunction(dict)
-            << "Unknown mapMethod type " << mapMethod_
-            << "\n\nValid mapMethod types :\n"
-            << "(nearest planar)" << nl
-            << exit(FatalIOError);
-    }
-}
-
 
 template<class Type>
 Foam::PatchFunction1Types::MappedFile<Type>::MappedFile
@@ -133,16 +40,41 @@ Foam::PatchFunction1Types::MappedFile<Type>::MappedFile
     const bool faceValues
 )
 :
-    MappedFile<Type>
+    PatchFunction1<Type>(pp, entryName, dict, faceValues),
+    dictConstructed_(true),
+    setAverage_(dict.getOrDefault("setAverage", false)),
+    fieldTableName_(dict.getOrDefault<word>("fieldTable", entryName)),
+    perturb_(dict.getOrDefault<scalar>("perturb", 1e-5)),
+    pointsName_(dict.getOrDefault<word>("points", "points")),
+    mapMethod_
     (
-        true,  // dictConstructed = true
-        pp,
-        entryName,
-        dict,
-        dict.getOrDefault<word>("fieldTable", entryName),
-        faceValues
+        dict.getOrDefault<word>
+        (
+            "mapMethod",
+            "planarInterpolation"
+        )
+    ),
+    mapperPtr_(nullptr),
+    sampleTimes_(0),
+    startSampleTime_(-1),
+    startSampledValues_(0),
+    startAverage_(Zero),
+    endSampleTime_(-1),
+    endSampledValues_(0),
+    endAverage_(Zero),
+    offset_(Function1<Type>::NewIfPresent("offset", dict))
+{
+    if
+    (
+        mapMethod_ != "planarInterpolation"
+     && mapMethod_ != "nearest"
     )
-{}
+    {
+        FatalIOErrorInFunction(dict)
+            << "mapMethod should be one of 'planarInterpolation'"
+            << ", 'nearest'" << exit(FatalIOError);
+    }
+}
 
 
 template<class Type>
@@ -155,16 +87,41 @@ Foam::PatchFunction1Types::MappedFile<Type>::MappedFile
     const bool faceValues
 )
 :
-    MappedFile<Type>
+    PatchFunction1<Type>(pp, entryName, dict, faceValues),
+    dictConstructed_(false),
+    setAverage_(dict.getOrDefault("setAverage", false)),
+    fieldTableName_(fieldTableName),
+    perturb_(dict.getOrDefault<scalar>("perturb", 1e-5)),
+    pointsName_(dict.getOrDefault<word>("points", "points")),
+    mapMethod_
     (
-        false,  // dictConstructed = false
-        pp,
-        entryName,
-        dict,
-        fieldTableName,
-        faceValues
+        dict.getOrDefault<word>
+        (
+            "mapMethod",
+            "planarInterpolation"
+        )
+    ),
+    mapperPtr_(nullptr),
+    sampleTimes_(0),
+    startSampleTime_(-1),
+    startSampledValues_(0),
+    startAverage_(Zero),
+    endSampleTime_(-1),
+    endSampledValues_(0),
+    endAverage_(Zero),
+    offset_(Function1<Type>::NewIfPresent("offset", dict))
+{
+    if
+    (
+        mapMethod_ != "planarInterpolation"
+     && mapMethod_ != "nearest"
     )
-{}
+    {
+        FatalIOErrorInFunction(dict)
+            << "mapMethod should be one of 'planarInterpolation'"
+            << ", 'nearest'" << exit(FatalIOError);
+    }
+}
 
 
 template<class Type>
@@ -187,31 +144,20 @@ Foam::PatchFunction1Types::MappedFile<Type>::MappedFile
     PatchFunction1<Type>(rhs, pp),
     dictConstructed_(rhs.dictConstructed_),
     setAverage_(rhs.setAverage_),
-    perturb_(rhs.perturb_),
     fieldTableName_(rhs.fieldTableName_),
+    perturb_(rhs.perturb_),
     pointsName_(rhs.pointsName_),
     mapMethod_(rhs.mapMethod_),
-    filterRadius_(rhs.filterRadius_),
-    filterSweeps_(rhs.filterSweeps_),
-    filterFieldPtr_(nullptr),
-    readerFormat_(rhs.readerFormat_),
-    readerFile_(rhs.readerFile_),
-    readerPtr_(nullptr),
     mapperPtr_(rhs.mapperPtr_.clone()),
     sampleTimes_(rhs.sampleTimes_),
-    sampleIndex_(rhs.sampleIndex_),
-    sampleAverage_(rhs.sampleAverage_),
-    sampleValues_(rhs.sampleValues_),
+    startSampleTime_(rhs.startSampleTime_),
+    startSampledValues_(rhs.startSampledValues_),
+    startAverage_(rhs.startAverage_),
+    endSampleTime_(rhs.endSampleTime_),
+    endSampledValues_(rhs.endSampledValues_),
+    endAverage_(rhs.endAverage_),
     offset_(rhs.offset_.clone())
-{
-    if (!readerFormat_.empty() && !readerFile_.empty())
-    {
-        fileName fName(readerFile_);
-        fName.expand();
-
-        readerPtr_ = surfaceReader::New(readerFormat_, fName);
-    }
-}
+{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -224,19 +170,20 @@ void Foam::PatchFunction1Types::MappedFile<Type>::autoMap
 {
     PatchFunction1<Type>::autoMap(mapper);
 
-    if (sampleValues_.first().size())
+    if (startSampledValues_.size())
     {
-        sampleValues_.first().autoMap(mapper);
+        startSampledValues_.autoMap(mapper);
     }
-    if (sampleValues_.second().size())
+
+    if (endSampledValues_.size())
     {
-        sampleValues_.second().autoMap(mapper);
+        endSampledValues_.autoMap(mapper);
     }
 
     // Clear interpolator
-    filterFieldPtr_.reset(nullptr);
-    mapperPtr_.reset(nullptr);
-    sampleIndex_ = labelPair(-1, -1);
+    mapperPtr_.clear();
+    startSampleTime_ = -1;
+    endSampleTime_ = -1;
 }
 
 
@@ -249,146 +196,25 @@ void Foam::PatchFunction1Types::MappedFile<Type>::rmap
 {
     PatchFunction1<Type>::rmap(pf1, addr);
 
-    const auto& tiptf =
+    const PatchFunction1Types::MappedFile<Type>& tiptf =
         refCast<const PatchFunction1Types::MappedFile<Type>>(pf1);
 
-    if (tiptf.sampleValues_.first().size())
+    if (tiptf.startSampledValues_.size())
     {
-        sampleValues_.first().resize(this->size());
-        sampleValues_.first().rmap(tiptf.sampleValues_.first(), addr);
+        startSampledValues_.setSize(this->size());
+        startSampledValues_.rmap(tiptf.startSampledValues_, addr);
     }
 
-    if (tiptf.sampleValues_.second().size())
+    if (tiptf.endSampledValues_.size())
     {
-        sampleValues_.second().resize(this->size());
-        sampleValues_.second().rmap(tiptf.sampleValues_.second(), addr);
+        endSampledValues_.setSize(this->size());
+        endSampledValues_.rmap(tiptf.endSampledValues_, addr);
     }
 
     // Clear interpolator
-    filterFieldPtr_.reset(nullptr);
-    mapperPtr_.reset(nullptr);
-    sampleIndex_ = labelPair(-1, -1);
-}
-
-
-template<class Type>
-void Foam::PatchFunction1Types::MappedFile<Type>::updateSampledValues
-(
-    const label sampleIndex,
-    Field<Type>& field,
-    Type& avg
-) const
-{
-    tmp<Field<Type>> tvalues;
-
-    // Update sampled data fields
-    if (readerPtr_)
-    {
-        wordList fieldNames = readerPtr_->fieldNames(sampleIndex);
-
-        label fieldIndex = fieldNames.find(fieldTableName_);
-
-        if (fieldIndex < 0)
-        {
-            FatalErrorInFunction
-                << "Sample field='" << fieldTableName_
-                << "' not found. Known field names: "
-                << flatOutput(fieldNames) << nl
-                << exit(FatalError);
-        }
-
-        if (debug)
-        {
-            Pout<< "checkTable : Update index=" << sampleIndex
-                << " field=" << fieldNames[fieldIndex] << endl;
-        }
-
-        tvalues = readerPtr_->field
-        (
-            sampleIndex,
-            fieldIndex,
-            pTraits<Type>::zero
-        );
-
-        if (tvalues().size() != mapperPtr_().sourceSize())
-        {
-            FatalErrorInFunction
-                << "Number of values (" << tvalues().size()
-                << ") differs from the number of points ("
-                <<  mapperPtr_().sourceSize() << ")"
-                << exit(FatalError);
-        }
-    }
-    else
-    {
-        const polyMesh& mesh = this->patch_.boundaryMesh().mesh();
-        const Time& time = mesh.time();
-
-        if (debug)
-        {
-            Pout<< "checkTable : Update index=" << sampleIndex
-                << " Reading values from "
-                <<
-                (
-                    "boundaryData"
-                  / this->patch_.name()
-                  / sampleTimes_[sampleIndex].name()
-                  / fieldTableName_
-                ) << endl;
-        }
-
-        // Reread values and interpolate
-        const fileName valsFile
-        (
-            time.globalPath()
-            /time.constant()
-            /mesh.dbDir()            // region
-            /"boundaryData"
-            /this->patch_.name()
-            /sampleTimes_[sampleIndex].name()
-            /fieldTableName_
-        );
-
-        IOobject io
-        (
-            valsFile,           // absolute path
-            time,
-            IOobject::MUST_READ,
-            IOobject::NO_WRITE,
-            IOobject::NO_REGISTER,
-            true                // is global object (currently not used)
-        );
-
-        rawIOField<Type> vals(io, setAverage_);
-
-        if (vals.hasAverage())
-        {
-            avg = vals.average();
-        }
-
-        if (vals.size() != mapperPtr_().sourceSize())
-        {
-            FatalErrorInFunction
-                << "Number of values (" << vals.size()
-                << ") differs from the number of points ("
-                <<  mapperPtr_().sourceSize()
-                << ") in file " << valsFile
-                << exit(FatalError);
-        }
-
-        tvalues = tmp<Field<Type>>::New(std::move(vals.field()));
-    }
-
-    if (filterFieldPtr_)
-    {
-        DebugInfo
-            << "apply " << filterSweeps_ << " filter sweeps" << endl;
-
-        tvalues = filterFieldPtr_().evaluate(tvalues, filterSweeps_);
-    }
-
-    // From input values to interpolated (sampled) positions
-    field = mapperPtr_().interpolate(tvalues);
+    mapperPtr_.clear();
+    startSampleTime_ = -1;
+    endSampleTime_ = -1;
 }
 
 
@@ -402,88 +228,8 @@ void Foam::PatchFunction1Types::MappedFile<Type>::checkTable
     const Time& time = mesh.time();
 
     // Initialise
-    if (!mapperPtr_ && readerPtr_)
+    if (!mapperPtr_)
     {
-        clockTime timing;
-
-        auto& reader = readerPtr_();
-
-        const meshedSurface& geom = reader.geometry(0);
-
-        sampleTimes_ = reader.times();
-
-        // We may have been passed in geometry without any faces
-        // eg, boundaryData
-
-        const pointField& samplePoints =
-        (
-            geom.nFaces() ? geom.faceCentres() : geom.points()
-        );
-
-        DebugInfo
-            << "Read " << samplePoints.size() << " sample points from "
-            << readerFile_ << endl
-            << "Found times "
-            << pointToPointPlanarInterpolation::timeNames(sampleTimes_) << nl
-            << "... in " << timing.timeIncrement() << 's' << endl;
-
-        // tbd: run-time selection
-        const bool nearestOnly =
-        (
-            !mapMethod_.empty() && !mapMethod_.starts_with("planar")
-        );
-
-        // Allocate the interpolator
-        if (this->faceValues())
-        {
-            mapperPtr_.reset
-            (
-                new pointToPointPlanarInterpolation
-                (
-                    samplePoints,
-                    this->localPosition(this->patch_.faceCentres()),
-                    perturb_,
-                    nearestOnly
-                )
-            );
-        }
-        else
-        {
-            mapperPtr_.reset
-            (
-                new pointToPointPlanarInterpolation
-                (
-                    samplePoints,
-                    this->localPosition(this->patch_.localPoints()),
-                    perturb_,
-                    nearestOnly
-                )
-            );
-        }
-
-        DebugInfo
-            << "Created point/point planar interpolation"
-            << " - in " << timing.timeIncrement() << 's' << endl;
-
-
-        // Setup median filter (if any)
-        if (filterSweeps_ > 0)
-        {
-            filterFieldPtr_.reset(new FilterField(geom, filterRadius_));
-
-            DebugInfo
-                << "Calculated field-filter"
-                << " - in " << timing.timeIncrement() << 's' << endl;
-        }
-        else
-        {
-            filterFieldPtr_.reset(nullptr);
-        }
-    }
-    else if (!mapperPtr_)
-    {
-        clockTime timing;
-
         // Reread values and interpolate
         const fileName samplePointsFile
         (
@@ -501,28 +247,23 @@ void Foam::PatchFunction1Types::MappedFile<Type>::checkTable
             time,
             IOobject::MUST_READ,
             IOobject::NO_WRITE,
-            IOobject::NO_REGISTER,
+            false,              // no need to register
             true                // is global object (currently not used)
         );
 
-        // Read data (no average value!)
-        const rawIOField<point> samplePoints(io);
-
-        // Read the times for which data is available
-        sampleTimes_ = Time::findTimes(samplePointsFile.path());
+        // Read data
+        const rawIOField<point> samplePoints(io, false);
 
         DebugInfo
             << "Read " << samplePoints.size() << " sample points from "
-            << samplePointsFile << endl
-            << "Found times "
-            << pointToPointPlanarInterpolation::timeNames(sampleTimes_) << nl
-            << "... in " << timing.timeIncrement() << 's' << endl;
+            << samplePointsFile << endl;
 
 
         // tbd: run-time selection
-        const bool nearestOnly =
+        bool nearestOnly =
         (
-            !mapMethod_.empty() && !mapMethod_.starts_with("planar")
+           !mapMethod_.empty()
+         && mapMethod_ != "planarInterpolation"
         );
 
         // Allocate the interpolator
@@ -553,36 +294,33 @@ void Foam::PatchFunction1Types::MappedFile<Type>::checkTable
             );
         }
 
+
+        // Read the times for which data is available
+        const fileName samplePointsDir = samplePointsFile.path();
+        sampleTimes_ = Time::findTimes(samplePointsDir);
+
         DebugInfo
-            << "Created point/point planar interpolation"
-            << " - in " << timing.timeIncrement() << 's' << endl;
-
-
-        // Setup median filter (if any)
-        if (filterSweeps_ > 0)
-        {
-            filterFieldPtr_.reset(new FilterField(samplePoints, filterRadius_));
-
-            DebugInfo
-                << "Calculated field-filter"
-                << " - in " << timing.timeIncrement() << 's' << endl;
-        }
-        else
-        {
-            filterFieldPtr_.reset(nullptr);
-        }
+            << "In directory "
+            << samplePointsDir << " found times "
+            << pointToPointPlanarInterpolation::timeNames(sampleTimes_)
+            << endl;
     }
 
 
-    // Find range of current time indices in sampleTimes
-    labelPair timeIndices = instant::findRange
+    // Find current time in sampleTimes
+    label lo = -1;
+    label hi = -1;
+
+    bool foundTime = mapperPtr_().findTime
     (
         sampleTimes_,
+        startSampleTime_,
         t,  //mesh.time().value(),
-        sampleIndex_.first()
+        lo,
+        hi
     );
 
-    if (timeIndices.first() < 0)
+    if (!foundTime)
     {
         FatalErrorInFunction
             << "Cannot find starting sampling values for index "
@@ -599,46 +337,139 @@ void Foam::PatchFunction1Types::MappedFile<Type>::checkTable
 
     // Update sampled data fields.
 
-    if (sampleIndex_.first() != timeIndices.first())
+    if (lo != startSampleTime_)
     {
-        sampleIndex_.first() = timeIndices.first();
+        startSampleTime_ = lo;
 
-        if (sampleIndex_.first() == sampleIndex_.second())
+        if (startSampleTime_ == endSampleTime_)
         {
-            // Can reuse previous end values
-            sampleValues_.first() = sampleValues_.second();
-            sampleAverage_.first() = sampleAverage_.second();
+            // No need to reread since are end values
+            if (debug)
+            {
+                Pout<< "checkTable : Setting startValues to (already read) "
+                    << "boundaryData"
+                      /this->patch_.name()
+                      /sampleTimes_[startSampleTime_].name()
+                    << endl;
+            }
+            startSampledValues_ = endSampledValues_;
+            startAverage_ = endAverage_;
         }
         else
         {
-            // Update first() values
-            this->updateSampledValues
+            if (debug)
+            {
+                Pout<< "checkTable : Reading startValues from "
+                    << "boundaryData"
+                      /this->patch_.name()
+                      /sampleTimes_[lo].name()
+                      /fieldTableName_
+                    << endl;
+            }
+
+            // Reread values and interpolate
+            const fileName valsFile
             (
-                sampleIndex_.first(),
-                sampleValues_.first(),
-                sampleAverage_.first()
+                time.globalPath()
+               /time.constant()
+               /mesh.dbDir()            // region
+               /"boundaryData"
+               /this->patch_.name()
+               /sampleTimes_[startSampleTime_].name()
+               /fieldTableName_
             );
+
+            IOobject io
+            (
+                valsFile,   // absolute path
+                time,
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE,
+                false,              // no need to register
+                true                // is global object (currently not used)
+            );
+
+            const rawIOField<Type> vals(io, setAverage_);
+            if (setAverage_)
+            {
+                startAverage_ = vals.average();
+            }
+
+            if (vals.size() != mapperPtr_().sourceSize())
+            {
+                FatalErrorInFunction
+                    << "Number of values (" << vals.size()
+                    << ") differs from the number of points ("
+                    <<  mapperPtr_().sourceSize()
+                    << ") in file " << valsFile << exit(FatalError);
+            }
+
+            startSampledValues_ = mapperPtr_().interpolate(vals);
         }
     }
 
-    if (sampleIndex_.second() != timeIndices.second())
+    if (hi != endSampleTime_)
     {
-        sampleIndex_.second() = timeIndices.second();
+        endSampleTime_ = hi;
 
-        if (sampleIndex_.second() == -1)
+        if (endSampleTime_ == -1)
         {
-            // Index no longer valid - clear values accordingly
-            sampleValues_.second().clear();
+            // endTime no longer valid. Might as well clear endValues.
+            if (debug)
+            {
+                Pout<< "checkTable : Clearing endValues" << endl;
+            }
+            endSampledValues_.clear();
         }
         else
         {
-            // Update second() values
-            this->updateSampledValues
+            if (debug)
+            {
+                Pout<< "checkTable : Reading endValues from "
+                    << "boundaryData"
+                      /this->patch_.name()
+                      /sampleTimes_[endSampleTime_].name()
+                    << endl;
+            }
+
+            // Reread values and interpolate
+            fileName valsFile
             (
-                sampleIndex_.second(),
-                sampleValues_.second(),
-                sampleAverage_.second()
+                time.globalPath()
+               /time.constant()
+               /mesh.dbDir()            // region
+               /"boundaryData"
+               /this->patch_.name()
+               /sampleTimes_[endSampleTime_].name()
+               /fieldTableName_
             );
+
+            IOobject io
+            (
+                valsFile,   // absolute path
+                time,
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE,
+                false,              // no need to register
+                true                // is global object (currently not used)
+            );
+
+            const rawIOField<Type> vals(io, setAverage_);
+            if (setAverage_)
+            {
+                endAverage_ = vals.average();
+            }
+
+            if (vals.size() != mapperPtr_().sourceSize())
+            {
+                FatalErrorInFunction
+                    << "Number of values (" << vals.size()
+                    << ") differs from the number of points ("
+                    <<  mapperPtr_().sourceSize()
+                    << ") in file " << valsFile << exit(FatalError);
+            }
+
+            endSampledValues_ = mapperPtr_().interpolate(vals);
         }
     }
 }
@@ -653,35 +484,41 @@ Foam::PatchFunction1Types::MappedFile<Type>::value
 {
     checkTable(x);
 
-    // Interpolate between the sampled data
-    auto tfld = tmp<Field<Type>>::New();
+    auto tfld = tmp<Field<Type>>::New(startSampledValues_.size());
     auto& fld = tfld.ref();
     Type wantedAverage;
 
-    if (sampleIndex_.second() == -1)
+    if (endSampleTime_ == -1)
     {
         // Only start value
-        fld = sampleValues_.first();
-        wantedAverage = sampleAverage_.first();
+        if (debug)
+        {
+            Pout<< "MappedFile<Type>::value : Sampled, non-interpolated values"
+                << " from start time:"
+                << sampleTimes_[startSampleTime_].name() << nl;
+        }
+
+        fld = startSampledValues_;
+        wantedAverage = startAverage_;
     }
     else
     {
-        const scalar beg = sampleTimes_[sampleIndex_.first()].value();
-        const scalar end = sampleTimes_[sampleIndex_.second()].value();
-        const scalar s = (x - beg)/(end - beg);
+        scalar start = sampleTimes_[startSampleTime_].value();
+        scalar end = sampleTimes_[endSampleTime_].value();
 
-        fld = (1 - s)*sampleValues_.first() + s*sampleValues_.second();
+        scalar s = (x - start)/(end - start);
 
-        wantedAverage
-            = (1 - s)*sampleAverage_.first() + s*sampleAverage_.second();
+        if (debug)
+        {
+            Pout<< "MappedFile<Type>::value : Sampled, interpolated values"
+                << " between start time:"
+                << sampleTimes_[startSampleTime_].name()
+                << " and end time:" << sampleTimes_[endSampleTime_].name()
+                << " with weight:" << s << endl;
+        }
 
-        DebugInfo
-            << "MappedFile<Type>::value : "
-            << "Sampled, interpolated values"
-            << " between time:"
-            << sampleTimes_[sampleIndex_.first()].name()
-            << " and time:" << sampleTimes_[sampleIndex_.second()].name()
-            << " with weight:" << s << endl;
+        fld = ((1 - s)*startSampledValues_ + s*endSampledValues_);
+        wantedAverage = (1 - s)*startAverage_ + s*endAverage_;
     }
 
     // Enforce average. Either by scaling (if scaling factor > 0.5) or by
@@ -689,7 +526,6 @@ Foam::PatchFunction1Types::MappedFile<Type>::value
     if (setAverage_)
     {
         Type averagePsi;
-
         if (this->faceValues())
         {
             const scalarField magSf(mag(this->patch_.faceAreas()));
@@ -768,28 +604,12 @@ void Foam::PatchFunction1Types::MappedFile<Type>::writeEntries
     Ostream& os
 ) const
 {
-    if (!readerFormat_.empty() && !readerFile_.empty())
-    {
-        os.writeEntry("readerFormat", readerFormat_);
-        os.writeEntry("readerFile", readerFile_);
-    }
-
     os.writeEntryIfDifferent
     (
         "fieldTable",
         this->name(),
         fieldTableName_
     );
-
-    if (!pointsName_.empty())
-    {
-        os.writeEntryIfDifferent<word>("points", "points", pointsName_);
-    }
-
-    if (!mapMethod_.empty() && !mapMethod_.starts_with("planar"))
-    {
-        os.writeEntry("mapMethod", mapMethod_);
-    }
 
     if (setAverage_)
     {
@@ -798,11 +618,14 @@ void Foam::PatchFunction1Types::MappedFile<Type>::writeEntries
 
     os.writeEntryIfDifferent<scalar>("perturb", 1e-5, perturb_);
 
-    if (filterSweeps_ >= 1)
-    {
-        os.writeEntry("filterRadius", filterRadius_);
-        os.writeEntry("filterSweeps", filterSweeps_);
-    }
+    os.writeEntryIfDifferent<word>("points", "points", pointsName_);
+
+    os.writeEntryIfDifferent<word>
+    (
+        "mapMethod",
+        "planarInterpolation",
+        mapMethod_
+    );
 
     if (offset_)
     {

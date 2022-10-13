@@ -195,7 +195,7 @@ void Foam::processorMeshes::reconstructPoints(fvMesh& mesh)
                     meshes_[proci].thisDb(),
                     IOobject::MUST_READ,
                     IOobject::NO_WRITE,
-                    false  // not registered
+                    false
                 )
             )
         );
@@ -230,32 +230,35 @@ void Foam::processorMeshes::reconstructPoints(fvMesh& mesh)
 
 void Foam::processorMeshes::removeFiles(const polyMesh& mesh)
 {
-    IOobject io
+    IOobject ioAddr
     (
         "procAddressing",
         mesh.facesInstance(),
         polyMesh::meshSubDir,
-        mesh.thisDb()
+        mesh.thisDb(),
+        IOobject::NO_READ,
+        IOobject::NO_WRITE,
+        false  // not registered
     );
 
     // procAddressing
-    fileHandler().rm(fileHandler().filePath(io.objectPath()));
+    rm(ioAddr.objectPath());
 
     // pointProcAddressing
-    io.rename("pointProcAddressing");
-    fileHandler().rm(fileHandler().filePath(io.objectPath()));
+    ioAddr.rename("pointProcAddressing");
+    rm(ioAddr.objectPath());
 
     // faceProcAddressing
-    io.rename("faceProcAddressing");
-    fileHandler().rm(fileHandler().filePath(io.objectPath()));
+    ioAddr.rename("faceProcAddressing");
+    rm(ioAddr.objectPath());
 
     // cellProcAddressing
-    io.rename("cellProcAddressing");
-    fileHandler().rm(fileHandler().filePath(io.objectPath()));
+    ioAddr.rename("cellProcAddressing");
+    rm(ioAddr.objectPath());
 
     // boundaryProcAddressing
-    io.rename("boundaryProcAddressing");
-    fileHandler().rm(fileHandler().filePath(io.objectPath()));
+    ioAddr.rename("boundaryProcAddressing");
+    rm(ioAddr.objectPath());
 }
 
 

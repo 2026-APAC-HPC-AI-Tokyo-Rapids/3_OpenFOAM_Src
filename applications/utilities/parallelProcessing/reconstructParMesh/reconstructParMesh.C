@@ -252,7 +252,7 @@ autoPtr<mapPolyMesh> mergeSharedPoints
     Info<< "mergeSharedPoints : detected " << pointToMaster.size()
         << " points that are to be merged." << endl;
 
-    if (returnReduceAnd(pointToMaster.empty()))
+    if (returnReduce(pointToMaster.size(), sumOp<label>()) == 0)
     {
         return nullptr;
     }
@@ -663,11 +663,7 @@ int main(int argc, char *argv[])
         Info<< "Merge tolerance : " << mergeTol << nl
             << "Write tolerance : " << writeTol << endl;
 
-        if
-        (
-            runTime.writeFormat() == IOstreamOption::ASCII
-         && mergeTol < writeTol
-        )
+        if (runTime.writeFormat() == IOstream::ASCII && mergeTol < writeTol)
         {
             FatalErrorInFunction
                 << "Your current settings specify ASCII writing with "
@@ -731,9 +727,7 @@ int main(int argc, char *argv[])
             (
                 Time::controlDictName,
                 args.rootPath(),
-                args.caseName()/("processor" + Foam::name(proci)),
-                args.allowFunctionObjects(),
-                args.allowLibs()
+                args.caseName()/("processor" + Foam::name(proci))
             )
         );
     }
@@ -1186,7 +1180,7 @@ int main(int argc, char *argv[])
                         false
                     );
 
-                    masterMeshPtr.cref(fvMeshes[0]);
+                    masterMeshPtr = fvMeshes[0];
                 }
 
 

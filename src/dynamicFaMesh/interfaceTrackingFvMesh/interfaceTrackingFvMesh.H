@@ -303,31 +303,31 @@ public:
         }
 
         //- Pure free-surface
-        Switch pureFreeSurface() const noexcept
+        const Switch& pureFreeSurface() const
         {
             return pureFreeSurface_;
         }
 
         //- Rigid free-surface
-        Switch rigidFreeSurface() const noexcept
+        const Switch& rigidFreeSurface() const
         {
             return rigidFreeSurface_;
         }
 
         //- Rigid free-surface
-        Switch& rigidFreeSurface() noexcept
+        Switch& rigidFreeSurface()
         {
             return rigidFreeSurface_;
         }
 
         //- Correct contact line point normals
-        Switch correctContactLineNormals() const noexcept
+        const Switch& correctContactLineNormals() const
         {
             return correctContactLineNormals_;
         }
 
         //- Correct contact line point normals
-        Switch& correctContactLineNormals() noexcept
+        Switch& correctContactLineNormals()
         {
             return correctContactLineNormals_;
         }

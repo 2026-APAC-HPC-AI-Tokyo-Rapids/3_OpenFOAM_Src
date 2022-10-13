@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020,2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -488,7 +488,7 @@ Foam::label Foam::meshRefinement::markSurfaceGapRefinement
                     cellI != -1
                  && (mag(normal1[i]&normal2[i]) > planarCos)
                  && (
-                        hit1[i].hitPoint().distSqr(hit2[i].hitPoint())
+                        magSqr(hit1[i].hitPoint()-hit2[i].hitPoint())
                       < Foam::sqr(gapSize[i])
                     )
                 )
@@ -565,14 +565,14 @@ Foam::label Foam::meshRefinement::markSurfaceGapRefinement
 //            // Nearer. Check if
 //            // - a bit way from other hit
 //            // - in correct search cone
-//            vector d(nearHit.point()-oppositePoint_);
+//            vector d(nearHit.rawPoint()-oppositePoint_);
 //            scalar normalDist(d&oppositeNormal_);
 //
 //            if (normalDist > Foam::sqr(SMALL) && normalDist/mag(d) > minCos_)
 //            {
 //                nearestDistSqr = distSqr;
 //                minIndex = index;
-//                nearestPoint = nearHit.point();
+//                nearestPoint = nearHit.rawPoint();
 //            }
 //        }
 //    }
@@ -1402,8 +1402,7 @@ Foam::label Foam::meshRefinement::markInternalGapRefinement
 
                 const label cellI = cellMap[i];
 
-                const scalar d2 =
-                    hit1[i].hitPoint().distSqr(hit2[i].hitPoint());
+                const scalar d2 = magSqr(hit1[i].hitPoint()-hit2[i].hitPoint());
 
                 if
                 (
@@ -1832,122 +1831,6 @@ Foam::label Foam::meshRefinement::markSmallFeatureRefinement
 
     return returnReduce(nRefine-oldNRefine, sumOp<label>());
 }
-
-
-////XXXXXXXX
-Foam::label Foam::meshRefinement::markSurfaceFieldRefinement
-(
-    const label nAllowRefine,
-    const labelList& neiLevel,
-    const pointField& neiCc,
-
-    labelList& refineCell,
-    label& nRefine
-) const
-{
-    const labelList& cellLevel = meshCutter_.cellLevel();
-    const labelList& surfaceIndices = surfaces_.surfaces();
-
-    label oldNRefine = nRefine;
-
-    //- Force calculation of tetBasePt
-    (void)mesh_.tetBasePtIs();
-    (void)mesh_.cellTree();
-    const indexedOctree<treeDataCell>& tree = mesh_.cellTree();
-
-
-    forAll(surfaceIndices, surfI)
-    {
-        label geomI = surfaceIndices[surfI];
-        const searchableSurface& geom = surfaces_.geometry()[geomI];
-
-        // Get the element index in a roundabout way. Problem is e.g.
-        // distributed surface where local indices differ from global
-        // ones (needed for getRegion call)
-
-        pointField ctrs;
-        labelList region;
-        labelList minLevelField;
-        {
-            // Representative local coordinates and bounding sphere
-            scalarField radiusSqr;
-            geom.boundingSpheres(ctrs, radiusSqr);
-
-            List<pointIndexHit> info;
-            geom.findNearest(ctrs, radiusSqr, info);
-
-            forAll(info, i)
-            {
-                if (!info[i].hit())
-                {
-                    FatalErrorInFunction
-                        << "fc:" << ctrs[i]
-                        << " radius:" << radiusSqr[i]
-                        << exit(FatalError);
-                }
-            }
-
-            geom.getRegion(info, region);
-            geom.getField(info, minLevelField);
-        }
-
-        if (minLevelField.size() != geom.size())
-        {
-            Pout<< "** no minLevelField" << endl;
-            continue;
-        }
-
-
-        label nOldRefine = 0;
-
-        forAll(ctrs, i)
-        {
-            label cellI = -1;
-            if (tree.nodes().size() && tree.bb().contains(ctrs[i]))
-            {
-                cellI = tree.findInside(ctrs[i]);
-            }
-
-            if
-            (
-                cellI != -1
-             && refineCell[cellI] == -1
-             && minLevelField[i] > cellLevel[cellI]
-            )
-            {
-                if
-                (
-                   !markForRefine
-                    (
-                        surfI,
-                        nAllowRefine,
-                        refineCell[cellI],
-                        nRefine
-                    )
-                )
-                {
-                    break;
-                }
-            }
-        }
-
-        Info<< "For surface " << geom.name() << " found "
-            << returnReduce(nRefine-nOldRefine, sumOp<label>())
-            << " cells containing cached refinement field" << endl;
-
-        if
-        (
-            returnReduce(nRefine, sumOp<label>())
-          > returnReduce(nAllowRefine, sumOp<label>())
-        )
-        {
-            Info<< "Reached refinement limit." << endl;
-        }
-    }
-
-    return returnReduce(nRefine-oldNRefine, sumOp<label>());
-}
-////XXXXXXXXX
 
 
 // ************************************************************************* //

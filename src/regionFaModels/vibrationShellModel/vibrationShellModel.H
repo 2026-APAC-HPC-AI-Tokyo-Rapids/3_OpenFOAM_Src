@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -68,8 +68,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_regionModels_vibrationShellModel_H
-#define Foam_regionModels_vibrationShellModel_H
+#ifndef thermalShellModel_H
+#define thermalShellModel_H
 
 #include "runTimeSelectionTables.H"
 #include "autoPtr.H"
@@ -132,10 +132,10 @@ public:
              dictionary,
              (
                 const word& modelType,
-                const fvMesh& mesh,
+                const fvPatch& patch,
                 const dictionary& dict
              ),
-             (modelType, mesh, dict)
+             (modelType, patch, dict)
          );
 
 
@@ -145,7 +145,7 @@ public:
         vibrationShellModel
         (
             const word& modelType,
-            const fvMesh& mesh,
+            const fvPatch& patch,
             const dictionary& dict
         );
 
@@ -161,7 +161,7 @@ public:
         //- Return a reference to the selected model using dictionary
         static autoPtr<vibrationShellModel> New
         (
-            const fvMesh& mesh,
+            const fvPatch& patch,
             const dictionary& dict
         );
 

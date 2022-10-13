@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,8 +50,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_lduMatrix_H
-#define Foam_lduMatrix_H
+#ifndef lduMatrix_H
+#define lduMatrix_H
 
 #include "lduMesh.H"
 #include "primitiveFieldsFwd.H"
@@ -62,7 +62,6 @@ SourceFiles
 #include "runTimeSelectionTables.H"
 #include "solverPerformance.H"
 #include "InfoProxy.H"
-#include "Enum.H"
 #include "profilingTrigger.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -71,6 +70,7 @@ namespace Foam
 {
 
 // Forward Declarations
+
 class lduMatrix;
 
 Ostream& operator<<(Ostream&, const lduMatrix&);
@@ -95,26 +95,6 @@ class lduMatrix
 
 public:
 
-    // Public Types
-
-        //- Enumerated matrix normalisation types
-        enum class normTypes : char
-        {
-            NO_NORM,            //!< "none" norm (returns 1)
-            DEFAULT_NORM,       //!< "default" norm (== L1_scaled)
-            L1_SCALED_NORM,     //!< "L1_scaled" norm
-        };
-
-        //- Names for the normTypes
-        static const Enum<normTypes> normTypesNames_;
-
-        //- Default maximum number of iterations for solvers (1000)
-        static constexpr const label defaultMaxIter = 1000;
-
-        //- Default (absolute) tolerance (1e-6)
-        static const scalar defaultTolerance;
-
-
     //- Abstract base-class for lduMatrix solvers
     class solver
     {
@@ -122,16 +102,19 @@ public:
 
         // Protected Data
 
+            //- Default maximum number of iterations in the solver
+            static const label defaultMaxIter_;
+
             word fieldName_;
             const lduMatrix& matrix_;
             const FieldField<Field, scalar>& interfaceBouCoeffs_;
             const FieldField<Field, scalar>& interfaceIntCoeffs_;
             lduInterfaceFieldPtrsList interfaces_;
 
-            //- Dictionary of solution controls
+            //- Dictionary of controls
             dictionary controlDict_;
 
-            //- Verbosity level for solver output statements
+            //- Level of verbosity in the solver output statements
             int log_;
 
             //- Minimum number of iterations in the solver
@@ -140,22 +123,18 @@ public:
             //- Maximum number of iterations in the solver
             label maxIter_;
 
-            //- The normalisation type
-            lduMatrix::normTypes normType_;
-
             //- Final convergence tolerance
             scalar tolerance_;
 
             //- Convergence tolerance relative to the initial
             scalar relTol_;
 
-            //- Profiling instrumentation
             profilingTrigger profiling_;
 
 
         // Protected Member Functions
 
-            //- Read the control parameters from controlDict_
+            //- Read the control parameters from the controlDict_
             virtual void readControls();
 
 
@@ -216,7 +195,6 @@ public:
 
         // Constructors
 
-            //- Construct solver for given field name, matrix etc
             solver
             (
                 const word& fieldName,
@@ -294,16 +272,6 @@ public:
                 const direction cmpt=0
             ) const;
 
-            //- Return the matrix norm using the specified norm method
-            solveScalarField::cmptType normFactor
-            (
-                const solveScalarField& psi,
-                const solveScalarField& source,
-                const solveScalarField& Apsi,
-                solveScalarField& tmpField,
-                const lduMatrix::normTypes normType
-            ) const;
-
             //- Return the matrix norm used to normalise the residual for the
             //- stopping criterion
             solveScalarField::cmptType normFactor
@@ -312,10 +280,7 @@ public:
                 const solveScalarField& source,
                 const solveScalarField& Apsi,
                 solveScalarField& tmpField
-            ) const
-            {
-                return this->normFactor(psi, source, Apsi, tmpField, normType_);
-            }
+            ) const;
     };
 
 
@@ -389,7 +354,6 @@ public:
 
         // Constructors
 
-            //- Construct for given field name, matrix etc
             smoother
             (
                 const word& fieldName,
@@ -515,8 +479,10 @@ public:
 
         // Constructors
 
-            //- Construct for given solver
-            explicit preconditioner(const solver& sol)
+            preconditioner
+            (
+                const solver& sol
+            )
             :
                 solver_(sol)
             {}
@@ -598,7 +564,7 @@ public:
         // Access to addressing
 
             //- Return the LDU mesh from which the addressing is obtained
-            const lduMesh& mesh() const noexcept
+            const lduMesh& mesh() const
             {
                 return lduMesh_;
             }
@@ -640,38 +606,38 @@ public:
             const scalarField& diag() const;
             const scalarField& upper() const;
 
-            bool hasDiag() const noexcept
+            bool hasDiag() const
             {
                 return (diagPtr_);
             }
 
-            bool hasUpper() const noexcept
+            bool hasUpper() const
             {
                 return (upperPtr_);
             }
 
-            bool hasLower() const noexcept
+            bool hasLower() const
             {
                 return (lowerPtr_);
             }
 
-            bool diagonal() const noexcept
+            bool diagonal() const
             {
                 return (diagPtr_ && !lowerPtr_ && !upperPtr_);
             }
 
-            bool symmetric() const noexcept
+            bool symmetric() const
             {
                 return (diagPtr_ && (!lowerPtr_ && upperPtr_));
             }
 
-            bool asymmetric() const noexcept
+            bool asymmetric() const
             {
                 return (diagPtr_ && lowerPtr_ && upperPtr_);
             }
 
 
-        // Operations
+        // operations
 
             void sumDiag();
             void negSumDiag();

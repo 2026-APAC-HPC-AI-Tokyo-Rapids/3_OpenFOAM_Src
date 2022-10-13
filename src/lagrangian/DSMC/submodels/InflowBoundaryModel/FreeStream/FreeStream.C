@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,6 +27,7 @@ License
 
 #include "FreeStream.H"
 #include "constants.H"
+#include "triPointRef.H"
 #include "tetIndices.H"
 
 using namespace Foam::constant::mathematical;
@@ -407,8 +407,10 @@ void Foam::FreeStream<CloudType>::inflow()
         }
     }
 
+    reduce(particlesInserted, sumOp<label>());
+
     Info<< "    Particles inserted              = "
-        << returnReduce(particlesInserted, sumOp<label>()) << endl;
+        << particlesInserted << endl;
 
 }
 

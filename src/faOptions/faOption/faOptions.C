@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 ------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -91,29 +91,38 @@ Foam::IOobject Foam::fa::options::createIOobject
 
 Foam::fa::options::options
 (
-    const fvMesh& mesh
+    const fvPatch& p
 )
 :
-    IOdictionary(createIOobject(mesh)),
-    optionList(mesh, *this)
+    IOdictionary(createIOobject(p.boundaryMesh().mesh())),
+    optionList(p, *this)
 {}
 
 
-Foam::fa::options& Foam::fa::options::New(const fvMesh& mesh)
+Foam::fa::options& Foam::fa::options::New(const fvPatch& p)
 {
-    options* ptr = mesh.thisDb().getObjectPtr<options>(typeName);
+    const fvMesh& mesh = p.boundaryMesh().mesh();
 
-    if (!ptr)
+    if (mesh.thisDb().foundObject<options>(typeName))
     {
-        DebugInFunction
-            << "Constructing " << typeName
-            << " for region " << mesh.name() << endl;
-
-        ptr = new options(mesh);
-        regIOobject::store(ptr);
+        return const_cast<options&>
+        (
+            mesh.lookupObject<options>(typeName)
+        );
     }
+    else
+    {
+        if (debug)
+        {
+            InfoInFunction
+                << "Constructing " << typeName
+                << " for region " << mesh.name() << endl;
+        }
 
-    return *ptr;
+        options* objectPtr = new options(p);
+        regIOobject::store(objectPtr);
+        return *objectPtr;
+    }
 }
 
 
@@ -124,8 +133,10 @@ bool Foam::fa::options::read()
         optionList::read(*this);
         return true;
     }
-
-    return false;
+    else
+    {
+        return false;
+    }
 }
 
 

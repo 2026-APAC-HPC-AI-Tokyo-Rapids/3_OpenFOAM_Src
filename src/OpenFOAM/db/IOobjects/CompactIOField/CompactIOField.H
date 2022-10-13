@@ -79,11 +79,6 @@ class CompactIOField
         //- Read according to header type
         void readFromStream(const bool valid = true);
 
-        //- Read if IOobject flags set. Return true if read.
-        //  Reads according to the header type
-        bool readContents();
-
-
 public:
 
     //- Runtime type information

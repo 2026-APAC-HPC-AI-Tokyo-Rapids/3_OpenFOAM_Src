@@ -63,46 +63,37 @@ inline Foam::Vector2D<Cmpt>::Vector2D(Istream& is)
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Cmpt>
-inline Foam::scalar Foam::Vector2D<Cmpt>::magSqr() const
+inline const Cmpt& Foam::Vector2D<Cmpt>::x() const
 {
-    return
-    (
-        Foam::magSqr(this->x())
-      + Foam::magSqr(this->y())
-    );
+    return this->v_[X];
 }
 
 
 template<class Cmpt>
-inline Foam::scalar Foam::Vector2D<Cmpt>::mag() const
+inline const Cmpt& Foam::Vector2D<Cmpt>::y() const
 {
-    return ::sqrt(this->magSqr());
+    return this->v_[Y];
 }
 
 
 template<class Cmpt>
-inline Foam::scalar
-Foam::Vector2D<Cmpt>::distSqr(const Vector2D<Cmpt>& v2) const
+inline Cmpt& Foam::Vector2D<Cmpt>::x()
 {
-    return
-    (
-        Foam::magSqr(v2.x() - this->x())
-      + Foam::magSqr(v2.y() - this->y())
-    );
+    return this->v_[X];
 }
 
 
 template<class Cmpt>
-inline Foam::scalar Foam::Vector2D<Cmpt>::dist(const Vector2D<Cmpt>& v2) const
+inline Cmpt& Foam::Vector2D<Cmpt>::y()
 {
-    return ::sqrt(this->distSqr(v2));
+    return this->v_[Y];
 }
 
 
 template<class Cmpt>
 inline Foam::Vector2D<Cmpt>& Foam::Vector2D<Cmpt>::normalise(const scalar tol)
 {
-    const scalar s = this->mag();
+    const scalar s(Foam::mag(*this));
 
     if (s < tol)
     {
@@ -126,41 +117,16 @@ Foam::Vector2D<Cmpt>::removeCollinear(const Vector2D<Cmpt>& unitVec)
 }
 
 
-// * * * * * * * * * * * * * Comparison Operations * * * * * * * * * * * * * //
-
-template<class Cmpt>
-inline bool
-Foam::Vector2D<Cmpt>::less_xy(const Vector2D<Cmpt>& a, const Vector2D<Cmpt>& b)
-{
-    return
-    (
-        (a.x() < b.x())
-     || (!(b.x() < a.x()) && (a.y() < b.y()))
-    );
-}
-
-
-template<class Cmpt>
-inline bool
-Foam::Vector2D<Cmpt>::less_yx(const Vector2D<Cmpt>& a, const Vector2D<Cmpt>& b)
-{
-    return
-    (
-        (a.y() < b.y())
-     || (!(b.y() < a.y()) && (a.x() < b.x()))
-    );
-}
-
-
-// * * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * //
 
 template<class Cmpt>
-inline Cmpt operator&(const Vector2D<Cmpt>& v1, const Vector2D<Cmpt>& v2)
+inline typename innerProduct<Vector2D<Cmpt>, Vector2D<Cmpt>>::type
+operator&(const Vector2D<Cmpt>& v1, const Vector2D<Cmpt>& v2)
 {
     return Cmpt(v1.x()*v2.x() + v1.y()*v2.y());
 }
@@ -180,7 +146,7 @@ inline bool Vector2D<Cmpt>::isClose
     const scalar tol
 ) const
 {
-    return (Foam::mag(x() - b.x()) < tol && Foam::mag(y() - b.y()) < tol);
+    return (mag(x() - b.x()) < tol && mag(y() - b.y()) < tol);
 }
 
 

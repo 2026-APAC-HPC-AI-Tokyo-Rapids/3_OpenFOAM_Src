@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_OFstream_H
-#define Foam_OFstream_H
+#ifndef OFstream_H
+#define OFstream_H
 
 #include "OSstream.H"
 #include "className.H"
@@ -68,58 +68,30 @@ public:
         //  Behaves like \c /dev/null and is named accordingly
         explicit OFstream(std::nullptr_t);
 
-        //- Construct with specified atomic behaviour
-        //- from pathname, stream option, optional append
-        OFstream
-        (
-            IOstreamOption::atomicType atomic,
-            const fileName& pathname,
-            IOstreamOption streamOpt = IOstreamOption(),
-            IOstreamOption::appendType append = IOstreamOption::NON_APPEND
-        );
-
-        //- Construct from pathname and other specifications
+        //- Construct from pathname
         explicit OFstream
         (
             const fileName& pathname,
             IOstreamOption streamOpt = IOstreamOption(),
-            IOstreamOption::appendType append = IOstreamOption::NON_APPEND
-        )
-        :
-            OFstream(IOstreamOption::NON_ATOMIC, pathname, streamOpt, append)
-        {}
+            const bool append = false
+        );
 
-        //- Construct from pathname, format (uncompressed), optional append,
-        //- atomic behaviour as per system default
+        //- Construct from pathname, format (version, compression)
         OFstream
         (
             const fileName& pathname,
             IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion,
             IOstreamOption::compressionType cmp = IOstreamOption::UNCOMPRESSED,
-            IOstreamOption::appendType append = IOstreamOption::NON_APPEND
+            const bool append = false
         )
         :
-            OFstream(pathname, IOstreamOption(fmt, cmp), append)
-        {}
-
-        //- Construct with specified atomic behaviour
-        //- from pathname, format (uncompressed), optional append
-        OFstream
-        (
-            IOstreamOption::atomicType atomic,
-            const fileName& pathname,
-            IOstreamOption::streamFormat fmt,
-            IOstreamOption::compressionType cmp = IOstreamOption::UNCOMPRESSED,
-            IOstreamOption::appendType append = IOstreamOption::NON_APPEND
-        )
-        :
-            OFstream(atomic, pathname, IOstreamOption(fmt, cmp), append)
+            OFstream(pathname, IOstreamOption(fmt, ver, cmp), append)
         {}
 
 
-    //- Destructor. Possibly invokes an atomic rename
-    //- (preference defined during construction)
-    ~OFstream();
+    //- Destructor
+    ~OFstream() = default;
 
 
     // Member Functions
@@ -145,26 +117,6 @@ public:
 
         //- Print stream description
         void print(Ostream& os) const;
-
-
-    // Additional constructors and methods
-    #ifdef Foam_IOstream_extras
-
-        //- Construct from pathname, format (version, compression)
-        FOAM_DEPRECATED_FOR(2022-09, "Construct without specifying version")
-        OFstream
-        (
-            const fileName& pathname,
-            IOstreamOption::streamFormat fmt,
-            IOstreamOption::versionNumber ver,
-            IOstreamOption::compressionType cmp = IOstreamOption::UNCOMPRESSED,
-            IOstreamOption::appendType append = IOstreamOption::NON_APPEND
-        )
-        :
-            OFstream(pathname, IOstreamOption(fmt, ver, cmp), append)
-        {}
-
-    #endif /* Foam_IOstream_extras */
 };
 
 

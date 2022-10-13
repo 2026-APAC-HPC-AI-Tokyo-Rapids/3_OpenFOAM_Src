@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -62,7 +62,6 @@ Usage
 
         // Optional entries (runtime modifiable)
         UNames          (<Uname1> <Uname2> ... <UnameN>);
-        C               <scalar>;
 
         // Conditional optional entries (runtime modifiable)
 
@@ -81,13 +80,11 @@ Usage
       UMax      | Maximum velocity magnitude            | scalar | yes   | -
       UNames    | Names of operand velocity fields      | wordList | no  | -
       U         | Name of operand velocity field        | word   | cndtnl | U
-      C         | Model factor                          | scalar | no    | 1
     \endtable
 
     The inherited entries are elaborated in:
-      - \link fvOption.H \endlink
-      - \link cellSetOption.H \endlink
-      - \link writeFile.H \endlink
+     - \link fvOption.H \endlink
+     - \link cellSetOption.H \endlink
 
 Note
   - When active, this constraint manipulates the system of equations.
@@ -103,11 +100,10 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fv_velocityDampingConstraint_H
-#define fv_velocityDampingConstraint_H
+#ifndef velocityDampingConstraint_H
+#define velocityDampingConstraint_H
 
 #include "cellSetOption.H"
-#include "writeFile.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -122,8 +118,7 @@ namespace fv
 
 class velocityDampingConstraint
 :
-    public fv::cellSetOption,
-    public functionObjects::writeFile
+    public fv::cellSetOption
 {
 protected:
 
@@ -132,17 +127,11 @@ protected:
         //- Maximum velocity magnitude
         scalar UMax_;
 
-        //- Model factor
-        scalar C_;
-
 
     // Protected Member Functions
 
         //- Constrain the given velocity fields by a given maximum value
         void addDamping(fvMatrix<vector>& eqn);
-
-        //- Write file header information
-        void writeFileHeader(Ostream& os);
 
 
 public:

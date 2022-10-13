@@ -27,6 +27,7 @@ License
 
 #include "faceAreaWeightAMI2D.H"
 #include "profiling.H"
+#include "OBJstream.H"
 #include "addToRunTimeSelectionTable.H"
 #include "triangle2D.H"
 
@@ -337,6 +338,9 @@ bool Foam::faceAreaWeightAMI2D::calculate
     // Find an approximate face length scale
     const scalar lf(Cbb_*Foam::sqrt(gAverage(srcMagSf_)));
 
+    // Expansion to apply to source face bounding box
+    const vector d(lf*vector::one);
+
     if (validSize)
     {
         // Create the tgt tree
@@ -368,7 +372,8 @@ bool Foam::faceAreaWeightAMI2D::calculate
             const face& srcFace = src[srcFacei];
 
             treeBoundBox srcFaceBb(srcPoints, srcFace);
-            srcFaceBb.grow(lf);
+            srcFaceBb.min() -= d;
+            srcFaceBb.max() += d;
 
             const labelList tgtFaces
             (

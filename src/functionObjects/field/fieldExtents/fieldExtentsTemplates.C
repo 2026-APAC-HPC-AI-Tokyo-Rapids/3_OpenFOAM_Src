@@ -64,7 +64,7 @@ void Foam::functionObjects::fieldExtents::calcFieldExtents
 
     auto extents = [this](const scalarField& mask, const vectorField& C)
     {
-        boundBox extents;
+        boundBox extents(boundBox::invertedBox);
         forAll(mask, i)
         {
             if (mask[i] > 0.5)
@@ -77,7 +77,7 @@ void Foam::functionObjects::fieldExtents::calcFieldExtents
 
         if (extents.empty())
         {
-            extents.reset(point::zero);
+            extents.add(point::zero);
         }
 
         return extents;
@@ -97,7 +97,7 @@ void Foam::functionObjects::fieldExtents::calcFieldExtents
         Log << "    internal field: " << bb << nl;
         file() << bb;
 
-        this->setResult(fieldName + "_internal_min", bb.min());
+        this->setResult(fieldName + "_internal_min" , bb.min());
         this->setResult(fieldName + "_internal_max", bb.max());
     }
 

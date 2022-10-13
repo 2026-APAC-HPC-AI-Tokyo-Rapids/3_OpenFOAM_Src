@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -110,8 +110,6 @@ bool optVerbose = false;
 //- The top-level source file being processed
 std::string sourceFile;
 
-//- The output stream
-FILE* output = stdout;
 
 //- All file opening and writing
 namespace Files
@@ -185,7 +183,7 @@ namespace Files
     }
 
 
-    //- Open a file for reading and emit its qualified name to output.
+    //- Open a file for reading and emit its qualified name to stdout.
     //
     //  Uses env substitutions at the beginning of the path
     //
@@ -215,13 +213,13 @@ namespace Files
                 )
                 {
                     fname += entry.len;  // Now positioned after the '/'
-                    fputs(entry.name.c_str(), output);
+                    fputs(entry.name.c_str(), stdout);
                     break;
                 }
             }
 
-            fputs(fname, output);
-            fputs(" \\\n", output);
+            fputs(fname, stdout);
+            fputs(" \\\n", stdout);
         }
         else if (errno == EMFILE)
         {
@@ -461,11 +459,9 @@ void processFile(std::string fileName)
             pending = 0;
         }
     }
-    ::fclose(infile);
+    fclose(infile);
 }
 
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 int main(int argc, char* argv[])
 {
@@ -513,7 +509,7 @@ int main(int argc, char* argv[])
 
     // Verify that input file has an extension
     {
-        const auto dot = sourceFile.find_last_of("./");
+        auto dot = sourceFile.find_last_of("./");
         if (dot == std::string::npos || sourceFile[dot] != '.')
         {
             std::cerr
@@ -565,39 +561,22 @@ int main(int argc, char* argv[])
         }
     }
 
-
-    // Output to an intermediate file
-    std::string outputTmp;
-    if (outputFile.length())
+    if (outputFile.size() && !freopen(outputFile.c_str(), "w", stdout))
     {
-        outputTmp = outputFile + ".part";
-
-        output = ::fopen(outputTmp.c_str(), "w");
-
-        if (!output)
-        {
-            std::cerr
-                << EXENAME ": could not open file '"
-                << outputTmp << "' for output: " << strerror(errno) << '\n';
-            return 1;
-        }
+        std::cerr
+            << EXENAME ": could not open file '"
+            << outputFile << "' for output: " << strerror(errno) << "\n";
+        return 1;
     }
 
-    fputs("$(OBJECTS_DIR)/", output);
-    fputs(sourceFile.c_str(), output);
-    fputs(".dep: \\\n", output);
+    fputs("$(OBJECTS_DIR)/", stdout);
+    fputs(sourceFile.c_str(), stdout);
+    fputs(".dep: \\\n", stdout);
 
     processFile(sourceFile);
 
-    fputs("\n#END\n", output);
-    fflush(output);
-
-    // Atomic move of intermediate file to final output file
-    if (outputFile.length())
-    {
-        ::fclose(output);
-        ::rename(outputTmp.c_str(), outputFile.c_str());
-    }
+    fputs("\n#END\n", stdout);
+    fflush(stdout);
 
     return 0;
 }

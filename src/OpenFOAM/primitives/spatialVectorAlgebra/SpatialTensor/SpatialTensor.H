@@ -49,8 +49,8 @@ See also
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_SpatialTensor_H
-#define Foam_SpatialTensor_H
+#ifndef SpatialTensor_H
+#define SpatialTensor_H
 
 #include "Tensor.H"
 #include "SpatialVector.H"
@@ -86,8 +86,8 @@ public:
 
     // Constructors
 
-        //- Default Construct
-        SpatialTensor() = default;
+        //- Construct null
+        inline SpatialTensor();
 
         //- Construct initialized to zero
         inline SpatialTensor(const Foam::zero);
@@ -125,7 +125,7 @@ public:
         );
 
         //- Construct from Istream
-        inline explicit SpatialTensor(Istream&);
+        inline SpatialTensor(Istream&);
 };
 
 

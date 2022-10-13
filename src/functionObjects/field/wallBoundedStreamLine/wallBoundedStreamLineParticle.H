@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,8 +36,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_wallBoundedStreamLineParticle_H
-#define Foam_wallBoundedStreamLineParticle_H
+#ifndef wallBoundedStreamLineParticle_H
+#define wallBoundedStreamLineParticle_H
 
 #include "wallBoundedParticle.H"
 #include "autoPtr.H"
@@ -50,9 +50,12 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
-class wallBoundedStreamLineParticle;
 class wallBoundedStreamLineParticleCloud;
+
+
+// Forward declaration of friend functions and operators
+
+class wallBoundedStreamLineParticle;
 
 Ostream& operator<<(Ostream&, const wallBoundedStreamLineParticle&);
 
@@ -65,6 +68,7 @@ class wallBoundedStreamLineParticle
 :
     public wallBoundedParticle
 {
+
 public:
 
     //- Class used to pass tracking data to the trackToEdge function
@@ -72,13 +76,13 @@ public:
     :
         public wallBoundedParticle::trackingData
     {
+
     public:
 
-        // Public Data
 
         const PtrList<interpolation<scalar>>& vsInterp_;
         const PtrList<interpolation<vector>>& vvInterp_;
-        const interpolation<vector>& UInterp_;
+        const label UIndex_;
         const scalar trackLength_;
 
         DynamicList<vectorList>& allPositions_;
@@ -88,13 +92,13 @@ public:
 
         // Constructors
 
-            template<class TrackCloudType>
+            template <class TrackCloudType>
             trackingData
             (
                 TrackCloudType& cloud,
                 const PtrList<interpolation<scalar>>& vsInterp,
                 const PtrList<interpolation<vector>>& vvInterp,
-                const interpolation<vector>& UInterp,
+                const label UIndex,
                 const scalar trackLength,
                 const bitSet& isWallPatch,
 
@@ -103,10 +107,14 @@ public:
                 List<DynamicList<vectorList>>& allVectors
             )
             :
-                wallBoundedParticle::trackingData(cloud, isWallPatch),
+                wallBoundedParticle::trackingData
+                (
+                    cloud,
+                    isWallPatch
+                ),
                 vsInterp_(vsInterp),
                 vvInterp_(vvInterp),
-                UInterp_(UInterp),
+                UIndex_(UIndex),
                 trackLength_(trackLength),
 
                 allPositions_(allPositions),
@@ -120,7 +128,7 @@ public:
 
 protected:
 
-    // Protected Data
+    // Protected data
 
         //- Track with +U or -U
         bool trackForward_;

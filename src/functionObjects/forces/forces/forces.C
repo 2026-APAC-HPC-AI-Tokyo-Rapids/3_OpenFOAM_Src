@@ -55,34 +55,38 @@ void Foam::functionObjects::forces::setCoordinateSystem
     const word& e1Name
 )
 {
+    coordSysPtr_.clear();
+
     point origin(Zero);
-
-    // With objectRegistry for access to indirect (global) coordinate systems
-    coordSysPtr_ = coordinateSystem::NewIfPresent(obr_, dict);
-
-    if (coordSysPtr_)
+    if (dict.readIfPresent<point>("CofR", origin))
     {
-        // Report ...
-    }
-    else if (dict.readIfPresent("CofR", origin))
-    {
-        const vector e3
-        (
-            e3Name.empty() ? vector(0, 0, 1) : dict.get<vector>(e3Name)
-        );
-        const vector e1
-        (
-            e1Name.empty() ? vector(1, 0, 0) : dict.get<vector>(e1Name)
-        );
+        const vector e3 = e3Name == word::null ?
+            vector(0, 0, 1) : dict.get<vector>(e3Name);
+        const vector e1 = e1Name == word::null ?
+            vector(1, 0, 0) : dict.get<vector>(e1Name);
 
         coordSysPtr_.reset(new coordSystem::cartesian(origin, e3, e1));
     }
     else
     {
-        // No 'coordinateSystem' or 'CofR'
-        // - enforce a cartesian system
+        // The 'coordinateSystem' sub-dictionary is optional,
+        // but enforce use of a cartesian system if not found.
 
-        coordSysPtr_.reset(new coordSystem::cartesian(dict));
+        if (dict.found(coordinateSystem::typeName_()))
+        {
+            // New() for access to indirect (global) coordinate system
+            coordSysPtr_ =
+                coordinateSystem::New
+                (
+                    obr_,
+                    dict,
+                    coordinateSystem::typeName_()
+                );
+        }
+        else
+        {
+            coordSysPtr_.reset(new coordSystem::cartesian(dict));
+        }
     }
 }
 
@@ -382,13 +386,13 @@ void Foam::functionObjects::forces::createIntegratedDataFiles()
 {
     if (!forceFilePtr_.valid())
     {
-        forceFilePtr_ = newFileAtStartTime("force");
+        forceFilePtr_ = createFile("force");
         writeIntegratedDataFileHeader("Force", forceFilePtr_());
     }
 
     if (!momentFilePtr_.valid())
     {
-        momentFilePtr_ = newFileAtStartTime("moment");
+        momentFilePtr_ = createFile("moment");
         writeIntegratedDataFileHeader("Moment", momentFilePtr_());
     }
 }

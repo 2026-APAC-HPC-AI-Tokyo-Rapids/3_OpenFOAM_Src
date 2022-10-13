@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -155,7 +155,9 @@ bool Foam::dynamicMotionSolverFvMeshAMI::update()
         changeRequired = pp.changeTopology() || changeRequired;
     }
 
-    if (returnReduceOr(changeRequired))
+    reduce(changeRequired, orOp<bool>());
+
+    if (changeRequired)
     {
         polyTopoChange polyTopo(*this);
 

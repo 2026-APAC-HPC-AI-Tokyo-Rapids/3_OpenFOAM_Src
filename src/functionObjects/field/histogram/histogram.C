@@ -27,7 +27,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "histogram.H"
-#include "histogramModel.H"
+#include "volFields.H"
+#include "ListOps.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -51,8 +52,11 @@ Foam::functionObjects::histogram::histogram
     const dictionary& dict
 )
 :
-    fvMeshFunctionObject(name, runTime, dict),
-    histogramModelPtr_(nullptr)
+    functionObjects::fvMeshFunctionObject(name, runTime, dict),
+    functionObjects::writeFile(obr_, name),
+    max_(-GREAT),
+    min_(GREAT),
+    setWriterPtr_(nullptr)
 {
     read(dict);
 }
@@ -62,14 +66,30 @@ Foam::functionObjects::histogram::histogram
 
 bool Foam::functionObjects::histogram::read(const dictionary& dict)
 {
-    if (!fvMeshFunctionObject::read(dict))
+    fvMeshFunctionObject::read(dict);
+    writeFile::read(dict);
+
+    dict.readEntry("field", fieldName_);
+
+    max_ = dict.getOrDefault<scalar>("max", -GREAT);
+    min_ = dict.getOrDefault<scalar>("min", GREAT);
+    dict.readEntry("nBins", nBins_);
+
+    if (nBins_ < 1)
     {
-        return false;
+        FatalErrorInFunction
+            << "Number of histogram bins = " << nBins_
+            << " cannot be negative or zero."
+            << abort(FatalError);
     }
 
-    Info<< type() << " " << name() << ":" << endl;
+    const word writeType(dict.get<word>("setFormat"));
 
-    histogramModelPtr_.reset(histogramModel::New(name(), mesh_, dict));
+    setWriterPtr_ = coordSetWriter::New
+    (
+        writeType,
+        dict.subOrEmptyDict("formatOptions").optionalSubDict(writeType)
+    );
 
     return true;
 }
@@ -83,13 +103,115 @@ bool Foam::functionObjects::histogram::execute()
 
 bool Foam::functionObjects::histogram::write()
 {
-    Log << type() << " " << name() << " write:" << endl;
+    Log << type() << " " << name() << " write:" << nl;
 
-    if (!histogramModelPtr_->write(log))
+    tmp<volScalarField> tfield;
+    tfield.cref(obr_.cfindObject<volScalarField>(fieldName_));
+
+    if (tfield)
     {
-        return false;
+        Log << "    Looking up field " << fieldName_ << endl;
     }
-    Log << endl;
+    else
+    {
+        Log << "    Reading field " << fieldName_ << endl;
+        tfield = tmp<volScalarField>::New
+        (
+            IOobject
+            (
+                fieldName_,
+                mesh_.time().timeName(),
+                mesh_,
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh_
+        );
+    }
+    const auto& field = tfield();
+
+    scalar histMax = max_;
+    scalar histMin = min_;
+
+    if (max_ == -GREAT)
+    {
+        // Determine current min and max
+        histMax = max(field).value();
+
+        if (min_ == GREAT)
+        {
+            histMin = min(field).value();
+        }
+        Log << "    Determined histogram bounds from field"
+            << " min/max(" << fieldName_ << ") = "
+            << histMin << ' ' << histMax << endl;
+    }
+    else if (min_ == GREAT)
+    {
+        histMin = 0;
+    }
+
+    // Calculate the mid-points of bins for the graph axis
+    pointField xBin(nBins_, Zero);
+    const scalar delta = (histMax - histMin)/nBins_;
+
+    {
+        scalar x = histMin + 0.5*delta;
+        for (point& p : xBin)
+        {
+            p.x() = x;
+            x += delta;
+        }
+    }
+
+    scalarField dataNormalized(nBins_, Zero);
+    labelField dataCount(nBins_, Zero);
+    const scalarField& V = mesh_.V();
+
+    forAll(field, celli)
+    {
+        const label bini = (field[celli] - histMin)/delta;
+        if (bini >= 0 && bini < nBins_)
+        {
+            dataNormalized[bini] += V[celli];
+            dataCount[bini]++;
+        }
+    }
+
+    Pstream::listCombineGather(dataNormalized, plusEqOp<scalar>());
+    Pstream::listCombineGather(dataCount, plusEqOp<label>());
+
+    if (Pstream::master())
+    {
+        const scalar sumData = sum(dataNormalized);
+
+        if (sumData > SMALL)
+        {
+            dataNormalized /= sumData;
+
+            const coordSet coords(fieldName_, "x", xBin, mag(xBin));
+
+            auto& writer = *setWriterPtr_;
+
+            writer.open
+            (
+                coords,
+                (
+                    writeFile::baseTimeDir()
+                  / (coords.name() + coordSetWriter::suffix(fieldName_))
+                )
+            );
+
+            Log << "    Writing histogram of " << fieldName_
+                << " to " << writer.path() << endl;
+
+            writer.nFields(2);
+            writer.write(fieldName_, dataNormalized);
+            writer.write(fieldName_ + "Count", dataCount);
+
+            writer.close(true);
+        }
+    }
 
     return true;
 }

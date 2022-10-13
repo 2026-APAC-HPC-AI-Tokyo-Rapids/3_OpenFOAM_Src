@@ -62,8 +62,8 @@ void Foam::polyMesh::calcDirections() const
     // Knock out empty and wedge directions. Note:they will be present on all
     // domains.
 
-    bool hasEmptyPatches = false;
-    bool hasWedgePatches = false;
+    label nEmptyPatches = 0;
+    label nWedgePatches = 0;
 
     vector emptyDirVec = Zero;
     vector wedgeDirVec = Zero;
@@ -79,7 +79,7 @@ void Foam::polyMesh::calcDirections() const
 
             if (pp.size())
             {
-                hasEmptyPatches = true;
+                nEmptyPatches++;
                 emptyDirVec += sum(cmptMag(fa));
             }
         }
@@ -93,14 +93,16 @@ void Foam::polyMesh::calcDirections() const
 
             if (pp.size())
             {
-                hasWedgePatches = true;
+                nWedgePatches++;
                 wedgeDirVec += cmptMag(wpp.centreNormal());
             }
         }
     }
 
+    reduce(nEmptyPatches, maxOp<label>());
+    reduce(nWedgePatches, maxOp<label>());
 
-    if (returnReduceOr(hasEmptyPatches))
+    if (nEmptyPatches)
     {
         reduce(emptyDirVec, sumOp<vector>());
 
@@ -124,7 +126,7 @@ void Foam::polyMesh::calcDirections() const
 
     geometricD_ = solutionD_;
 
-    if (returnReduceOr(hasWedgePatches))
+    if (nWedgePatches)
     {
         reduce(wedgeDirVec, sumOp<vector>());
 
@@ -337,21 +339,21 @@ Foam::polyMesh::polyMesh(const IOobject& io, const bool doInit)
         neighbour_.write();
     }
 
-    if (returnReduceOr(boundary_.empty()))
+    // Warn if global empty mesh
+    if (returnReduce(boundary_.empty(), orOp<bool>()))
     {
         WarningInFunction
-            << "Missing mesh boundary on one or more domains" << endl;
+            << "mesh missing boundary on one or more domains" << endl;
 
-        // Warn if global empty mesh
-        if (returnReduceAnd(!nPoints()))
+        if (returnReduce(nPoints(), sumOp<label>()) == 0)
         {
             WarningInFunction
-                << "No points in mesh" << endl;
+                << "no points in mesh" << endl;
         }
-        if (returnReduceAnd(!nCells()))
+        if (returnReduce(nCells(), sumOp<label>()) == 0)
         {
             WarningInFunction
-                << "No cells in mesh" << endl;
+                << "no cells in mesh" << endl;
         }
     }
 
@@ -800,10 +802,14 @@ void Foam::polyMesh::resetPrimitives
         boundary_.calcGeometry();
 
         // Warn if global empty mesh
-        if (returnReduceAnd(!nPoints()) || returnReduceAnd(!nCells()))
+        if
+        (
+            (returnReduce(nPoints(), sumOp<label>()) == 0)
+         || (returnReduce(nCells(), sumOp<label>()) == 0)
+        )
         {
             FatalErrorInFunction
-                << "No points or no cells in mesh" << endl;
+                << "no points or no cells in mesh" << endl;
         }
     }
 }
@@ -935,10 +941,13 @@ Foam::polyMesh::cellTree() const
 {
     if (!cellTreePtr_)
     {
+        treeBoundBox overallBb(points());
+
         Random rndGen(261782);
 
-        treeBoundBox overallBb(points());
-        overallBb.inflate(rndGen, 1e-4, ROOTVSMALL);
+        overallBb = overallBb.extend(rndGen, 1e-4);
+        overallBb.min() -= point::uniform(ROOTVSMALL);
+        overallBb.max() += point::uniform(ROOTVSMALL);
 
         cellTreePtr_.reset
         (
@@ -1002,39 +1011,57 @@ void Foam::polyMesh::addPatches
 
 void Foam::polyMesh::addZones
 (
-    PtrList<pointZone>&& pz,
-    PtrList<faceZone>&& fz,
-    PtrList<cellZone>&& cz
+    const List<pointZone*>& pz,
+    const List<faceZone*>& fz,
+    const List<cellZone*>& cz
 )
 {
-    if (pointZones_.size() || faceZones_.size() || cellZones_.size())
+    if (pointZones().size() || faceZones().size() || cellZones().size())
     {
         FatalErrorInFunction
             << "point, face or cell zone already exists"
             << abort(FatalError);
     }
 
-    // Point zones - take ownership of the pointers
+    // Point zones
     if (pz.size())
     {
-        pointZones_.clear();
-        pointZones_.transfer(pz);
+        pointZones_.setSize(pz.size());
+
+        // Copy the zone pointers
+        forAll(pz, pI)
+        {
+            pointZones_.set(pI, pz[pI]);
+        }
+
         pointZones_.writeOpt(IOobject::AUTO_WRITE);
     }
 
-    // Face zones - take ownership of the pointers
+    // Face zones
     if (fz.size())
     {
-        faceZones_.clear();
-        faceZones_.transfer(fz);
+        faceZones_.setSize(fz.size());
+
+        // Copy the zone pointers
+        forAll(fz, fI)
+        {
+            faceZones_.set(fI, fz[fI]);
+        }
+
         faceZones_.writeOpt(IOobject::AUTO_WRITE);
     }
 
-    // Cell zones - take ownership of the pointers
+    // Cell zones
     if (cz.size())
     {
-        cellZones_.clear();
-        cellZones_.transfer(cz);
+        cellZones_.setSize(cz.size());
+
+        // Copy the zone pointers
+        forAll(cz, cI)
+        {
+            cellZones_.set(cI, cz[cI]);
+        }
+
         cellZones_.writeOpt(IOobject::AUTO_WRITE);
     }
 }
@@ -1050,23 +1077,6 @@ void Foam::polyMesh::addPatches
     polyPatchList plist(const_cast<List<polyPatch*>&>(p));
 
     addPatches(plist, validBoundary);
-}
-
-
-void Foam::polyMesh::addZones
-(
-    const List<pointZone*>& pz,
-    const List<faceZone*>& fz,
-    const List<cellZone*>& cz
-)
-{
-    // Acquire ownership of the pointers
-    addZones
-    (
-        PtrList<pointZone>(const_cast<List<pointZone*>&>(pz)),
-        PtrList<faceZone>(const_cast<List<faceZone*>&>(fz)),
-        PtrList<cellZone>(const_cast<List<cellZone*>&>(cz))
-    );
 }
 
 

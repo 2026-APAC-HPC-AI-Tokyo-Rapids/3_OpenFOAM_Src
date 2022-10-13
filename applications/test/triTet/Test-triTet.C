@@ -1,4 +1,3 @@
-#include "argList.H"
 #include "point.H"
 #include "triangle.H"
 #include "tetrahedron.H"
@@ -6,7 +5,7 @@
 
 using namespace Foam;
 
-int main(int argc, char *argv[])
+int main()
 {
     triangle<point, point> tri
     (
@@ -14,12 +13,6 @@ int main(int argc, char *argv[])
         vector(1, 0, 0),
         vector(1, 1, 0)
     );
-
-    Info<< "triangle: " << tri << nl
-        << "  vecA: " << tri.vecA() << nl
-        << "  vecB: " << tri.vecB() << nl
-        << "  vecC: " << tri.vecC() << nl
-        << endl;
 
     Info<< "tri circumCentre = " << tri.circumCentre() << endl;
     Info<< "tri circumRadius = " << tri.circumRadius() << endl;
@@ -35,8 +28,6 @@ int main(int argc, char *argv[])
     Info<< "tet circumCentre = " << tet.circumCentre() << endl;
     Info<< "tet circumRadius = " << tet.circumRadius() << endl;
 
-    InfoErr<< "Enter four points: " << endl;
-
     vector a(Sin);
     vector b(Sin);
     vector c(Sin);
@@ -45,6 +36,5 @@ int main(int argc, char *argv[])
     Info<< "tet circumRadius = "
         << tetrahedron<point, point>(a, b, c, d).circumRadius() << endl;
 
-    Info<< "\nEnd\n";
     return 0;
 }

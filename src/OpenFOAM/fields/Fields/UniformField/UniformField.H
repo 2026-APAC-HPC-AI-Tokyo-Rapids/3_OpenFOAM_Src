@@ -33,9 +33,10 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_UniformField_H
-#define Foam_UniformField_H
+#ifndef UniformField_H
+#define UniformField_H
 
+#include "label.H"
 #include "UniformList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -62,7 +63,6 @@ public:
 
     // Member Functions
 
-        //- Method name compatibility with DimensionedField
         UniformField field() const
         {
             return UniformField(UniformList<Type>::value());

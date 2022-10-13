@@ -46,10 +46,13 @@ Description
 #ifndef Foam_BitOps_H
 #define Foam_BitOps_H
 
+#include "label.H"
 #include "UList.H"
 #include "HashSet.H"
 #include "Ostream.H"
+#include <algorithm>
 #include <limits>
+#include <utility>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -236,7 +239,7 @@ inline UIntType repeat_value(unsigned val)
 template<class UIntType>
 inline Ostream& print(Ostream& os, UIntType value, char off='0', char on='1')
 {
-    if (os.format() == IOstreamOption::BINARY)
+    if (os.format() == IOstream::BINARY)
     {
         // Perhaps not the most sensible, but the only thing we currently have.
         os << label(value);

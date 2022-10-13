@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,11 +40,10 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_LabelledItem_H
-#define Foam_LabelledItem_H
+#ifndef LabelledItem_H
+#define LabelledItem_H
 
 #include "label.H"
-#include "IOstreams.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -162,40 +161,9 @@ public:
 
 } // End namespace Foam
 
-// * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-template<class T>
-inline Foam::Istream& Foam::operator>>
-(
-    Istream& is,
-    LabelledItem<T>& item
-)
-{
-    is.readBegin("LabelledItem");
-    is >> static_cast<T&>(item) >> item.index();
-    is.readEnd("LabelledItem");
-
-    is.check(FUNCTION_NAME);
-    return is;
-}
-
-
-template<class T>
-inline Foam::Ostream& Foam::operator<<
-(
-    Ostream& os,
-    const LabelledItem<T>& item
-)
-{
-    // Output like Tuple2
-    os  << token::BEGIN_LIST
-        << static_cast<const T&>(item) << token::SPACE
-        << item.index()
-        << token::END_LIST;
-
-    return os;
-}
-
+#include "LabelledItemI.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

@@ -44,8 +44,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_linearEqn_H
-#define Foam_linearEqn_H
+#ifndef linearEqn_H
+#define linearEqn_H
 
 #include "Roots.H"
 
@@ -70,8 +70,8 @@ public:
 
     // Constructors
 
-        //- Default construct
-        linearEqn() = default;
+        //- Construct null
+        inline linearEqn();
 
         //- Construct initialized to zero
         inline linearEqn(const Foam::zero);
@@ -84,12 +84,11 @@ public:
 
     // Access
 
-        scalar a() const noexcept { return this->v_[A]; }
-        scalar b() const noexcept { return this->v_[B]; }
+        inline scalar a() const;
+        inline scalar b() const;
 
-        scalar& a() noexcept { return this->v_[A]; }
-        scalar& b() noexcept { return this->v_[B]; }
-
+        inline scalar& a();
+        inline scalar& b();
 
     // Evaluate
 

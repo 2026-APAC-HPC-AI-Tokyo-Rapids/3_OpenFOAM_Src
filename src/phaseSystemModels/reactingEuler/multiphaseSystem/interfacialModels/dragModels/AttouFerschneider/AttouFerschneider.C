@@ -131,7 +131,7 @@ Foam::dragModels::AttouFerschneider::CdRe() const
         << "Drag coefficient is not defined for the AttouFerschneider model."
         << exit(FatalError);
 
-    return nullptr;
+    return tmp<volScalarField>(nullptr);
 }
 
 
@@ -167,7 +167,7 @@ Foam::dragModels::AttouFerschneider::K() const
         << "phase models."
         << exit(FatalError);
 
-    return nullptr;
+    return tmp<volScalarField>(nullptr);
 }
 
 

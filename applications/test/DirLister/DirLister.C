@@ -28,6 +28,11 @@ License
 #include "DirLister.H"
 #include <dirent.h>
 
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+
+static const Foam::word extgz("gz");
+
+
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
 bool Foam::DirLister::const_iterator::open(const fileName& dir)
@@ -105,9 +110,9 @@ Foam::word Foam::DirLister::next(DIR* dirPtr) const
 
         if (ok)
         {
-            if (fType == fileName::FILE && stripgz_ && name.has_ext("gz"))
+            if (fType == fileName::FILE && stripgz_ && name.hasExt(extgz))
             {
-                name.remove_ext();
+                name = name.lessExt();
             }
 
             if (!name.empty() && accept(name))

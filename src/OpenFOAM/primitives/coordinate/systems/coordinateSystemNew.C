@@ -30,46 +30,113 @@ License
 #include "cartesianCS.H"
 #include "indirectCS.H"
 
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
 
-Foam::autoPtr<Foam::coordinateSystem>
-Foam::coordinateSystem::New
+namespace Foam
+{
+
+// Handle a 'coordinateSystem' sub-dictionary
+// In 1806 and earlier, this was handled (rather poorly) in the
+// coordinateSystem constructor itself.
+static const dictionary* subDictCompat
 (
-    const word& modelType,
-    const dictionary& dict,
-    IOobjectOption::readOption readOrigin,
-    const objectRegistry* obrPtr
+    const word& entryName,
+    const dictionary* dictPtr
 )
 {
-    // Direct dispatch
-    // - treat missing modelType as 'cartesian'
-
-    if (modelType.empty())
+    if (entryName.empty() || !dictPtr)
     {
-        return autoPtr<coordinateSystem>
-        (
-            new coordSystem::cartesian(dict, readOrigin)
-        );
+        return nullptr;
     }
 
+    const auto finder = dictPtr->csearch(entryName, keyType::LITERAL);
 
-    // Dispatch with objectRegistry reference (if possible)
-    if (obrPtr)
+    if (finder.good())
     {
-        auto* ctorPtr = registryConstructorTable(modelType);
-
-        if (ctorPtr)
+        if (finder.isDict())
         {
-            return autoPtr<coordinateSystem>
-            (
-                ctorPtr(*obrPtr, dict, readOrigin)
-            );
+            return finder.dictPtr();
+        }
+        else
+        {
+            const word csName(finder.ref().stream());
+
+            // Deprecated, unsupported syntax
+            if (error::master())
+            {
+                std::cerr
+                    << "--> FOAM IOWarning :" << nl
+                    << "    Ignoring '" << entryName << "' as a keyword."
+                    " Perhaps you meant this instead?" << nl
+                    << '{' << nl
+                    << "    type " << coordSystem::indirect::typeName_()
+                    << ';' << nl
+                    << "    name " << csName << ';' << nl
+                    << '}' << nl
+                    << std::endl;
+
+                error::warnAboutAge("syntax change", 1806);
+            }
         }
     }
 
-    // Regular dispatch
-    // Note: everything with a registry constructor also has a
-    // dictionary constructor, so just need to print those on error.
+    return dictPtr;
+}
+
+} // End namespace Foam
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+Foam::autoPtr<Foam::coordinateSystem> Foam::coordinateSystem::New
+(
+    word modelType,
+    const objectRegistry& obr,
+    const dictionary& dict
+)
+{
+    if (modelType.empty())
+    {
+        modelType = coordSystem::cartesian::typeName_();
+    }
+
+    {
+        auto* ctorPtr = registryConstructorTable(modelType);
+        if (ctorPtr)
+        {
+            return autoPtr<coordinateSystem>(ctorPtr(obr, dict));
+        }
+    }
+
+    auto* ctorPtr = dictionaryConstructorTable(modelType);
+
+    // Everything with a registry constructor also has a dictionary
+    // constructor, so just need to print those.
+    if (!ctorPtr)
+    {
+        FatalIOErrorInLookup
+        (
+            dict,
+            "coordinate system",
+             modelType,
+            *dictionaryConstructorTablePtr_
+        ) << exit(FatalIOError);
+    }
+
+    return autoPtr<coordinateSystem>(ctorPtr(dict));
+}
+
+
+Foam::autoPtr<Foam::coordinateSystem> Foam::coordinateSystem::New
+(
+    word modelType,
+    const dictionary& dict
+)
+{
+    if (modelType.empty())
+    {
+        modelType = coordSystem::cartesian::typeName_();
+    }
 
     auto* ctorPtr = dictionaryConstructorTable(modelType);
 
@@ -84,231 +151,76 @@ Foam::coordinateSystem::New
         ) << exit(FatalIOError);
     }
 
-    return autoPtr<coordinateSystem>(ctorPtr(dict, readOrigin));
+    return autoPtr<coordinateSystem>(ctorPtr(dict));
 }
 
 
-Foam::autoPtr<Foam::coordinateSystem>
-Foam::coordinateSystem::New
+Foam::autoPtr<Foam::coordinateSystem> Foam::coordinateSystem::New
 (
+    const objectRegistry& obr,
     const dictionary& dict,
-    const word& dictName,
-    IOobjectOption::readOption readOrigin,
-    const objectRegistry* obrPtr
+    const word& dictName
 )
 {
-    const dictionary* dictPtr = nullptr;
+    const dictionary* dictPtr = &dict;
 
-    // If dictName is non-empty: treat as mandatory
-    // Include fallback handling of 'coordinateSystem' sub-dictionary
-    // In 1806 and earlier, this was handled (rather poorly) in the
-    // coordinateSystem constructor itself
-
-    if (!dictName.empty())
+    if (dictName.size())
     {
-        const auto finder = dict.csearch(dictName, keyType::LITERAL);
-
-        if (finder.isDict())
-        {
-            dictPtr = finder.dictPtr();
-        }
-        else
-        {
-            // Missing or primitive entry: trigger fatal error
-            dictPtr = &(dict.subDict(dictName, keyType::LITERAL));
-        }
+        dictPtr = &(dictPtr->subDict(dictName));
     }
     else
     {
-        // Search for "coordinateSystem" sub-dictionary
-
-        const auto finder =
-            dict.csearch(coordinateSystem::typeName, keyType::LITERAL);
-
-        if (finder.isDict())
-        {
-            dictPtr = finder.dictPtr();
-        }
-        else if (finder.good())
-        {
-            const word csName(finder.ref().stream());
-
-            // Deprecated, unsupported syntax
-            if (error::master())
-            {
-                std::cerr
-                    << "--> FOAM IOWarning :" << nl
-                    << "    Ignoring '" << coordinateSystem::typeName
-                    << "' as a keyword. Perhaps you meant this instead?" << nl
-                    << '{' << nl
-                    << "    type " << coordSystem::indirect::typeName
-                    << ';' << nl
-                    << "    name " << csName << ';' << nl
-                    << '}' << nl
-                    << std::endl;
-
-                error::warnAboutAge("syntax change", 1806);
-            }
-        }
+        // Fallback: 'coordinateSystem' subDict if present
+        dictPtr = subDictCompat(coordinateSystem::typeName_(), dictPtr);
     }
 
+    word modelType = dictPtr->getOrDefault<word>
+    (
+        "type",
+        coordSystem::cartesian::typeName_()
+    );
 
-    if (dictPtr)
+    return coordinateSystem::New(modelType, obr, *dictPtr);
+}
+
+
+Foam::autoPtr<Foam::coordinateSystem> Foam::coordinateSystem::New
+(
+    const dictionary& dict,
+    const word& dictName
+)
+{
+    const dictionary* dictPtr = &dict;
+
+    if (dictName.size())
     {
-        // Using a sub-dictionary
-        // - the 'origin' can be optional
-        if (IOobjectOption::isReadRequired(readOrigin))
-        {
-            readOrigin = IOobjectOption::READ_IF_PRESENT;
-        }
+        dictPtr = &(dictPtr->subDict(dictName));
     }
     else
     {
-        // Using top-level dictionary
-        dictPtr = &dict;
+        // Fallback: 'coordinateSystem' subDict if present
+        dictPtr = subDictCompat(coordinateSystem::typeName_(), dictPtr);
     }
 
-
-    // The coordinate-system type (if not cartesian)
-    word modelType;
-    dictPtr->readIfPresent("type", modelType, keyType::LITERAL);
-
-    return coordinateSystem::New
+    const word modelType = dictPtr->getOrDefault<word>
     (
-        modelType,
-        *dictPtr,
-        readOrigin,
-        obrPtr
+        "type",
+        coordSystem::cartesian::typeName_()
     );
+
+    return coordinateSystem::New(modelType, *dictPtr);
 }
 
 
-Foam::autoPtr<Foam::coordinateSystem>
-Foam::coordinateSystem::NewIfPresent
-(
-    const dictionary& dict,
-    const word& dictName,
-    const objectRegistry* obrPtr
-)
-{
-    const dictionary* dictPtr = nullptr;
-
-    if
-    (
-        dictName.empty()
-     || (dictPtr = dict.findDict(dictName, keyType::LITERAL)) == nullptr
-    )
-    {
-        return nullptr;
-    }
-
-    // The coordinate-system type (if not cartesian)
-    word modelType;
-    dictPtr->readIfPresent("type", modelType, keyType::LITERAL);
-
-    return coordinateSystem::New
-    (
-        modelType,
-        *dictPtr,
-        IOobjectOption::READ_IF_PRESENT,
-        obrPtr
-    );
-}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-Foam::autoPtr<Foam::coordinateSystem>
-Foam::coordinateSystem::New
-(
-    Istream& is,
-    IOobjectOption::readOption readOrigin
-)
+Foam::autoPtr<Foam::coordinateSystem> Foam::coordinateSystem::New(Istream& is)
 {
     const word csName(is);
     const dictionary dict(is);
 
-    // The coordinate-system type (if not cartesian)
-    word modelType;
-    dict.readIfPresent("type", modelType, keyType::LITERAL);
-
-    auto cs = coordinateSystem::New(modelType, dict, readOrigin);
+    auto cs = coordinateSystem::New(dict, word::null);
     cs->rename(csName);
 
     return cs;
-}
-
-
-Foam::autoPtr<Foam::coordinateSystem>
-Foam::coordinateSystem::New
-(
-    const word& modelType,
-    const objectRegistry& obr,
-    const dictionary& dict,
-    IOobjectOption::readOption readOrigin
-)
-{
-    return New(modelType, dict, readOrigin, &obr);
-}
-
-
-Foam::autoPtr<Foam::coordinateSystem>
-Foam::coordinateSystem::New
-(
-    const word& modelType,
-    const dictionary& dict,
-    IOobjectOption::readOption readOrigin
-)
-{
-    return New(modelType, dict, readOrigin, nullptr);
-}
-
-
-Foam::autoPtr<Foam::coordinateSystem>
-Foam::coordinateSystem::New
-(
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const word& dictName,
-    IOobjectOption::readOption readOrigin
-)
-{
-    return New(dict, dictName, readOrigin, &obr);
-}
-
-
-Foam::autoPtr<Foam::coordinateSystem>
-Foam::coordinateSystem::New
-(
-    const dictionary& dict,
-    const word& dictName,
-    IOobjectOption::readOption readOrigin
-)
-{
-    return New(dict, dictName, readOrigin, nullptr);
-}
-
-
-Foam::autoPtr<Foam::coordinateSystem>
-Foam::coordinateSystem::NewIfPresent
-(
-    const objectRegistry& obr,
-    const dictionary& dict,
-    const word& dictName
-)
-{
-    return NewIfPresent(dict, dictName, &obr);
-}
-
-
-Foam::autoPtr<Foam::coordinateSystem>
-Foam::coordinateSystem::NewIfPresent
-(
-    const dictionary& dict,
-    const word& dictName
-)
-{
-    return NewIfPresent(dict, dictName, nullptr);
 }
 
 

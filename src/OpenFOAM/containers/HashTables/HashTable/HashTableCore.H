@@ -36,8 +36,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_HashTableCore_H
-#define Foam_HashTableCore_H
+#ifndef HashTableCore_H
+#define HashTableCore_H
 
 #include "label.H"
 #include "uLabel.H"
@@ -66,7 +66,7 @@ struct HashTableCore
     ClassName("HashTable");
 
     //- Default construct
-    HashTableCore() noexcept = default;
+    HashTableCore() = default;
 
     static_assert
     (

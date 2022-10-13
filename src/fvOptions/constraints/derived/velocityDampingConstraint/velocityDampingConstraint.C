@@ -30,7 +30,6 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "fvMatrix.H"
 #include "volFields.H"
-#include "cellCellStencilObject.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -49,7 +48,7 @@ namespace fv
 }
 
 
-// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 void Foam::fv::velocityDampingConstraint::addDamping(fvMatrix<vector>& eqn)
 {
@@ -68,14 +67,14 @@ void Foam::fv::velocityDampingConstraint::addDamping(fvMatrix<vector>& eqn)
     label nDamped(0);
     const label nTotCells(returnReduce(cells_.size(), sumOp<label>()));
 
-    for (const label celli : cells_)
+    for (label celli : cells_)
     {
         const scalar magU = mag(U[celli]);
         if (magU > UMax_)
         {
             const scalar scale = sqr(Foam::cbrt(vol[celli]));
 
-            diag[celli] += C_*scale*(magU-UMax_);
+            diag[celli] += scale*(magU-UMax_);
 
             ++nDamped;
         }
@@ -89,35 +88,10 @@ void Foam::fv::velocityDampingConstraint::addDamping(fvMatrix<vector>& eqn)
         return (denom ? 1e-2*round(1e4*num/denom) : 0);
     };
 
-    const scalar nDampedPercent = percent(nDamped, nTotCells);
-
     Info<< type() << ' ' << name_ << " damped "
         << nDamped << " ("
-        << nDampedPercent
+        << percent(nDamped, nTotCells)
         << "%) of cells, with max limit " << UMax_ << endl;
-
-
-    if (canWriteToFile())
-    {
-        file()
-            << mesh_.time().timeOutputValue() << token::TAB
-            << nDamped << token::TAB
-            << nDampedPercent
-            << endl;
-    }
-}
-
-
-void Foam::fv::velocityDampingConstraint::writeFileHeader(Ostream& os)
-{
-    writeHeaderValue(os, "UMax", Foam::name(UMax_));
-    writeCommented(os, "Time");
-    writeTabbed(os, "nDamped_[count]");
-    writeTabbed(os, "nDamped_[%]");
-
-    os  << endl;
-
-    writtenHeader_ = true;
 }
 
 
@@ -131,10 +105,7 @@ Foam::fv::velocityDampingConstraint::velocityDampingConstraint
     const fvMesh& mesh
 )
 :
-    fv::cellSetOption(name, modelType, dict, mesh),
-    writeFile(mesh, name, typeName, dict, false),
-    UMax_(GREAT),  // overwritten later
-    C_(1)
+    fv::cellSetOption(name, modelType, dict, mesh)
 {
     read(dict);
 }
@@ -160,35 +131,22 @@ void Foam::fv::velocityDampingConstraint::writeData(Ostream& os) const
 
 bool Foam::fv::velocityDampingConstraint::read(const dictionary& dict)
 {
-    if (!(fv::cellSetOption::read(dict) && writeFile::read(dict)))
+    if (fv::cellSetOption::read(dict))
     {
-        return false;
+        coeffs_.readEntry("UMax", UMax_);
+
+        if (!coeffs_.readIfPresent("UNames", fieldNames_))
+        {
+            fieldNames_.resize(1);
+            fieldNames_.first() = coeffs_.getOrDefault<word>("U", "U");
+        }
+
+        fv::option::resetApplied();
+
+        return true;
     }
 
-    coeffs_.readEntry("UMax", UMax_);
-    coeffs_.readIfPresent("C", C_);
-
-    if (!coeffs_.readIfPresent("UNames", fieldNames_))
-    {
-        fieldNames_.resize(1);
-        fieldNames_.first() = coeffs_.getOrDefault<word>("U", "U");
-    }
-
-    fv::option::resetApplied();
-
-
-    if (canResetFile())
-    {
-        resetFile(typeName);
-    }
-
-    if (canWriteHeader())
-    {
-        writeFileHeader(file());
-    }
-
-
-    return true;
+    return false;
 }
 
 

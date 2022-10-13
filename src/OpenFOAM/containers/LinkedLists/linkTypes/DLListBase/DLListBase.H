@@ -73,13 +73,13 @@ public:
         link* next_ = nullptr;
 
         //- Default construct
-        link() noexcept = default;
+        link() = default;
 
-        //- Node registered (linked) in a list?
-        bool registered() const noexcept { return prev_ && next_; }
+        //- Check if the node is registered with the list
+        inline bool registered() const noexcept;
 
-        //- Deregister the node (after removal)
-        void deregister() noexcept { prev_ = next_ = nullptr; }
+        //- Deregister the node after removal
+        inline void deregister() noexcept;
     };
 
 
@@ -124,7 +124,7 @@ protected:
 
 public:
 
-    // Forward Declarations (iterators)
+    // Forward declaration of iterators
 
         class iterator;
         friend class iterator;
@@ -157,23 +157,23 @@ public:
         inline bool empty() const noexcept;
 
         //- Return first entry
-        inline link* front();
+        inline link* first();
 
         //- Return const access to first entry
-        inline const link* front() const;
+        inline const link* first() const;
 
         //- Return last entry
-        inline link* back();
+        inline link* last();
 
         //- Return const access to last entry
-        inline const link* back() const;
+        inline const link* last() const;
 
 
         //- Add at front of list
-        void push_front(link* item);
+        void prepend(link* item);
 
         //- Add at back of list
-        void push_back(link* item);
+        void append(link* item);
 
         //- Swap this element with the one above unless it is at the top
         bool swapUp(link* item);
@@ -320,33 +320,6 @@ public:
 
         //- End of list for reverse iterators
         inline const const_iterator& crend() const;
-
-
-    // Housekeeping
-
-        //- Return first entry
-        //FOAM_DEPRECATED_FOR(2022-10, "front()")
-        link* first() { return front(); }
-
-        //- Return const access to first entry
-        //FOAM_DEPRECATED_FOR(2022-10, "front()")
-        const link* first() const { return front(); }
-
-        //- Return last entry
-        //FOAM_DEPRECATED_FOR(2022-10, "back()")
-        link* last() { return back(); }
-
-        //- Return const access to last entry
-        //FOAM_DEPRECATED_FOR(2022-10, "back()")
-        const link* last() const { return back(); }
-
-        //- Add at front of list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_front()")
-        void prepend(link* item) { push_front(item); }
-
-        //- Add at back of list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(link* item) { push_back(item); }
 };
 
 

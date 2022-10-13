@@ -29,8 +29,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_ListLoopM_H
-#define Foam_ListLoopM_H
+#ifndef ListLoopM_H
+#define ListLoopM_H
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 // Element access looping
@@ -43,7 +43,6 @@ Description
 #define List_CONST_ACCESS(type, f, fp)          \
     const type* const __restrict__ fp = (f).begin()
 
-// Loop over all elements
 #define List_FOR_ALL(f, i)                      \
         const label _n##i = (f).size();         \
         for (label i=0; i<_n##i; ++i)

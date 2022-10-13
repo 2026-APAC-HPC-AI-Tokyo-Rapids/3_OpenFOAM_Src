@@ -116,7 +116,7 @@ public:
         autoPtr<binaryBreakupModel> clone() const
         {
             NotImplemented;
-            return nullptr;
+            return autoPtr<binaryBreakupModel>(nullptr);
         }
 
 

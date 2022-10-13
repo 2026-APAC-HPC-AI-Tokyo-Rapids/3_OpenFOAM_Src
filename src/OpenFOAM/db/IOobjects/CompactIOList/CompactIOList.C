@@ -50,8 +50,8 @@ void Foam::CompactIOList<T, BaseType>::readFromStream()
     {
         FatalIOErrorInFunction(is)
             << "unexpected class name " << headerClassName()
-            << " expected " << typeName
-            << " or " << IOList<T>::typeName << endl
+            << " expected " << typeName << " or " << IOList<T>::typeName
+            << endl
             << "    while reading object " << name()
             << exit(FatalIOError);
     }
@@ -64,7 +64,7 @@ bool Foam::CompactIOList<T, BaseType>::readContents()
     if
     (
         readOpt() == IOobject::MUST_READ
-     || (isReadOptional() && headerOk())
+     || (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
     )
     {
         readFromStream();
@@ -174,11 +174,11 @@ bool Foam::CompactIOList<T, BaseType>::writeObject
 {
     if
     (
-        streamOpt.format() == IOstreamOption::BINARY
+        streamOpt.format() == IOstream::BINARY
      && overflows()
     )
     {
-        streamOpt.format(IOstreamOption::ASCII);
+        streamOpt.format(IOstream::ASCII);
 
         WarningInFunction
             << "Overall number of elements of CompactIOList of size "
@@ -186,7 +186,7 @@ bool Foam::CompactIOList<T, BaseType>::writeObject
             << nl << "    Switching to ascii writing" << endl;
     }
 
-    if (streamOpt.format() == IOstreamOption::ASCII)
+    if (streamOpt.format() == IOstream::ASCII)
     {
         // Change type to be non-compact format type
         const word oldTypeName(typeName);
@@ -264,8 +264,8 @@ Foam::Ostream& Foam::operator<<
     const Foam::CompactIOList<T, BaseType>& L
 )
 {
-    // Keep ASCII writing same
-    if (os.format() == IOstreamOption::ASCII)
+    // Keep ascii writing same.
+    if (os.format() == IOstream::ASCII)
     {
         os << static_cast<const List<T>&>(L);
     }

@@ -625,19 +625,18 @@ bool Foam::ccm::reader::remapMeshInfo
         return false;
     }
 
-    const dictionary* subDictPtr = nullptr;
 
     // Merge specified cellTable entries together
-    if ((subDictPtr = remapDict.findDict("cellTable")) != nullptr)
+    if (remapDict.isDict("cellTable"))
     {
-        cellTable_.combine(*subDictPtr, cellTableId_);
+        cellTable_.combine(remapDict.subDict("cellTable"), cellTableId_);
         ok = true;
     }
 
     // Rename boundaries
-    if ((subDictPtr = remapDict.findDict("boundaryRegion")) != nullptr)
+    if (remapDict.isDict("boundaryRegion"))
     {
-        boundaryRegion_.rename(*subDictPtr);
+        boundaryRegion_.rename(remapDict.subDict("boundaryRegion"));
         ok = true;
     }
 

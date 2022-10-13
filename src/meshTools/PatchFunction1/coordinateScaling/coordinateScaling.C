@@ -43,19 +43,22 @@ Foam::coordinateScaling<Type>::coordinateScaling
     const dictionary& dict
 )
 :
-    coordSys_(coordinateSystem::NewIfPresent(obr, dict)),
-    scale_(label(vector::nComponents)),
+    coordSys_
+    (
+        dict.found(coordinateSystem::typeName_())
+      ? coordinateSystem::New(obr, dict)
+      : nullptr
+    ),
+    scale_(3),
     active_(bool(coordSys_))
 {
     for (direction dir = 0; dir < vector::nComponents; ++dir)
     {
         const word key("scale" + Foam::name(dir+1));
 
-        auto scaling = Function1<Type>::NewIfPresent(key, dict);
-
-        if (scaling)
+        if (dict.found(key))
         {
-            scale_.set(dir, std::move(scaling));
+            scale_.set(dir, Function1<Type>::New(key, dict));
             active_ = true;
         }
     }
@@ -72,21 +75,6 @@ Foam::coordinateScaling<Type>::coordinateScaling(const coordinateScaling& rhs)
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-template<class Type>
-Foam::tmp<Foam::pointField> Foam::coordinateScaling<Type>::localPosition
-(
-    const pointField& globalPos
-) const
-{
-    if (coordSys_)
-    {
-        return coordSys_->localPosition(globalPos);
-    }
-
-    return globalPos;
-}
-
 
 template<class Type>
 Foam::tmp<Foam::Field<Type>> Foam::coordinateScaling<Type>::transform

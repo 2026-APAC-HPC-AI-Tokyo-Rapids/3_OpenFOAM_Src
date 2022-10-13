@@ -81,15 +81,11 @@ inline bool Foam::triad::set() const
 
 inline Foam::direction Foam::triad::primaryDirection(const vector& v)
 {
-    if
-    (
-        Foam::mag(v.x()) > Foam::mag(v.y())
-     && Foam::mag(v.x()) > Foam::mag(v.z())
-    )
+    if (mag(v.x()) > mag(v.y()) && mag(v.x()) > mag(v.z()))
     {
         return triad::X;
     }
-    else if (Foam::mag(v.y()) > Foam::mag(v.z()))
+    else if (mag(v.y()) > mag(v.z()))
     {
         return triad::Y;
     }
@@ -108,7 +104,7 @@ inline Foam::vector Foam::triad::orthogonal
 {
     vector v3 = v1 ^ v2;
 
-    scalar magV3 = Foam::mag(v3);
+    scalar magV3 = mag(v3);
 
     if (magV3 > 0.5)
     {

@@ -29,8 +29,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
+#include "SLList.H"
 #include "boolList.H"
-#include "CircularBuffer.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -55,57 +55,58 @@ Foam::PrimitivePatch<FaceList, PointField>::calcLocalPointOrder() const
 
     const labelListList& ff = faceFaces();
 
+    boolList visitedFace(lf.size(), false);
+
     localPointOrderPtr_.reset(new labelList(meshPoints().size(), -1));
     auto& pointOrder = *localPointOrderPtr_;
 
-    boolList visitedFace(lf.size(), false);
     boolList visitedPoint(pointOrder.size(), false);
 
     label nPoints = 0;
-
-    // FIFO buffer managing point/face insertion order
-    CircularBuffer<label> faceOrder(32);
 
     forAll(lf, facei)
     {
         if (!visitedFace[facei])
         {
-            faceOrder.push_back(facei);
+            SLList<label> faceOrder(facei);
 
-            while (!faceOrder.empty())
+            do
             {
-                // Process as FIFO
-                const label curFace = faceOrder.front();
-                faceOrder.pop_front();
+                const label curFace = faceOrder.first();
+
+                faceOrder.removeHead();
 
                 if (!visitedFace[curFace])
                 {
                     visitedFace[curFace] = true;
 
+                    const labelList& curPoints = lf[curFace];
+
                     // mark points
-                    for (const label pointi : lf[curFace])
+                    forAll(curPoints, pointi)
                     {
-                        if (!visitedPoint[pointi])
+                        if (!visitedPoint[curPoints[pointi]])
                         {
-                            visitedPoint[pointi] = true;
+                            visitedPoint[curPoints[pointi]] = true;
 
-                            pointOrder[nPoints] = pointi;
+                            pointOrder[nPoints] = curPoints[pointi];
 
-                            ++nPoints;
+                            nPoints++;
                         }
                     }
 
-                    // Add unvisited face neighbours to the list
+                    // add face neighbours to the list
+                    const labelList& nbrs = ff[curFace];
 
-                    for (const label nbrFacei : ff[curFace])
+                    forAll(nbrs, nbrI)
                     {
-                        if (!visitedFace[nbrFacei])
+                        if (!visitedFace[nbrs[nbrI]])
                         {
-                            faceOrder.push_back(nbrFacei);
+                            faceOrder.append(nbrs[nbrI]);
                         }
                     }
                 }
-            }
+            } while (faceOrder.size());
         }
     }
 

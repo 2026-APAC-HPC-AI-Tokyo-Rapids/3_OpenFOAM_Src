@@ -65,7 +65,6 @@ SourceFiles
 #include "vector.H"
 #include "tensor.H"
 #include "dictionary.H"
-#include "IOobjectOption.H"
 #include "runTimeSelectionTables.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -120,7 +119,7 @@ public:
         //  An empty modelType will be treated as "axes" (eg, e1/e3)
         static autoPtr<coordinateRotation> New
         (
-            const word& modelType,
+            word modelType,
             const dictionary& dict
         );
 

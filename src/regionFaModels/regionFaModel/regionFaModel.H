@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -64,8 +64,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_regionFaModel_H
-#define Foam_regionFaModel_H
+#ifndef regionFaModel_H
+#define regionFaModel_H
 
 #include "volMesh.H"
 #include "IOdictionary.H"
@@ -79,6 +79,7 @@ SourceFiles
 
 namespace Foam
 {
+
 namespace regionModels
 {
 
@@ -109,6 +110,9 @@ protected:
         //- Reference to the primary mesh database
         const fvMesh& primaryMesh_;
 
+        //- Reference to fvPatch
+        const fvPatch& patch_;
+
         //- Reference to the time database
         const Time& time_;
 
@@ -130,8 +134,15 @@ protected:
         //- Dictionary of output properties
         autoPtr<IOdictionary> outputPropertiesPtr_;
 
-        //- Volume/surface mapping
+        //-Volume-to surface mapping
         autoPtr<volSurfaceMapping> vsmPtr_;
+
+
+        // Addressing
+
+            //- Patch IDs on the primary region coupled to this region
+            label patchID_;
+
 
         //- Region name
         word regionName_;
@@ -151,7 +162,7 @@ public:
         //- Construct from mesh and name and dict
         regionFaModel
         (
-            const fvMesh& mesh,
+            const fvPatch& patch,
             const word& regionType,
             const word& modelName,
             const dictionary& dict,
@@ -171,79 +182,73 @@ public:
 
     // Member Functions
 
-    // Access
+        // Access
 
-        //- Return the reference to the primary mesh database
-        const fvMesh& primaryMesh() const noexcept { return primaryMesh_; }
+            //- Return the reference to the primary mesh database
+            inline const fvMesh& primaryMesh() const;
 
-        //- Return the reference to the time database
-        const Time& time() const noexcept { return time_; }
+            //- Return the reference to the time database
+            inline const Time& time() const;
 
-        //- Return the active flag
-        Switch active() const noexcept { return active_; }
+            //- Return the active flag
+            inline const Switch& active() const;
 
-        //- Return the information flag
-        Switch infoOutput() const noexcept { return infoOutput_; }
+            //- Return the information flag
+            inline const Switch& infoOutput() const;
 
-        //- Return the model name
-        const word& modelName() const noexcept { return modelName_; }
+            //- Return the model name
+            inline const word& modelName() const;
 
-        //- Return the region mesh database
-        inline const faMesh& regionMesh() const;
+            //- Return the region mesh database
+            inline const faMesh& regionMesh() const;
 
-        //- Return the region mesh database for manipulation
-        inline faMesh& regionMesh();
+            //- Return the region mesh database for manipulation
+            inline faMesh& regionMesh();
 
-        //- Return the model coefficients dictionary
-        const dictionary& coeffs() const noexcept { return coeffs_; }
+            //- Return the model coefficients dictionary
+            inline const dictionary& coeffs() const;
 
-        //- Return const access to the output properties dictionary
-        inline const IOdictionary& outputProperties() const;
+            //- Return const access to the output properties dictionary
+            inline const IOdictionary& outputProperties() const;
 
-        //- Return output properties dictionary
-        inline IOdictionary& outputProperties();
+            //- Return output properties dictionary
+            inline IOdictionary& outputProperties();
 
-        //- Return the solution dictionary
-        inline const dictionary& solution() const;
+            //- Return the solution dictionary
+            inline const dictionary& solution() const;
 
-
-    // Addressing
-
-        //- List of patch IDs on the primary region coupled to this region
-        inline const labelList& primaryPatchIDs() const;
-
-        //- True if patchi on the primary region is coupled to this region
-        inline bool isRegionPatch(const label patchi) const;
+            //- Return patch ID
+            inline label patchID() const;
 
 
-    // Helper Functions
+        // Help Functions
 
-        //- Return mapping between surface and volume fields
-        const volSurfaceMapping& vsm() const;
-
-
-    // Evolution
-
-        //- Main driver routing to evolve the region - calls other evolves
-        virtual void evolve();
-
-        //- Pre-evolve region
-        virtual void preEvolveRegion();
-
-        //- Evolve the region
-        virtual void evolveRegion();
-
-        //- Post-evolve region
-        virtual void postEvolveRegion();
-
-        //- Courant number of the region
-        virtual scalar CourantNumber() const;
+            //- Return mapping between surface and volume fields
+            const volSurfaceMapping& vsm() const;
 
 
-    // IO
+        // Evolution
 
-        //- Provide some feedback
-        virtual void info() = 0;
+            //- Main driver routing to evolve the region - calls other evolves
+            virtual void evolve();
+
+            //- Pre-evolve region
+            virtual void preEvolveRegion();
+
+            //- Evolve the region
+            virtual void evolveRegion();
+
+            //- Post-evolve region
+            virtual void postEvolveRegion();
+
+            //- Courant number of the region
+            virtual scalar CourantNumber() const;
+
+
+        // IO
+
+            //- Provide some feedback
+            virtual void info() = 0;
 };
 
 

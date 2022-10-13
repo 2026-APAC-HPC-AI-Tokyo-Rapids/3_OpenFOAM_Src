@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2017 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -707,7 +707,9 @@ void Foam::conformalVoronoiMesh::reorderProcessorPatches
 
     Info<< incrIndent << indent << "Faces matched." << endl;
 
-    if (returnReduceOr(anyChanged))
+    reduce(anyChanged, orOp<bool>());
+
+    if (anyChanged)
     {
         label nReorderedFaces = 0;
 
@@ -1393,7 +1395,10 @@ void Foam::conformalVoronoiMesh::writePointPairs
 
         if (ptPairs_.isPointPair(vA, vB))
         {
-            os.writeLine(topoint(vA->point()), topoint(vB->point()));
+            os.write
+            (
+                linePointRef(topoint(vA->point()), topoint(vB->point()))
+            );
         }
     }
 }

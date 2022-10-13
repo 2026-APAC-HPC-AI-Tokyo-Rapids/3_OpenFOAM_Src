@@ -12,18 +12,10 @@ runApplication decomposePar
 
 runParallel $(getApplication)
 
-targetCase="../main"
-dataDir="postProcessing/surfaces"
+vibroAcousticCase="../main"
+dataDir="postProcessing/surfaces/window"
 
-targetDir="$targetCase"/constant/boundaryData
-mkdir -p "$targetDir"
-rm -rf "$targetDir"/window
-cp -rf "$dataDir/window" "$targetDir"/window
-
-targetDir="$targetCase"/constant/sampled
-mkdir -p "$targetDir"
-rm -rf "$targetDir"/window
-cp -rf "$dataDir/windowPatch" "$targetDir"/window
-
+mkdir -p "$vibroAcousticCase"/constant/boundaryData
+cp -rf "$dataDir" "$vibroAcousticCase"/constant/boundaryData/window
 
 # -----------------------------------------------------------------------------

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -84,12 +84,12 @@ void Foam::geomDecomp::readCoeffs()
     }
     setOrder();
 
-    // Optional (cartesian) coordinate system transform
-    auto csysPtr = coordinateSystem::NewIfPresent(coeffsDict_, "transform");
+    const dictionary* transformDict =
+        coeffsDict_.findDict("transform", keyType::LITERAL);
 
-    if (csysPtr)
+    if (transformDict)
     {
-        csys_ = csysPtr();
+        csys_ = coordinateSystem(*transformDict);
     }
     else if (equal(delta_, 0))
     {

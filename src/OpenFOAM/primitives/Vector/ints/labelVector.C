@@ -32,54 +32,47 @@ License
 template<>
 const char* const Foam::labelVector::vsType::typeName = "labelVector";
 
-#undef  defineTraits
-#define defineTraits(Type, Prefix)                                            \
-                                                                              \
-    template<>                                                                \
-    const char* const Foam::Vector<Type>::vsType::componentNames[] =          \
-    {                                                                         \
-        "x", "y", "z"                                                         \
-    };                                                                        \
-                                                                              \
-    template<>                                                                \
-    const Foam::Vector<Type> Foam::Vector<Type>::vsType::zero                 \
-    (                                                                         \
-        Vector<Type>::uniform(0)                                              \
-    );                                                                        \
-                                                                              \
-    template<>                                                                \
-    const Foam::Vector<Type> Foam::Vector<Type>::vsType::one                  \
-    (                                                                         \
-        Vector<Type>::uniform(1)                                              \
-    );                                                                        \
-                                                                              \
-    template<>                                                                \
-    const Foam::Vector<Type> Foam::Vector<Type>::vsType::max                  \
-    (                                                                         \
-        Vector<Type>::uniform(Prefix##Max)                                    \
-    );                                                                        \
-                                                                              \
-    template<>                                                                \
-    const Foam::Vector<Type> Foam::Vector<Type>::vsType::min                  \
-    (                                                                         \
-        Vector<Type>::uniform(-Prefix##Max)                                   \
-    );                                                                        \
-                                                                              \
-    template<>                                                                \
-    const Foam::Vector<Type> Foam::Vector<Type>::vsType::rootMax              \
-    (                                                                         \
-        Vector<Type>::uniform(::sqrt(double(Prefix##Max)))                    \
-    );                                                                        \
-                                                                              \
-    template<>                                                                \
-    const Foam::Vector<Type> Foam::Vector<Type>::vsType::rootMin              \
-    (                                                                         \
-        Vector<Type>::uniform(-::sqrt(double(Prefix##Max)))                   \
-    );
+template<>
+const char* const Foam::labelVector::vsType::componentNames[] =
+{
+    "x", "y", "z"
+};
 
+template<>
+const Foam::labelVector Foam::labelVector::vsType::zero
+(
+    labelVector::uniform(0)
+);
 
-defineTraits(Foam::label, label);
+template<>
+const Foam::labelVector Foam::labelVector::vsType::one
+(
+    labelVector::uniform(1)
+);
 
-#undef defineTraits
+template<>
+const Foam::labelVector Foam::labelVector::vsType::max
+(
+    labelVector::uniform(labelMax)
+);
+
+template<>
+const Foam::labelVector Foam::labelVector::vsType::min
+(
+    labelVector::uniform(-labelMax)
+);
+
+template<>
+const Foam::labelVector Foam::labelVector::vsType::rootMax
+(
+    labelVector::uniform(sqrt(scalar(labelMax)))
+);
+
+template<>
+const Foam::labelVector Foam::labelVector::vsType::rootMin
+(
+    labelVector::uniform(-sqrt(scalar(labelMax)))
+);
+
 
 // ************************************************************************* //

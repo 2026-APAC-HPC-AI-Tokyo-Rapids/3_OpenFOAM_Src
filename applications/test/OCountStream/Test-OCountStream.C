@@ -83,9 +83,9 @@ int main(int argc, char *argv[])
     {
         IOstreamOption streamOpt;
 
-        if (outputName.has_ext("gz"))
+        if (outputName.hasExt("gz"))
         {
-            outputName.remove_ext();
+            outputName.removeExt();
             streamOpt.compression(IOstreamOption::COMPRESSED);
         }
 

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,70 +28,34 @@ License
 
 #include "IOstreams.H"
 #include "pointHit.H"
+#include "triPoints.H"
 #include "mathematicalConstants.H"
 
 // * * * * * * * * * * * * * * * * Constructors * * * * * * * * * * * * * * //
 
-inline Foam::triPoints::triPoints
+template<class Point, class PointRef>
+inline Foam::triangle<Point, PointRef>::triangle
 (
-    const point& p0,
-    const point& p1,
-    const point& p2
-)
-{
-    a() = p0;
-    b() = p1;
-    c() = p2;
-}
-
-
-inline Foam::triPoints::triPoints(const triPointRef& pts)
-{
-    a() = pts.a();
-    b() = pts.b();
-    c() = pts.c();
-}
-
-
-inline Foam::triPoints::triPoints(const FixedList<point, 3>& pts)
-:
-    FixedList<point, 3>(pts)
-{}
-
-
-inline Foam::triPoints::triPoints
-(
-    const UList<point>& points,
-    const FixedList<label, 3>& indices
+    const Point& a,
+    const Point& b,
+    const Point& c
 )
 :
-    FixedList<point, 3>(points, indices)
+    a_(a),
+    b_(b),
+    c_(c)
 {}
 
 
 template<class Point, class PointRef>
 inline Foam::triangle<Point, PointRef>::triangle
 (
-    const Point& p0,
-    const Point& p1,
-    const Point& p2
+    const FixedList<Point, 3>& tri
 )
 :
-    a_(p0),
-    b_(p1),
-    c_(p2)
-{}
-
-
-template<class Point, class PointRef>
-inline Foam::triangle<Point, PointRef>::triangle
-(
-    const FixedList<Point, 3>& pts
-)
-:
-    a_(pts.template get<0>()),
-    b_(pts.template get<1>()),
-    c_(pts.template get<2>())
+    a_(tri[0]),
+    b_(tri[1]),
+    c_(tri[2])
 {}
 
 
@@ -102,10 +66,11 @@ inline Foam::triangle<Point, PointRef>::triangle
     const FixedList<label, 3>& indices
 )
 :
-    a_(points[indices.template get<0>()]),
-    b_(points[indices.template get<1>()]),
-    c_(points[indices.template get<2>()])
+    a_(points[indices[0]]),
+    b_(points[indices[1]]),
+    c_(points[indices[2]])
 {}
+
 
 
 template<class Point, class PointRef>
@@ -118,14 +83,21 @@ inline Foam::triangle<Point, PointRef>::triangle(Istream& is)
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Point, class PointRef>
-inline Point Foam::triangle<Point, PointRef>::centre
-(
-    const Point& p0,
-    const Point& p1,
-    const Point& p2
-)
+inline const Point& Foam::triangle<Point, PointRef>::a() const
 {
-    return (1.0/3.0)*(p0 + p1 + p2);
+    return a_;
+}
+
+template<class Point, class PointRef>
+inline const Point& Foam::triangle<Point, PointRef>::b() const
+{
+    return b_;
+}
+
+template<class Point, class PointRef>
+inline const Point& Foam::triangle<Point, PointRef>::c() const
+{
+    return c_;
 }
 
 
@@ -136,24 +108,6 @@ inline Point Foam::triangle<Point, PointRef>::centre() const
 }
 
 
-inline Foam::point Foam::triPoints::centre() const
-{
-    return triPointRef::centre(a(), b(), c());
-}
-
-
-template<class Point, class PointRef>
-inline Foam::vector Foam::triangle<Point, PointRef>::areaNormal
-(
-    const Point& p0,
-    const Point& p1,
-    const Point& p2
-)
-{
-    return 0.5*((p1 - p0)^(p2 - p0));
-}
-
-
 template<class Point, class PointRef>
 inline Foam::vector Foam::triangle<Point, PointRef>::areaNormal() const
 {
@@ -161,125 +115,12 @@ inline Foam::vector Foam::triangle<Point, PointRef>::areaNormal() const
 }
 
 
-inline Foam::vector Foam::triPoints::areaNormal() const
-{
-    return triPointRef::areaNormal(a(), b(), c());
-}
-
-
-template<class Point, class PointRef>
-inline Foam::vector Foam::triangle<Point, PointRef>::unitNormal
-(
-    const Point& p0,
-    const Point& p1,
-    const Point& p2
-)
-{
-    const vector n(areaNormal(p0, p1, p2));
-    const scalar s(::Foam::mag(n));
-    return s < ROOTVSMALL ? Zero : n/s;
-}
-
-
 template<class Point, class PointRef>
 inline Foam::vector Foam::triangle<Point, PointRef>::unitNormal() const
 {
-    return triangle<Point, PointRef>::unitNormal(a_, b_, c_);
-}
-
-
-inline Foam::vector Foam::triPoints::unitNormal() const
-{
-    return triPointRef::unitNormal(a(), b(), c());
-}
-
-
-template<class Point, class PointRef>
-inline Foam::Pair<Point> Foam::triangle<Point, PointRef>::box
-(
-    const Point& p0,
-    const Point& p1,
-    const Point& p2
-)
-{
-    return Pair<Point>
-    (
-        min(p0, min(p1, p2)),
-        max(p0, max(p1, p2))
-    );
-}
-
-
-template<class Point, class PointRef>
-inline Foam::Pair<Point> Foam::triangle<Point, PointRef>::box() const
-{
-    return triangle<Point, PointRef>::box(a_, b_, c_);
-}
-
-
-inline Foam::Pair<Foam::point> Foam::triPoints::box() const
-{
-    return triPointRef::box(a(), b(), c());
-}
-
-
-template<class Point, class PointRef>
-inline Point Foam::triangle<Point, PointRef>::vecA() const
-{
-    return Point(c_ - b_);
-}
-
-template<class Point, class PointRef>
-inline Point Foam::triangle<Point, PointRef>::vecB() const
-{
-    return Point(a_ - c_);
-}
-
-template<class Point, class PointRef>
-inline Point Foam::triangle<Point, PointRef>::vecC() const
-{
-    return Point(b_ - a_);
-}
-
-
-inline Foam::vector Foam::triPoints::vecA() const
-{
-    return vector(c() - b());
-}
-
-
-inline Foam::vector Foam::triPoints::vecB() const
-{
-    return vector(a() - c());
-}
-
-
-inline Foam::vector Foam::triPoints::vecC() const
-{
-    return vector(b() - a());
-}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-inline Foam::triPointRef Foam::triPoints::tri() const
-{
-    return triPointRef(a(), b(), c());
-}
-
-
-inline void Foam::triPoints::flip()
-{
-    // swap pt1 <-> pt2
-    point t(b());
-    b() = c();
-    c() = t;
-}
-
-
-inline Foam::scalar Foam::triPoints::mag() const
-{
-    return ::Foam::mag(areaNormal());
+    const vector n(areaNormal());
+    const scalar s(Foam::mag(n));
+    return s < ROOTVSMALL ? Zero : n/s;
 }
 
 
@@ -478,46 +319,6 @@ inline Foam::scalar Foam::triangle<Point, PointRef>::pointToBarycentric
 
 
 template<class Point, class PointRef>
-inline bool Foam::triangle<Point, PointRef>::intersects
-(
-    const point& origin,
-    const vector& normal
-) const
-{
-    // Check points cut below(1) or above(2). Mix of above/below == 3
-    // Cf. plane::whichSide()
-    return
-    (
-        (
-            (((a_ - origin) & normal) < 0 ? 1 : 2)
-          | (((b_ - origin) & normal) < 0 ? 1 : 2)
-          | (((c_ - origin) & normal) < 0 ? 1 : 2)
-        ) == 3
-    );
-}
-
-
-template<class Point, class PointRef>
-inline bool Foam::triangle<Point, PointRef>::intersects
-(
-    const point& origin,
-    const vector::components axis
-) const
-{
-    // Direct check of points cut below(1) or above(2)
-    // Cf. plane::whichSide()
-    return
-    (
-        (
-            (a_[axis] < origin[axis] ? 1 : 2)
-          | (b_[axis] < origin[axis] ? 1 : 2)
-          | (c_[axis] < origin[axis] ? 1 : 2)
-        ) == 3
-    );
-}
-
-
-template<class Point, class PointRef>
 inline Foam::pointHit Foam::triangle<Point, PointRef>::ray
 (
     const point& p,
@@ -574,7 +375,7 @@ inline Foam::pointHit Foam::triangle<Point, PointRef>::ray
 
         if (hit)
         {
-            pInter = fastInter.point();
+            pInter = fastInter.rawPoint();
         }
         else
         {
@@ -609,7 +410,8 @@ inline Foam::pointHit Foam::triangle<Point, PointRef>::ray
     if (hit && eligible)
     {
         // Hit. Set distance to intersection.
-        inter.hitPoint(pInter);
+        inter.setHit();
+        inter.setPoint(pInter);
         inter.setDistance(dist);
     }
     else
@@ -618,7 +420,7 @@ inline Foam::pointHit Foam::triangle<Point, PointRef>::ray
         inter.setMiss(eligible);
 
         // The miss point is the nearest point on the triangle
-        inter.setPoint(nearestPoint(p).point());
+        inter.setPoint(nearestPoint(p).rawPoint());
 
         // The distance to the miss is the distance between the
         // original point and plane of intersection
@@ -707,7 +509,8 @@ inline Foam::pointHit Foam::triangle<Point, PointRef>::intersection
         return intersection;
     }
 
-    intersection.hitPoint(a_ + u*edge1 + v*edge2);
+    intersection.setHit();
+    intersection.setPoint(a_ + u*edge1 + v*edge2);
     intersection.setDistance(t);
 
     return intersection;
@@ -915,7 +718,7 @@ inline Foam::pointHit Foam::triangle<Point, PointRef>::nearestPoint
             // Hit beyond endpoint
             lnInfo.setMiss(true);
             lnInfo.setPoint(ln.end());
-            scalar dist = triInfo.point().dist(lnInfo.point());
+            scalar dist = Foam::mag(triInfo.hitPoint()-lnInfo.missPoint());
             lnInfo.setDistance(dist);
             triInfo.setMiss(true);
             triInfo.setDistance(dist);
@@ -925,7 +728,7 @@ inline Foam::pointHit Foam::triangle<Point, PointRef>::nearestPoint
             // Hit beyond startpoint
             lnInfo.setMiss(true);
             lnInfo.setPoint(ln.start());
-            scalar dist = triInfo.point().dist(lnInfo.point());
+            scalar dist = Foam::mag(triInfo.hitPoint()-lnInfo.missPoint());
             lnInfo.setDistance(dist);
             triInfo.setMiss(true);
             triInfo.setDistance(dist);
@@ -933,9 +736,10 @@ inline Foam::pointHit Foam::triangle<Point, PointRef>::nearestPoint
         else
         {
             // Hit on line
-            lnInfo.hitPoint(triInfo.point());
-            lnInfo.setDistance(0);
-            triInfo.setDistance(0);
+            lnInfo.setHit();
+            lnInfo.setPoint(triInfo.hitPoint());
+            lnInfo.setDistance(0.0);
+            triInfo.setDistance(0.0);
         }
     }
     else
@@ -1006,7 +810,8 @@ inline Foam::pointHit Foam::triangle<Point, PointRef>::nearestPoint
         }
         else
         {
-            lnInfo.hitPoint(nearestLinePoint);
+            lnInfo.setHit();
+            lnInfo.setPoint(nearestLinePoint);
         }
     }
     return triInfo;
@@ -1111,7 +916,6 @@ inline Foam::Ostream& Foam::operator<<
     const triangle<Point, PointRef>& t
 )
 {
-    // Format like FixedList
     os  << nl
         << token::BEGIN_LIST
         << t.a_ << token::SPACE

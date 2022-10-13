@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,8 +38,8 @@ See Also
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_IListStream_H
-#define Foam_IListStream_H
+#ifndef IListStream_H
+#define IListStream_H
 
 #include "List.H"
 #include "UIListStream.H"
@@ -217,10 +217,11 @@ public:
         //- Construct with an empty list
         explicit IListStream
         (
-            IOstreamOption::streamFormat fmt
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
         )
         :
-            IListStream(IOstreamOption(fmt))
+            IListStream(IOstreamOption(fmt, ver))
         {}
 
 
@@ -228,10 +229,11 @@ public:
         IListStream
         (
             ::Foam::List<char>&& buffer,  // Fully qualify (issue #1521)
-            IOstreamOption::streamFormat fmt
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
         )
         :
-            IListStream(std::move(buffer), IOstreamOption(fmt))
+            IListStream(std::move(buffer), IOstreamOption(fmt, ver))
         {}
 
 
@@ -240,10 +242,11 @@ public:
         explicit IListStream
         (
             DynamicList<char,SizeMin>&& buffer,
-            IOstreamOption::streamFormat fmt
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
         )
         :
-            IListStream(std::move(buffer), IOstreamOption(fmt))
+            IListStream(std::move(buffer), IOstreamOption(fmt, ver))
         {}
 
     #endif /* Foam_IOstream_extras */

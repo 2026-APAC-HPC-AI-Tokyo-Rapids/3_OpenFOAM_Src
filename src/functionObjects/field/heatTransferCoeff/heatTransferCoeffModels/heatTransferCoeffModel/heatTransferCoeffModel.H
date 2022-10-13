@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,18 +33,44 @@ Class
     Foam::heatTransferCoeffModel
 
 Description
-    A base class for heat transfer coefficient models.
+    An abstract base class for heat transfer coeffcient models.
+
+Usage
+    Minimal example by using \c system/controlDict.functions:
+    \verbatim
+    heatTransferCoeff1
+    {
+        // Mandatory and other optional entries
+        ...
+
+        // Mandatory (inherited) entries (runtime modifiable)
+        patches     (<patch1> <patch2> ... <patchN>);
+
+        // Optional (inherited) entries (runtime modifiable)
+        qr          <qrName>;
+    }
+    \endverbatim
+
+    where the entries mean:
+    \table
+      Property  | Description                  | Type | Reqd | Dflt
+      patches   | Names of operand patches  | wordRes | yes  | -
+      qr        | Name of radiative heat flux  | word | no   | qr
+    \endtable
 
 SourceFiles
-    heatTransferCoeffModel.C
-    heatTransferCoeffModelNew.C
+  - heatTransferCoeffModel.C
+  - heatTransferCoeffModelNew.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_heatTransferCoeffModel_H
-#define Foam_heatTransferCoeffModel_H
+#ifndef heatTransferCoeffModel_H
+#define heatTransferCoeffModel_H
 
+#include "dictionary.H"
+#include "HashSet.H"
 #include "volFields.H"
+#include "runTimeSelectionTables.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -64,16 +90,16 @@ protected:
 
     // Protected Data
 
-        //- Const reference to the mesh
+        //- Mesh reference
         const fvMesh& mesh_;
 
-        //- List of (wall) patches to process
+        //- Optional list of (wall) patches to process
         labelHashSet patchSet_;
 
-        //- Name of temperature field
+        //- Temperature name
         const word TName_;
 
-        //- Name of radiative heat flux field
+        //- Name of radiative heat flux
         word qrName_;
 
 
@@ -143,51 +169,41 @@ public:
 
     // Member Functions
 
-    // Access
-
-        //- Return const reference to the mesh
-        const fvMesh& mesh() const noexcept
+        //- The mesh reference
+        const fvMesh& mesh() const
         {
             return mesh_;
         }
 
-        //- Return const reference to wall patches to process
-        const labelHashSet& patchSet() const noexcept
+        //- Wall patches to process
+        const labelHashSet& patchSet() const
         {
             return patchSet_;
         }
 
-        //- Return const reference to name of temperature field
-        const word& TName() const noexcept
+        //- Temperature name
+        const word& TName() const
         {
             return TName_;
         }
 
-        //- Return const reference to name of radiative heat-flux field
-        const word& qrName() const noexcept
+        //- Name of radiative heat flux
+        const word& qrName() const
         {
             return qrName_;
         }
 
+        //- Read from dictionary
+        virtual bool read(const dictionary& dict);
 
-    // Evaluation
-
-        //- Return boundary fields of heat-flux field
-        tmp<FieldField<Field, scalar>> q() const;
-
-        //- Calculate the heat transfer coefficient field and return true
-        //- if successful
         virtual bool calc
         (
             volScalarField& result,
             const FieldField<Field, scalar>& q
         );
 
-
-    // I-O
-
-        //- Read from dictionary
-        virtual bool read(const dictionary& dict);
+        //- Return q boundary fields
+        tmp<FieldField<Field, scalar>> q() const;
 };
 
 

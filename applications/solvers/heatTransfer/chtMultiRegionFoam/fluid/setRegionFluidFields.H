@@ -1,3 +1,5 @@
+    fvMesh& mesh = fluidRegions[i];
+
     CombustionModel<rhoReactionThermo>& reaction = reactionFluid[i];
 
     rhoReactionThermo& thermo = reaction.thermo();

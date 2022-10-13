@@ -36,10 +36,9 @@ Description
     {
         boundaryData
         {
-            header      true;
+            header      false;
             format      ascii;
             compression false;
-            normal      false;
         }
     }
     \endverbatim
@@ -54,7 +53,6 @@ Description
         transform   | Output coordinate transform           | no  |
         fieldLevel  | Subtract field level before scaling   | no  | empty dict
         fieldScale  | Output field scaling                  | no  | empty dict
-        normal      | Write face area normal in output      | no  | false
     \endtable
 
     Typical way of working:
@@ -70,7 +68,6 @@ Description
             boundaryData
             {
                 format  binary;
-                normal  yes;
                 fieldLevel
                 {
                     p       1e5;    // Absolute -> gauge [Pa]
@@ -161,14 +158,11 @@ class boundaryDataWriter
 {
     // Private Data
 
-        //- Output stream option
-        IOstreamOption streamOpt_;
-
         //- Output files with FoamFile header
         bool header_;
 
-        //- Output face area normal
-        const bool writeNormal_;
+        //- Output stream option
+        IOstreamOption streamOpt_;
 
 
     // Private Member Functions

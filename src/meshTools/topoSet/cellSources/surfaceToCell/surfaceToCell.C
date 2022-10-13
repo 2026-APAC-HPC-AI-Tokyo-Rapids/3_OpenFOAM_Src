@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -188,12 +188,11 @@ void Foam::surfaceToCell::combine(topoSet& set, const bool add) const
         {
             // Find cell point is in. Linear search.
             label celli = queryMesh.findCell(outsidePoint, -1, false);
-
-            if (returnReduceAnd(celli < 0))
+            if (returnReduce(celli, maxOp<label>()) == -1)
             {
                 FatalErrorInFunction
                     << "outsidePoint " << outsidePoint
-                    << " is not inside any cell" << nl
+                    << " is not inside any cell"
                     << exit(FatalError);
             }
         }
@@ -270,7 +269,7 @@ void Foam::surfaceToCell::combine(topoSet& set, const bool add) const
 
                 pointIndexHit inter = querySurf().nearest(c, span);
 
-                if (inter.hit() && inter.point().dist(c) < nearDist_)
+                if (inter.hit() && (mag(inter.hitPoint() - c) < nearDist_))
                 {
                     addOrDelete(set, celli, add);
                 }
@@ -302,7 +301,7 @@ void Foam::surfaceToCell::combine(topoSet& set, const bool add) const
 
                 pointIndexHit inter = querySurf().nearest(c, span);
 
-                if (inter.hit() && inter.point().dist(c) < nearDist_)
+                if (inter.hit() && (mag(inter.hitPoint() - c) < nearDist_))
                 {
                     if
                     (

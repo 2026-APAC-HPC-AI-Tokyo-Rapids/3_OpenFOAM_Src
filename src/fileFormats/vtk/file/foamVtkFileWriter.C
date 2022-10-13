@@ -334,15 +334,16 @@ bool Foam::vtk::fileWriter::open(const fileName& file, bool parallel)
     if
     (
         legacy()
-      ? outputFile_.has_ext(vtk::fileExtension[contentType_])
-      : outputFile_.has_ext(vtk::legacy::fileExtension)
+      ? outputFile_.hasExt(vtk::fileExtension[contentType_])
+      : outputFile_.hasExt(vtk::legacy::fileExtension)
     )
     {
         // Inappropriate extension. Legacy instead of xml, or vice versa.
-        outputFile_.remove_ext();
+
+        outputFile_.removeExt();
     }
 
-    if (!outputFile_.has_ext(ext()))
+    if (!outputFile_.hasExt(ext()))
     {
         // Add extension if required
         outputFile_.ext(ext());
@@ -567,8 +568,8 @@ bool Foam::vtk::fileWriter::writeProcIDs(const label nValues)
     const globalIndex procAddr
     (
         parallel_
-      ? globalIndex(globalIndex::gatherOnly{}, nValues)
-      : globalIndex(globalIndex::gatherNone{}, nValues)
+      ? globalIndex(nValues, globalIndex::gatherOnly{})
+      : globalIndex(nValues, globalIndex::gatherNone{})
     );
 
     const label totalCount = procAddr.totalSize();
@@ -599,7 +600,7 @@ bool Foam::vtk::fileWriter::writeProcIDs(const label nValues)
     this->endDataArray();
 
     // MPI barrier
-    return parallel_ ? returnReduceOr(good) : good;
+    return parallel_ ? returnReduce(good, orOp<bool>()) : good;
 }
 
 

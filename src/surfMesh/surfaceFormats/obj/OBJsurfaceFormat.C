@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -229,7 +229,7 @@ void Foam::fileFormats::OBJsurfaceFormat<Face>::write
 )
 {
     // ASCII only, allow output compression
-    streamOpt.format(IOstreamOption::ASCII);
+    streamOpt.format(IOstream::ASCII);
 
     const UList<point>& pointLst = surf.points();
     const UList<Face>&  faceLst  = surf.surfFaces();
@@ -255,7 +255,7 @@ void Foam::fileFormats::OBJsurfaceFormat<Face>::write
 
 
     os  << "# Wavefront OBJ file written " << clock::dateTime().c_str() << nl
-        << "o " << os.name().stem() << nl
+        << "o " << os.name().nameLessExt() << nl
         << nl
         << "# points : " << pointLst.size() << nl
         << "# faces  : " << faceLst.size() << nl

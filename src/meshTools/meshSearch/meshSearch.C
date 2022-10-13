@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2018 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -84,7 +84,7 @@ namespace Foam
             // the new face shares a point with an existing hit face and the
             // line passes through both faces in the same direction, then this
             // is also assumed to be a duplicate hit.
-            const label newFacei = tree_.shapes().objectIndex(index);
+            const label newFacei = tree_.shapes().faceLabels()[index];
             const face& newFace = mesh.faces()[newFacei];
             const scalar newDot = mesh.faceAreas()[newFacei] & (end - start);
             forAll(hits_, hiti)
@@ -136,7 +136,7 @@ bool Foam::meshSearch::findNearer
 
     forAll(points, pointi)
     {
-        scalar distSqr = sample.distSqr(points[pointi]);
+        scalar distSqr = magSqr(points[pointi] - sample);
 
         if (distSqr < nearestDistSqr)
         {
@@ -161,9 +161,11 @@ bool Foam::meshSearch::findNearer
 {
     bool nearer = false;
 
-    for (const label pointi : indices)
+    forAll(indices, i)
     {
-        scalar distSqr = sample.distSqr(points[pointi]);
+        label pointi = indices[i];
+
+        scalar distSqr = magSqr(points[pointi] - sample);
 
         if (distSqr < nearestDistSqr)
         {
@@ -182,7 +184,11 @@ Foam::label Foam::meshSearch::findNearestCellTree(const point& location) const
 {
     const indexedOctree<treeDataCell>& tree = cellTree();
 
-    pointIndexHit info = tree.findNearest(location, tree.bb().magSqr());
+    pointIndexHit info = tree.findNearest
+    (
+        location,
+        magSqr(tree.bb().max()-tree.bb().min())
+    );
 
     if (!info.hit())
     {
@@ -197,7 +203,7 @@ Foam::label Foam::meshSearch::findNearestCellLinear(const point& location) const
     const vectorField& centres = mesh_.cellCentres();
 
     label nearestIndex = 0;
-    scalar minProximity = location.distSqr(centres[nearestIndex]);
+    scalar minProximity = magSqr(centres[nearestIndex] - location);
 
     findNearer
     (
@@ -226,7 +232,7 @@ Foam::label Foam::meshSearch::findNearestCellWalk
     // Walk in direction of face that decreases distance
 
     label curCelli = seedCelli;
-    scalar distanceSqr = location.distSqr(mesh_.cellCentres()[curCelli]);
+    scalar distanceSqr = magSqr(mesh_.cellCentres()[curCelli] - location);
 
     bool closer;
 
@@ -253,7 +259,11 @@ Foam::label Foam::meshSearch::findNearestFaceTree(const point& location) const
     const indexedOctree<treeDataCell>& tree = cellTree();
 
     // Search with decent span
-    pointIndexHit info = tree.findNearest(location, tree.bb().magSqr());
+    pointIndexHit info = tree.findNearest
+    (
+        location,
+        magSqr(tree.bb().max()-tree.bb().min())
+    );
 
     if (!info.hit())
     {
@@ -267,7 +277,7 @@ Foam::label Foam::meshSearch::findNearestFaceTree(const point& location) const
     const cell& ownFaces = mesh_.cells()[info.index()];
 
     label nearestFacei = ownFaces[0];
-    scalar minProximity = location.distSqr(centres[nearestFacei]);
+    scalar minProximity = magSqr(centres[nearestFacei] - location);
 
     findNearer
     (
@@ -287,7 +297,7 @@ Foam::label Foam::meshSearch::findNearestFaceLinear(const point& location) const
     const vectorField& centres = mesh_.faceCentres();
 
     label nearestFacei = 0;
-    scalar minProximity = location.distSqr(centres[nearestFacei]);
+    scalar minProximity = magSqr(centres[nearestFacei] - location);
 
     findNearer
     (
@@ -319,7 +329,7 @@ Foam::label Foam::meshSearch::findNearestFaceWalk
     // Walk in direction of face that decreases distance
 
     label curFacei = seedFacei;
-    scalar distanceSqr = location.distSqr(centres[curFacei]);
+    scalar distanceSqr = magSqr(centres[curFacei] - location);
 
     while (true)
     {
@@ -405,7 +415,7 @@ Foam::label Foam::meshSearch::findCellWalk
 
     // Walk in direction of face that decreases distance
     label curCelli = seedCelli;
-    scalar nearestDistSqr = location.distSqr(mesh_.cellCentres()[curCelli]);
+    scalar nearestDistSqr = magSqr(mesh_.cellCentres()[curCelli] - location);
 
     while(true)
     {
@@ -434,7 +444,7 @@ Foam::label Foam::meshSearch::findCellWalk
                 }
 
                 // Also calculate the nearest cell
-                scalar distSqr = location.distSqr(mesh_.cellCentres()[celli]);
+                scalar distSqr = magSqr(mesh_.cellCentres()[celli] - location);
 
                 if (distSqr < nearestDistSqr)
                 {
@@ -605,7 +615,9 @@ const Foam::treeBoundBox& Foam::meshSearch::dataBoundBox() const
         treeBoundBox& overallBb = overallBbPtr_();
 
         // Extend slightly and make 3D
-        overallBb.inflate(rndGen, 1e-4, ROOTVSMALL);
+        overallBb = overallBb.extend(rndGen, 1e-4);
+        overallBb.min() -= point::uniform(ROOTVSMALL);
+        overallBb.max() += point::uniform(ROOTVSMALL);
     }
 
     return *overallBbPtr_;
@@ -618,18 +630,21 @@ Foam::meshSearch::boundaryTree() const
     if (!boundaryTreePtr_)
     {
         // All boundary faces (not just walls)
-        const labelRange bndFaces
+        labelList bndFaces
         (
-            mesh_.nInternalFaces(),
-            mesh_.nBoundaryFaces()
+            identity(mesh_.nBoundaryFaces(), mesh_.nInternalFaces())
         );
 
         boundaryTreePtr_.reset
         (
             new indexedOctree<treeDataFace>
             (
-                treeDataFace(mesh_, bndFaces),  // Boundary faces
-
+                treeDataFace    // all information needed to search faces
+                (
+                    false,                      // do not cache bb
+                    mesh_,
+                    bndFaces                    // boundary faces only
+                ),
                 dataBoundBox(),                 // overall search domain
                 8,                              // maxLevel
                 10,                             // leafsize
@@ -664,14 +679,18 @@ Foam::meshSearch::nonCoupledBoundaryTree() const
                 }
             }
         }
-        bndFaces.resize(bndi);
+        bndFaces.setSize(bndi);
 
         nonCoupledBoundaryTreePtr_.reset
         (
             new indexedOctree<treeDataFace>
             (
-                treeDataFace(mesh_, bndFaces),  // Boundary faces
-
+                treeDataFace    // all information needed to search faces
+                (
+                    false,                      // do not cache bb
+                    mesh_,
+                    bndFaces                    // boundary faces only
+                ),
                 dataBoundBox(),                 // overall search domain
                 8,                              // maxLevel
                 10,                             // leafsize
@@ -797,7 +816,7 @@ Foam::label Foam::meshSearch::findNearestBoundaryFace
             pointIndexHit info = boundaryTree().findNearest
             (
                 location,
-                tree.bb().magSqr()
+                magSqr(tree.bb().max()-tree.bb().min())
             );
 
             if (!info.hit())
@@ -809,7 +828,7 @@ Foam::label Foam::meshSearch::findNearestBoundaryFace
                 );
             }
 
-            return tree.shapes().objectIndex(info.index());
+            return tree.shapes().faceLabels()[info.index()];
         }
         else
         {
@@ -858,7 +877,7 @@ Foam::pointIndexHit Foam::meshSearch::intersection
     if (curHit.hit())
     {
         // Change index into octreeData into face label
-        curHit.setIndex(boundaryTree().shapes().objectIndex(curHit.index()));
+        curHit.setIndex(boundaryTree().shapes().faceLabels()[curHit.index()]);
     }
     return curHit;
 }
@@ -880,7 +899,7 @@ Foam::List<Foam::pointIndexHit> Foam::meshSearch::intersections
         if (!curHit.hit()) break;
 
         // Change index into octreeData into face label
-        curHit.setIndex(boundaryTree().shapes().objectIndex(curHit.index()));
+        curHit.setIndex(boundaryTree().shapes().faceLabels()[curHit.index()]);
 
         hits.append(curHit);
     }

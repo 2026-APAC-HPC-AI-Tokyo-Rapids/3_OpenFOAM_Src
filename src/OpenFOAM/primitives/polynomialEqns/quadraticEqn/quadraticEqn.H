@@ -72,8 +72,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_quadraticEqn_H
-#define Foam_quadraticEqn_H
+#ifndef quadraticEqn_H
+#define quadraticEqn_H
 
 #include "Roots.H"
 
@@ -98,8 +98,8 @@ public:
 
     // Constructors
 
-        //- Default construct
-        quadraticEqn() = default;
+        //- Construct null
+        inline quadraticEqn();
 
         //- Construct initialized to zero
         inline quadraticEqn(const Foam::zero);
@@ -112,14 +112,13 @@ public:
 
     // Access
 
-        scalar a() const noexcept { return this->v_[A]; }
-        scalar b() const noexcept { return this->v_[B]; }
-        scalar c() const noexcept { return this->v_[C]; }
+        inline scalar a() const;
+        inline scalar b() const;
+        inline scalar c() const;
 
-        scalar& a() noexcept { return this->v_[A]; }
-        scalar& b() noexcept { return this->v_[B]; }
-        scalar& c() noexcept { return this->v_[C]; }
-
+        inline scalar& a();
+        inline scalar& b();
+        inline scalar& c();
 
     // Evaluate
 

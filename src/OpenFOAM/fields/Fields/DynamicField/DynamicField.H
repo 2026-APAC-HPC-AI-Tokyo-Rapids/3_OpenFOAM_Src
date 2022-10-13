@@ -196,7 +196,7 @@ public:
         //- Alter the size of the underlying storage.
         //  The addressed size will be truncated if needed to fit, but will
         //  remain otherwise untouched.
-        //  Use this or reserve() in combination with push_back().
+        //  Use this or reserve() in combination with append().
         inline void setCapacity(const label len);
 
         //- Alter the size of the underlying storage,
@@ -283,18 +283,15 @@ public:
         inline void transfer(DynamicField<T, AnySizeMin>& list);
 
         //- Append an element at the end of the list
-        inline void push_back(const T& val);
+        inline void append(const T& val);
 
         //- Move append an element
-        inline void push_back(T&& val);
+        inline void append(T&& val);
 
         //- Append a List at the end of this list
-        inline void push_back(const UList<T>& list);
+        inline void append(const UList<T>& list);
 
-        //- Reduce size by 1 or more elements. Can be called on an empty list.
-        inline void pop_back(label n = 1);
-
-        //- Remove and return the last element. Fatal on an empty list.
+        //- Remove and return the top element
         inline T remove();
 
 
@@ -352,21 +349,6 @@ public:
             Ostream& os,
             const DynamicField<T, SizeMin>& rhs
         );
-
-
-    // Housekeeping
-
-        //- Append an element at the end of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(const T& val) { this->push_back(val); }
-
-        //- Move append an element
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(T&& val) { this->push_back(std::move(val)); }
-
-        //- Append a List at the end of this list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(const UList<T>& list) { this->push_back(list); }
 };
 
 

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -185,7 +185,7 @@ bool Foam::fileFormats::NASsurfaceFormat<Face>::read
 
         // HYPERMESH extension
         // $HMNAME COMP                   1"partName"
-        if (line.starts_with("$HMNAME COMP") && line.contains('"'))
+        if (line.starts_with("$HMNAME COMP") && line.find('"') != string::npos)
         {
             label groupId = readLabel(line.substr(16, 16));
 
@@ -441,7 +441,7 @@ void Foam::fileFormats::NASsurfaceFormat<Face>::write
 )
 {
     // ASCII only, allow output compression
-    streamOpt.format(IOstreamOption::ASCII);
+    streamOpt.format(IOstream::ASCII);
 
     const UList<point>& pointLst = surf.points();
     const UList<Face>&  faceLst  = surf.surfFaces();
@@ -493,7 +493,7 @@ void Foam::fileFormats::NASsurfaceFormat<Face>::write
     fileFormats::NASCore::setPrecision(os, fieldFormat::FREE);
 
     os  << "CEND" << nl
-        << "TITLE = " << os.name().stem() << nl;
+        << "TITLE = " << os.name().nameLessExt() << nl;
 
     // Print zone names as comment
     forAll(zones, zonei)

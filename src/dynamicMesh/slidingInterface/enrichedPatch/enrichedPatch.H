@@ -99,38 +99,38 @@ class enrichedPatch
     // Demand-driven private data
 
         //- Enriched patch
-        mutable std::unique_ptr<faceList> enrichedFacesPtr_;
+        mutable unique_ptr<faceList> enrichedFacesPtr_;
 
         //- Mesh points
-        mutable std::unique_ptr<labelList> meshPointsPtr_;
+        mutable unique_ptr<labelList> meshPointsPtr_;
 
         //- Local faces
-        mutable std::unique_ptr<faceList> localFacesPtr_;
+        mutable unique_ptr<faceList> localFacesPtr_;
 
         //- Local points
-        mutable std::unique_ptr<pointField> localPointsPtr_;
+        mutable unique_ptr<pointField> localPointsPtr_;
 
         //- Point-point addressing
-        mutable std::unique_ptr<labelListList> pointPointsPtr_;
+        mutable unique_ptr<labelListList> pointPointsPtr_;
 
         // Master point addressing
-        mutable std::unique_ptr<Map<labelList>> masterPointFacesPtr_;
+        mutable unique_ptr<Map<labelList>> masterPointFacesPtr_;
 
 
         // Cut faces and addressing
 
             //- Cut faces
-            mutable std::unique_ptr<faceList> cutFacesPtr_;
+            mutable unique_ptr<faceList> cutFacesPtr_;
 
             //- Cut face master
             //  - the face on the master patch for internal faces
             //  - the creator face for boundary face
-            mutable std::unique_ptr<labelList> cutFaceMasterPtr_;
+            mutable unique_ptr<labelList> cutFaceMasterPtr_;
 
             //- Cut face slave
             //  - the face on the slave patch for internal faces
             //  - -1 for boundary face
-            mutable std::unique_ptr<labelList> cutFaceSlavePtr_;
+            mutable unique_ptr<labelList> cutFaceSlavePtr_;
 
 
     // Private Member Functions

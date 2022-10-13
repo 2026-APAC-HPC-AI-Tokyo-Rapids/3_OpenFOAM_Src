@@ -15,8 +15,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_Fstream_H
-#define Foam_Fstream_H
+#ifndef Fstream_H
+#define Fstream_H
 
 #include "fstreamPointer.H"
 #include "IFstream.H"

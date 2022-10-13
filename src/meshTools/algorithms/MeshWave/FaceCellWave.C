@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,6 +40,16 @@ License
 #include "globalMeshData.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+
+template<class Type, class TrackingData>
+const Foam::scalar Foam::FaceCellWave<Type, TrackingData>::geomTol_ = 1e-6;
+
+template<class Type, class TrackingData>
+Foam::scalar Foam::FaceCellWave<Type, TrackingData>::propagationTol_ = 0.01;
+
+template<class Type, class TrackingData>
+int Foam::FaceCellWave<Type, TrackingData>::dummyTrackData_ = 12345;
+
 
 namespace Foam
 {
@@ -135,7 +145,7 @@ bool Foam::FaceCellWave<Type, TrackingData>::updateCell
     {
         if (changedCell_.set(celli))
         {
-            changedCells_.push_back(celli);
+            changedCells_.append(celli);
         }
     }
 
@@ -183,7 +193,7 @@ bool Foam::FaceCellWave<Type, TrackingData>::updateFace
     {
         if (changedFace_.set(facei))
         {
-            changedFaces_.push_back(facei);
+            changedFaces_.append(facei);
         }
     }
 
@@ -229,7 +239,7 @@ bool Foam::FaceCellWave<Type, TrackingData>::updateFace
     {
         if (changedFace_.set(facei))
         {
-            changedFaces_.push_back(facei);
+            changedFaces_.append(facei);
         }
     }
 
@@ -323,7 +333,7 @@ void Foam::FaceCellWave<Type, TrackingData>::setFaceInfo
 
     // Mark facei as visited and changed (both on list and on face itself)
     changedFace_.set(facei);
-    changedFaces_.push_back(facei);
+    changedFaces_.append(facei);
 }
 
 
@@ -351,7 +361,7 @@ void Foam::FaceCellWave<Type, TrackingData>::setFaceInfo
 
         // Mark facei as changed, both on list and on face itself.
         changedFace_.set(facei);
-        changedFaces_.push_back(facei);
+        changedFaces_.append(facei);
     }
 }
 
@@ -830,13 +840,13 @@ void Foam::FaceCellWave<Type, TrackingData>::handleExplicitConnections()
         if (changedFace_.test(f0))
         {
             // f0 changed. Update information on f1.
-            changedBaffles_.push_back(taggedInfoType(f1, allFaceInfo_[f0]));
+            changedBaffles_.append(taggedInfoType(f1, allFaceInfo_[f0]));
         }
 
         if (changedFace_.test(f1))
         {
             // f1 changed. Update information on f0.
-            changedBaffles_.push_back(taggedInfoType(f0, allFaceInfo_[f1]));
+            changedBaffles_.append(taggedInfoType(f0, allFaceInfo_[f1]));
         }
     }
 
@@ -877,19 +887,24 @@ Foam::FaceCellWave<Type, TrackingData>::FaceCellWave
     TrackingData& td
 )
 :
-    FaceCellWaveBase(mesh),
-
+    mesh_(mesh),
     explicitConnections_(),
     allFaceInfo_(allFaceInfo),
     allCellInfo_(allCellInfo),
     td_(td),
+    changedFace_(mesh_.nFaces(), false),
+    changedCell_(mesh_.nCells(), false),
+    changedFaces_(mesh_.nFaces()),
+    changedCells_(mesh_.nCells()),
     changedBaffles_(2*explicitConnections_.size()),
     hasCyclicPatches_(hasPatch<cyclicPolyPatch>()),
     hasCyclicAMIPatches_
     (
-        returnReduceOr(hasPatch<cyclicAMIPolyPatch>())
+        returnReduce(hasPatch<cyclicAMIPolyPatch>(), orOp<bool>())
     ),
-    nEvals_(0)
+    nEvals_(0),
+    nUnvisitedCells_(mesh_.nCells()),
+    nUnvisitedFaces_(mesh_.nFaces())
 {
     if
     (
@@ -920,19 +935,24 @@ Foam::FaceCellWave<Type, TrackingData>::FaceCellWave
     TrackingData& td
 )
 :
-    FaceCellWaveBase(mesh),
-
+    mesh_(mesh),
     explicitConnections_(),
     allFaceInfo_(allFaceInfo),
     allCellInfo_(allCellInfo),
     td_(td),
+    changedFace_(mesh_.nFaces(), false),
+    changedCell_(mesh_.nCells(), false),
+    changedFaces_(mesh_.nFaces()),
+    changedCells_(mesh_.nCells()),
     changedBaffles_(2*explicitConnections_.size()),
     hasCyclicPatches_(hasPatch<cyclicPolyPatch>()),
     hasCyclicAMIPatches_
     (
-        returnReduceOr(hasPatch<cyclicAMIPolyPatch>())
+        returnReduce(hasPatch<cyclicAMIPolyPatch>(), orOp<bool>())
     ),
-    nEvals_(0)
+    nEvals_(0),
+    nUnvisitedCells_(mesh_.nCells()),
+    nUnvisitedFaces_(mesh_.nFaces())
 {
     if
     (
@@ -960,8 +980,8 @@ Foam::FaceCellWave<Type, TrackingData>::FaceCellWave
         FatalErrorInFunction
             << "Maximum number of iterations reached. Increase maxIter." << nl
             << "    maxIter:" << maxIter << nl
-            << "    nChangedCells:" << nChangedCells() << nl
-            << "    nChangedFaces:" << nChangedFaces() << endl
+            << "    nChangedCells:" << changedCells_.size() << nl
+            << "    nChangedFaces:" << changedFaces_.size() << endl
             << exit(FatalError);
     }
 }
@@ -981,20 +1001,25 @@ Foam::FaceCellWave<Type, TrackingData>::FaceCellWave
     TrackingData& td
 )
 :
-    FaceCellWaveBase(mesh),
-
+    mesh_(mesh),
     explicitConnections_(explicitConnections),
     allFaceInfo_(allFaceInfo),
     allCellInfo_(allCellInfo),
     td_(td),
+    changedFace_(mesh_.nFaces(), false),
+    changedCell_(mesh_.nCells(), false),
+    changedFaces_(mesh_.nFaces()),
+    changedCells_(mesh_.nCells()),
     changedBaffles_(2*explicitConnections_.size()),
     hasCyclicPatches_(hasPatch<cyclicPolyPatch>()),
     hasCyclicAMIPatches_
     (
         handleCyclicAMI
-     && returnReduceOr(hasPatch<cyclicAMIPolyPatch>())
+     && returnReduce(hasPatch<cyclicAMIPolyPatch>(), orOp<bool>())
     ),
-    nEvals_(0)
+    nEvals_(0),
+    nUnvisitedCells_(mesh_.nCells()),
+    nUnvisitedFaces_(mesh_.nFaces())
 {
     if
     (
@@ -1022,14 +1047,28 @@ Foam::FaceCellWave<Type, TrackingData>::FaceCellWave
         FatalErrorInFunction
             << "Maximum number of iterations reached. Increase maxIter." << nl
             << "    maxIter:" << maxIter << nl
-            << "    nChangedCells:" << nChangedCells() << nl
-            << "    nChangedFaces:" << nChangedFaces() << endl
+            << "    nChangedCells:" << changedCells_.size() << nl
+            << "    nChangedFaces:" << changedFaces_.size() << endl
             << exit(FatalError);
     }
 }
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+template<class Type, class TrackingData>
+Foam::label Foam::FaceCellWave<Type, TrackingData>::nUnvisitedCells() const
+{
+    return nUnvisitedCells_;
+}
+
+
+template<class Type, class TrackingData>
+Foam::label Foam::FaceCellWave<Type, TrackingData>::nUnvisitedFaces() const
+{
+    return nUnvisitedFaces_;
+}
+
 
 template<class Type, class TrackingData>
 Foam::label Foam::FaceCellWave<Type, TrackingData>::faceToCell()
@@ -1100,11 +1139,11 @@ Foam::label Foam::FaceCellWave<Type, TrackingData>::faceToCell()
 
     if (debug & 2)
     {
-        Pout<< " Changed cells            : " << nChangedCells() << endl;
+        Pout<< " Changed cells            : " << changedCells_.size() << endl;
     }
 
     // Number of changedCells over all procs
-    return returnReduce(nChangedCells(), sumOp<label>());
+    return returnReduce(changedCells_.size(), sumOp<label>());
 }
 
 
@@ -1174,12 +1213,12 @@ Foam::label Foam::FaceCellWave<Type, TrackingData>::cellToFace()
 
     if (debug & 2)
     {
-        Pout<< " Changed faces            : " << nChangedFaces() << endl;
+        Pout<< " Changed faces            : " << changedFaces_.size() << endl;
     }
 
 
     // Number of changedFaces over all procs
-    return returnReduce(nChangedFaces(), sumOp<label>());
+    return returnReduce(changedFaces_.size(), sumOp<label>());
 }
 
 

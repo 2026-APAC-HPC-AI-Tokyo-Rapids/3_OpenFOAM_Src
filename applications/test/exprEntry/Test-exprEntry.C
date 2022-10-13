@@ -120,8 +120,7 @@ int main(int argc, char *argv[])
                     try
                     {
                         // Should not trigger any errors
-                        auto expr = expressions::exprString::toExpr(str, dict);
-
+                        expressions::exprString expr(str, dict, false);
                         Info<< "expr: " << expr << nl;
                     }
                     catch (const Foam::error& err)

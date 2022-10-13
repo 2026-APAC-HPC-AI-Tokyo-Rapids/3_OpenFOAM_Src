@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -124,7 +124,7 @@ Foam::FixedList<Foam::label, 3> Foam::ensightFaces::sizes() const
 {
     FixedList<label, 3> count;
 
-    for (int typei = 0; typei < nTypes; ++typei)
+    forAll(count, typei)
     {
         count[typei] = size(elemType(typei));
     }
@@ -133,14 +133,14 @@ Foam::FixedList<Foam::label, 3> Foam::ensightFaces::sizes() const
 }
 
 
-Foam::label Foam::ensightFaces::totalSize() const noexcept
+Foam::label Foam::ensightFaces::total() const
 {
-    label count = 0;
-    for (label n : sizes_)
+    label nTotal = 0;
+    forAll(sizes_, typei)
     {
-        count += n;
+        nTotal += sizes_[typei];
     }
-    return count;
+    return nTotal;
 }
 
 
@@ -163,10 +163,11 @@ void Foam::ensightFaces::clearOut()
 
 void Foam::ensightFaces::reduce()
 {
-    for (int typei = 0; typei < nTypes; ++typei)
+    forAll(sizes_, typei)
     {
         sizes_[typei] = size(elemType(typei));
     }
+    // Can reduce FixedList with sumOp<label> in a single operation
     Foam::reduce(sizes_, sumOp<label>());
 }
 

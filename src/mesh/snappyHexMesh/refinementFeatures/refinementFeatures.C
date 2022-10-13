@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -297,15 +297,22 @@ void Foam::refinementFeatures::buildTrees(const label featI)
 
     // Slightly extended bb. Slightly off-centred just so on symmetric
     // geometry there are less face/edge aligned items.
-    bb.inflate(rndGen, 1e-4, ROOTVSMALL);
+    bb = bb.extend(rndGen, 1e-4);
+    bb.min() -= point::uniform(ROOTVSMALL);
+    bb.max() += point::uniform(ROOTVSMALL);
 
     edgeTrees_.set
     (
         featI,
         new indexedOctree<treeDataEdge>
         (
-            treeDataEdge(edges, points),  // All edges
-
+            treeDataEdge
+            (
+                false,                  // do not cache bb
+                edges,
+                points,
+                identity(edges.size())
+            ),
             bb,     // overall search domain
             8,      // maxLevel
             10,     // leafsize
@@ -322,7 +329,6 @@ void Foam::refinementFeatures::buildTrees(const label featI)
         new indexedOctree<treeDataPoint>
         (
             treeDataPoint(points, featurePoints),
-
             bb,     // overall search domain
             8,      // maxLevel
             10,     // leafsize
@@ -393,7 +399,7 @@ void Foam::refinementFeatures::findHigherLevel
             label minDistI = findLower
             (
                 distances,
-                nearInfo[candidateI].point().dist(candidates[candidateI])
+                mag(nearInfo[candidateI].hitPoint()-candidates[candidateI])
             );
 
             label pointi = candidateMap[candidateI];
@@ -432,15 +438,22 @@ Foam::refinementFeatures::regionEdgeTrees() const
 
             // Slightly extended bb. Slightly off-centred just so on symmetric
             // geometry there are less face/edge aligned items.
-            bb.inflate(rndGen, 1e-4, ROOTVSMALL);
+            bb = bb.extend(rndGen, 1e-4);
+            bb.min() -= point::uniform(ROOTVSMALL);
+            bb.max() += point::uniform(ROOTVSMALL);
 
             trees.set
             (
                 featI,
                 new indexedOctree<treeDataEdge>
                 (
-                    treeDataEdge(edges, points, eMesh.regionEdges()),
-
+                    treeDataEdge
+                    (
+                        false,                  // do not cache bb
+                        edges,
+                        points,
+                        eMesh.regionEdges()
+                    ),
                     bb,     // overall search domain
                     8,      // maxLevel
                     10,     // leafsize
@@ -619,7 +632,7 @@ bool Foam::refinementFeatures::checkSizes
         os<< endl;
     }
 
-    return returnReduceOr(hasError);
+    return returnReduce(hasError, orOp<bool>());
 }
 
 
@@ -642,9 +655,8 @@ void Foam::refinementFeatures::findNearestEdge
     forAll(edgeTrees_, featI)
     {
         const indexedOctree<treeDataEdge>& tree = edgeTrees_[featI];
-        const treeDataEdge& treeData = tree.shapes();
 
-        if (!treeData.empty())
+        if (tree.shapes().size() > 0)
         {
             forAll(samples, sampleI)
             {
@@ -653,7 +665,7 @@ void Foam::refinementFeatures::findNearestEdge
                 scalar distSqr;
                 if (nearInfo[sampleI].hit())
                 {
-                    distSqr = nearInfo[sampleI].point().distSqr(sample);
+                    distSqr = magSqr(nearInfo[sampleI].hitPoint()-sample);
                 }
                 else
                 {
@@ -668,10 +680,14 @@ void Foam::refinementFeatures::findNearestEdge
                     nearInfo[sampleI] = pointIndexHit
                     (
                         info.hit(),
-                        info.point(),
-                        treeData.objectIndex(info.index())
+                        info.hitPoint(),
+                        tree.shapes().edgeLabels()[info.index()]
                     );
-                    nearNormal[sampleI] = treeData.line(info.index()).unitVec();
+
+                    const treeDataEdge& td = tree.shapes();
+                    const edge& e = td.edges()[nearInfo[sampleI].index()];
+
+                    nearNormal[sampleI] = e.unitVec(td.points());
                 }
             }
         }
@@ -702,7 +718,6 @@ void Foam::refinementFeatures::findNearestRegionEdge
     forAll(regionTrees, featI)
     {
         const indexedOctree<treeDataEdge>& regionTree = regionTrees[featI];
-        const treeDataEdge& treeData = regionTree.shapes();
 
         forAll(samples, sampleI)
         {
@@ -711,7 +726,7 @@ void Foam::refinementFeatures::findNearestRegionEdge
             scalar distSqr;
             if (nearInfo[sampleI].hit())
             {
-                distSqr = nearInfo[sampleI].point().distSqr(sample);
+                distSqr = magSqr(nearInfo[sampleI].hitPoint()-sample);
             }
             else
             {
@@ -723,14 +738,19 @@ void Foam::refinementFeatures::findNearestRegionEdge
 
             if (info.hit())
             {
+                const treeDataEdge& td = regionTree.shapes();
+
                 nearFeature[sampleI] = featI;
                 nearInfo[sampleI] = pointIndexHit
                 (
                     info.hit(),
-                    info.point(),
-                    treeData.objectIndex(info.index())
+                    info.hitPoint(),
+                    regionTree.shapes().edgeLabels()[info.index()]
                 );
-                nearNormal[sampleI] = treeData.line(info.index()).unitVec();
+
+                const edge& e = td.edges()[nearInfo[sampleI].index()];
+
+                nearNormal[sampleI] = e.unitVec(td.points());
             }
         }
     }
@@ -754,7 +774,7 @@ void Foam::refinementFeatures::findNearestRegionEdge
 //    {
 //        const indexedOctree<treeDataPoint>& tree = pointTrees_[featI];
 //
-//        if (!tree.shapes().empty())
+//        if (tree.shapes().pointLabels().size() > 0)
 //        {
 //            forAll(samples, sampleI)
 //            {
@@ -763,11 +783,14 @@ void Foam::refinementFeatures::findNearestRegionEdge
 //                scalar distSqr;
 //                if (nearFeature[sampleI] != -1)
 //                {
-//                    const nearTree = pointTrees_[nearFeature[sampleI]];
-//                    distSqr = sample.distSqr
-//                    (
-//                        nearTree.shapes()[nearIndex[sampleI]]
-//                    );
+//                    label nearFeatI = nearFeature[sampleI];
+//                    const indexedOctree<treeDataPoint>& nearTree =
+//                        pointTrees_[nearFeatI];
+//                    label featPointi =
+//                        nearTree.shapes().pointLabels()[nearIndex[sampleI]];
+//                    const point& featPt =
+//                        operator[](nearFeatI).points()[featPointi];
+//                    distSqr = magSqr(featPt-sample);
 //                }
 //                else
 //                {
@@ -803,9 +826,8 @@ void Foam::refinementFeatures::findNearestPoint
     forAll(pointTrees_, featI)
     {
         const indexedOctree<treeDataPoint>& tree = pointTrees_[featI];
-        const auto& treeData = tree.shapes();
 
-        if (!treeData.empty())
+        if (tree.shapes().pointLabels().size() > 0)
         {
             forAll(samples, sampleI)
             {
@@ -814,7 +836,7 @@ void Foam::refinementFeatures::findNearestPoint
                 scalar distSqr;
                 if (nearFeature[sampleI] != -1)
                 {
-                    distSqr = nearInfo[sampleI].point().distSqr(sample);
+                    distSqr = magSqr(nearInfo[sampleI].hitPoint()-sample);
                 }
                 else
                 {
@@ -829,8 +851,8 @@ void Foam::refinementFeatures::findNearestPoint
                     nearInfo[sampleI] = pointIndexHit
                     (
                         info.hit(),
-                        info.point(),
-                        treeData.objectIndex(info.index())
+                        info.hitPoint(),
+                        tree.shapes().pointLabels()[info.index()]
                     );
                 }
             }

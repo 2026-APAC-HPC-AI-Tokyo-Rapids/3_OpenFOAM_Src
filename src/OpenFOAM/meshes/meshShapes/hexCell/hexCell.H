@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,8 +38,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_hexCell_H
-#define Foam_hexCell_H
+#ifndef hexCell_H
+#define hexCell_H
 
 #include "FixedList.H"
 #include "faceList.H"
@@ -78,15 +78,6 @@ class hexCell
 
 
 public:
-
-    // Generated Methods
-
-        //- The front() accessor (from FixedList) has no purpose
-        void front() = delete;
-
-        //- The back() accessor (from FixedList) has no purpose
-        void back() = delete;
-
 
     // Constructors
 

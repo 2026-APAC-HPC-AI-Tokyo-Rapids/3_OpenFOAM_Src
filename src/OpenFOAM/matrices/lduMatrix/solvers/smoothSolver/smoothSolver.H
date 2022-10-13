@@ -43,8 +43,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_smoothSolver_H
-#define Foam_smoothSolver_H
+#ifndef smoothSolver_H
+#define smoothSolver_H
 
 #include "lduMatrix.H"
 
@@ -63,7 +63,7 @@ class smoothSolver
 {
 protected:
 
-    // Protected Data
+    // Protected data
 
         //- Number of sweeps before the evaluation of residual
         label nSweeps_;
@@ -94,7 +94,6 @@ public:
 
     //- Destructor
     virtual ~smoothSolver() = default;
-
 
     // Member Functions
 

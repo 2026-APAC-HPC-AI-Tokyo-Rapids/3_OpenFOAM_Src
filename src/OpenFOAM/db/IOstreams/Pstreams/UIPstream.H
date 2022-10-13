@@ -156,11 +156,11 @@ public:
             //- Read a label
             Istream& read(label& val);
 
-            //- Read a float
-            Istream& read(float& val);
+            //- Read a floatScalar
+            Istream& read(floatScalar& val);
 
-            //- Read a double
-            Istream& read(double& val);
+            //- Read a doubleScalar
+            Istream& read(doubleScalar& val);
 
             //- Read binary block with 8-byte alignment.
             Istream& read(char* data, std::streamsize count);

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,7 +28,7 @@ License
 
 #include "treeDataFace.H"
 #include "polyMesh.H"
-#include "triangle.H"
+#include "triangleFuncs.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -40,139 +40,25 @@ namespace Foam
 }
 
 
-// * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
-
-namespace Foam
-{
-
-// Bound boxes corresponding to specified faces
-template<class ElementIds>
-static treeBoundBoxList boxesImpl
-(
-    const primitiveMesh& mesh,
-    const ElementIds& elemIds
-)
-{
-    treeBoundBoxList bbs(elemIds.size());
-
-    std::transform
-    (
-        elemIds.cbegin(),
-        elemIds.cend(),
-        bbs.begin(),
-        [&](label facei)
-        {
-            return treeBoundBox(mesh.points(), mesh.faces()[facei]);
-        }
-    );
-
-    return bbs;
-}
-
-
-// Overall bound box for specified faces
-template<class ElementIds>
-static treeBoundBox boundsImpl
-(
-    const primitiveMesh& mesh,
-    const ElementIds& elemIds
-)
-{
-    treeBoundBox bb;
-
-    for (const label facei : elemIds)
-    {
-        bb.add(mesh.points(), mesh.faces()[facei]);
-    }
-
-    return bb;
-}
-
-}  // End namespace Foam
-
-
-// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
-
-Foam::treeBoundBoxList
-Foam::treeDataFace::boxes(const primitiveMesh& mesh)
-{
-    // All faces
-    return boxesImpl(mesh, labelRange(mesh.nFaces()));
-}
-
-
-Foam::treeBoundBoxList
-Foam::treeDataFace::boxes
-(
-    const primitiveMesh& mesh,
-    const labelRange& range
-)
-{
-    return boxesImpl(mesh, range);
-}
-
-
-Foam::treeBoundBoxList
-Foam::treeDataFace::boxes
-(
-    const primitiveMesh& mesh,
-    const labelUList& faceIds
-)
-{
-    return boxesImpl(mesh, faceIds);
-}
-
-
-Foam::treeBoundBox
-Foam::treeDataFace::bounds
-(
-    const primitiveMesh& mesh,
-    const labelRange& range
-)
-{
-    return boundsImpl(mesh, range);
-}
-
-
-Foam::treeBoundBox
-Foam::treeDataFace::bounds
-(
-    const primitiveMesh& mesh,
-    const labelUList& faceIds
-)
-{
-    return boundsImpl(mesh, faceIds);
-}
-
-
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-inline bool
-Foam::treeDataFace::usesFace(const label facei) const
+Foam::treeBoundBox Foam::treeDataFace::calcBb(const label facei) const
 {
-    return (!useSubset_ || isTreeFace_.test(facei));
-}
-
-
-inline Foam::treeBoundBox
-Foam::treeDataFace::getBounds(const label index) const
-{
-    const label facei = objectIndex(index);
     return treeBoundBox(mesh_.points(), mesh_.faces()[facei]);
 }
 
 
 void Foam::treeDataFace::update()
 {
+    isTreeFace_.set(faceLabels_);
+
     if (cacheBb_)
     {
-        if (useSubset_)
+        bbs_.setSize(faceLabels_.size());
+
+        forAll(faceLabels_, i)
         {
-            bbs_ = treeDataFace::boxes(mesh_, faceLabels_);
-        }
-        else
-        {
-            bbs_ = treeDataFace::boxes(mesh_);
+            bbs_[i] = calcBb(faceLabels_[i]);
         }
     }
 }
@@ -183,57 +69,13 @@ void Foam::treeDataFace::update()
 Foam::treeDataFace::treeDataFace
 (
     const bool cacheBb,
-    const primitiveMesh& mesh
-)
-:
-    mesh_(mesh),
-    faceLabels_(),
-    isTreeFace_(),
-    useSubset_(false),
-    cacheBb_(cacheBb)
-{
-    update();
-}
-
-
-Foam::treeDataFace::treeDataFace
-(
-    const bool cacheBb,
-    const primitiveMesh& mesh,
-    const labelRange& range
-)
-:
-    mesh_(mesh),
-    faceLabels_(identity(range)),
-    isTreeFace_(range),
-    useSubset_(true),
-    cacheBb_(cacheBb)
-{
-    update();
-}
-
-
-Foam::treeDataFace::treeDataFace
-(
-    const bool cacheBb,
-    const polyPatch& patch
-)
-:
-    treeDataFace(cacheBb, patch.boundaryMesh().mesh(), patch.range())
-{}
-
-
-Foam::treeDataFace::treeDataFace
-(
-    const bool cacheBb,
     const primitiveMesh& mesh,
     const labelUList& faceLabels
 )
 :
     mesh_(mesh),
     faceLabels_(faceLabels),
-    isTreeFace_(mesh_.nFaces(), faceLabels_),
-    useSubset_(true),
+    isTreeFace_(mesh.nFaces(), false),
     cacheBb_(cacheBb)
 {
     update();
@@ -249,45 +91,73 @@ Foam::treeDataFace::treeDataFace
 :
     mesh_(mesh),
     faceLabels_(std::move(faceLabels)),
-    isTreeFace_(mesh_.nFaces(), faceLabels_),
-    useSubset_(true),
+    isTreeFace_(mesh.nFaces(), false),
     cacheBb_(cacheBb)
 {
     update();
 }
 
 
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-Foam::treeBoundBox
-Foam::treeDataFace::bounds(const labelUList& indices) const
+Foam::treeDataFace::treeDataFace
+(
+    const bool cacheBb,
+    const primitiveMesh& mesh
+)
+:
+    mesh_(mesh),
+    faceLabels_(identity(mesh_.nFaces())),
+    isTreeFace_(mesh.nFaces(), false),
+    cacheBb_(cacheBb)
 {
-    if (useSubset_)
-    {
-        treeBoundBox bb;
-
-        for (const label index : indices)
-        {
-            const label facei = faceLabels_[index];
-
-            bb.add(mesh_.points(), mesh_.faces()[facei]);
-        }
-
-        return bb;
-    }
-
-    return treeDataFace::bounds(mesh_, indices);
+    update();
 }
 
 
-Foam::tmp<Foam::pointField> Foam::treeDataFace::centres() const
+Foam::treeDataFace::treeDataFace
+(
+    const bool cacheBb,
+    const polyPatch& patch
+)
+:
+    mesh_(patch.boundaryMesh().mesh()),
+    faceLabels_(identity(patch.range())),
+    isTreeFace_(mesh_.nFaces(), false),
+    cacheBb_(cacheBb)
 {
-    if (useSubset_)
+    update();
+}
+
+
+Foam::treeDataFace::findNearestOp::findNearestOp
+(
+    const indexedOctree<treeDataFace>& tree
+)
+:
+    tree_(tree)
+{}
+
+
+Foam::treeDataFace::findIntersectOp::findIntersectOp
+(
+    const indexedOctree<treeDataFace>& tree
+)
+:
+    tree_(tree)
+{}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+Foam::pointField Foam::treeDataFace::shapePoints() const
+{
+    pointField cc(faceLabels_.size());
+
+    forAll(faceLabels_, i)
     {
-        return tmp<pointField>::New(mesh_.faceCentres(), faceLabels_);
+        cc[i] = mesh_.faceCentres()[faceLabels_[i]];
     }
 
-    return mesh_.faceCentres();
+    return cc;
 }
 
 
@@ -311,9 +181,7 @@ Foam::volumeType Foam::treeDataFace::getVolumeType
     // Find nearest face to sample
     pointIndexHit info = oc.findNearest(sample, sqr(GREAT));
 
-    const label index = info.index();
-
-    if (index == -1)
+    if (info.index() == -1)
     {
         FatalErrorInFunction
             << "Could not find " << sample << " in octree."
@@ -322,7 +190,7 @@ Foam::volumeType Foam::treeDataFace::getVolumeType
 
 
     // Get actual intersection point on face
-    const label facei = objectIndex(index);
+    label facei = faceLabels_[info.index()];
 
     if (debug & 2)
     {
@@ -340,7 +208,7 @@ Foam::volumeType Foam::treeDataFace::getVolumeType
     const point& fc = mesh_.faceCentres()[facei];
 
     pointHit curHit = f.nearestPoint(sample, points);
-    const point& curPt = curHit.point();
+    const point& curPt = curHit.rawPoint();
 
     //
     // 1] Check whether sample is above face
@@ -370,32 +238,32 @@ Foam::volumeType Foam::treeDataFace::getVolumeType
 
     const scalar typDimSqr = mag(area) + VSMALL;
 
-    for (const label fp : f)
+    forAll(f, fp)
     {
-        const scalar relDistSqr = (magSqr(points[fp] - curPt)/typDimSqr);
-
-        if (relDistSqr < tolSqr)
+        if ((magSqr(points[f[fp]] - curPt)/typDimSqr) < tolSqr)
         {
-            // Face intersection point equals face vertex
+            // Face intersection point equals face vertex fp
 
             // Calculate point normal (wrong: uses face normals instead of
             // triangle normals)
+            const labelList& pFaces = mesh_.pointFaces()[f[fp]];
 
             vector pointNormal(Zero);
 
-            for (const label ptFacei : mesh_.pointFaces()[fp])
+            for (const label facei : pFaces)
             {
-                if (usesFace(ptFacei))
+                if (isTreeFace_.test(facei))
                 {
-                    pointNormal += normalised(mesh_.faceAreas()[ptFacei]);
+                    pointNormal += normalised(mesh_.faceAreas()[facei]);
                 }
             }
 
             if (debug & 2)
             {
-                    Pout<< " -> face point hit :" << points[fp]
+                    Pout<< " -> face point hit :" << points[f[fp]]
                         << " point normal:" << pointNormal
-                        << " distance:" << relDistSqr << endl;
+                        << " distance:"
+                        << magSqr(points[f[fp]] - curPt)/typDimSqr << endl;
             }
             return indexedOctree<treeDataFace>::getSide
             (
@@ -404,10 +272,7 @@ Foam::volumeType Foam::treeDataFace::getVolumeType
             );
         }
     }
-
-    const scalar relDistSqr = (magSqr(fc - curPt)/typDimSqr);
-
-    if (relDistSqr < tolSqr)
+    if ((magSqr(fc - curPt)/typDimSqr) < tolSqr)
     {
         // Face intersection point equals face centre. Normal at face centre
         // is already average of face normals
@@ -415,44 +280,53 @@ Foam::volumeType Foam::treeDataFace::getVolumeType
         if (debug & 2)
         {
             Pout<< " -> centre hit:" << fc
-                << " distance:" << relDistSqr << endl;
+                << " distance:" << magSqr(fc - curPt)/typDimSqr << endl;
         }
 
         return indexedOctree<treeDataFace>::getSide(area,  sample - curPt);
     }
 
 
+
     //
     // 3] Get the 'real' edge the face intersection is on
     //
 
-    for (const label edgei : mesh_.faceEdges()[facei])
+    const labelList& myEdges = mesh_.faceEdges()[facei];
+
+    forAll(myEdges, myEdgeI)
     {
+        const edge& e = mesh_.edges()[myEdges[myEdgeI]];
+
         pointHit edgeHit =
-            mesh_.edges()[edgei].line(points).nearestDist(sample);
+            line<point, const point&>
+            (
+                points[e.start()],
+                points[e.end()]
+            ).nearestDist(sample);
 
-        const scalar relDistSqr = edgeHit.point().distSqr(curPt)/typDimSqr;
 
-        if (relDistSqr < tolSqr)
+        if ((magSqr(edgeHit.rawPoint() - curPt)/typDimSqr) < tolSqr)
         {
             // Face intersection point lies on edge e
 
             // Calculate edge normal (wrong: uses face normals instead of
             // triangle normals)
+            const labelList& eFaces = mesh_.edgeFaces()[myEdges[myEdgeI]];
 
             vector edgeNormal(Zero);
 
-            for (const label eFacei : mesh_.edgeFaces()[edgei])
+            for (const label facei : eFaces)
             {
-                if (usesFace(eFacei))
+                if (isTreeFace_.test(facei))
                 {
-                    edgeNormal += normalised(mesh_.faceAreas()[eFacei]);
+                    edgeNormal += normalised(mesh_.faceAreas()[facei]);
                 }
             }
 
             if (debug & 2)
             {
-                Pout<< " -> real edge hit point:" << edgeHit.point()
+                Pout<< " -> real edge hit point:" << edgeHit.rawPoint()
                     << " comparing to edge normal:" << edgeNormal
                     << endl;
             }
@@ -474,11 +348,13 @@ Foam::volumeType Foam::treeDataFace::getVolumeType
 
     forAll(f, fp)
     {
-        pointHit edgeHit = linePointRef(points[f[fp]], fc).nearestDist(sample);
+        pointHit edgeHit = line<point, const point&>
+        (
+            points[f[fp]],
+            fc
+        ).nearestDist(sample);
 
-        const scalar relDistSqr = edgeHit.point().distSqr(curPt)/typDimSqr;
-
-        if (relDistSqr < tolSqr)
+        if ((magSqr(edgeHit.rawPoint() - curPt)/typDimSqr) < tolSqr)
         {
             // Face intersection point lies on edge between two face triangles
 
@@ -492,7 +368,7 @@ Foam::volumeType Foam::treeDataFace::getVolumeType
 
             if (debug & 2)
             {
-                Pout<< " -> internal edge hit point:" << edgeHit.point()
+                Pout<< " -> internal edge hit point:" << edgeHit.rawPoint()
                     << " comparing to edge normal "
                     << 0.5*(nLeft + nRight)
                     << endl;
@@ -530,145 +406,62 @@ Foam::volumeType Foam::treeDataFace::getVolumeType
 }
 
 
-// Check if any point on shape is inside searchBox.
+// Check if any point on shape is inside cubeBb.
 bool Foam::treeDataFace::overlaps
 (
     const label index,
-    const treeBoundBox& searchBox
+    const treeBoundBox& cubeBb
 ) const
 {
     // 1. Quick rejection: bb does not intersect face bb at all
-    if
-    (
-        cacheBb_
-      ? !searchBox.overlaps(bbs_[index])
-      : !searchBox.overlaps(getBounds(index))
-    )
+    if (cacheBb_)
     {
-        return false;
+        if (!cubeBb.overlaps(bbs_[index]))
+        {
+            return false;
+        }
+    }
+    else
+    {
+        if (!cubeBb.overlaps(calcBb(faceLabels_[index])))
+        {
+            return false;
+        }
     }
 
     const pointField& points = mesh_.points();
 
+
     // 2. Check if one or more face points inside
-    const label facei = objectIndex(index);
+    label facei = faceLabels_[index];
 
     const face& f = mesh_.faces()[facei];
-
-    if (f.size() == 3)
-    {
-        const triPointRef tri(points[f[0]], points[f[1]], points[f[2]]);
-
-        return searchBox.intersects(tri);
-    }
-
-    if (searchBox.containsAny(points, f))
+    if (cubeBb.containsAny(points, f))
     {
         return true;
     }
 
     // 3. Difficult case: all points are outside but connecting edges might
     // go through cube. Use triangle-bounding box intersection.
-
     const point& fc = mesh_.faceCentres()[facei];
 
     forAll(f, fp)
     {
-        const triPointRef tri
+        bool triIntersects = triangleFuncs::intersectBb
         (
-            points[f.thisLabel(fp)], points[f.nextLabel(fp)], fc
+            points[f[fp]],
+            points[f[f.fcIndex(fp)]],
+            fc,
+            cubeBb
         );
 
-        if (searchBox.intersects(tri))
+        if (triIntersects)
         {
             return true;
         }
     }
 
     return false;
-}
-
-
-// Check if any point on shape is inside sphere.
-bool Foam::treeDataFace::overlaps
-(
-    const label index,
-    const point& centre,
-    const scalar radiusSqr
-) const
-{
-    // 1. Quick rejection: sphere does not intersect face bb at all
-    if
-    (
-        cacheBb_
-      ? !bbs_[index].overlaps(centre, radiusSqr)
-      : !getBounds(index).overlaps(centre, radiusSqr)
-    )
-    {
-        return false;
-    }
-
-    const label facei = objectIndex(index);
-
-    const face& f = mesh().faces()[facei];
-
-    pointHit nearHit = f.nearestPoint(centre, mesh().points());
-
-    if (sqr(nearHit.distance()) < radiusSqr)
-    {
-        return true;
-    }
-
-    return false;
-}
-
-
-// * * * * * * * * * * * * * * * * Searching * * * * * * * * * * * * * * * * //
-
-Foam::treeDataFace::findNearestOp::findNearestOp
-(
-    const indexedOctree<treeDataFace>& tree
-)
-:
-    tree_(tree)
-{}
-
-
-Foam::treeDataFace::findIntersectOp::findIntersectOp
-(
-    const indexedOctree<treeDataFace>& tree
-)
-:
-    tree_(tree)
-{}
-
-
-void Foam::treeDataFace::findNearest
-(
-    const labelUList& indices,
-    const point& sample,
-
-    scalar& nearestDistSqr,
-    label& minIndex,
-    point& nearestPoint
-) const
-{
-    for (const label index : indices)
-    {
-        const label facei = objectIndex(index);
-
-        const face& f = mesh().faces()[facei];
-
-        pointHit nearHit = f.nearestPoint(sample, mesh().points());
-        scalar distSqr = sqr(nearHit.distance());
-
-        if (distSqr < nearestDistSqr)
-        {
-            nearestDistSqr = distSqr;
-            minIndex = index;
-            nearestPoint = nearHit.point();
-        }
-    }
 }
 
 
@@ -682,14 +475,22 @@ void Foam::treeDataFace::findNearestOp::operator()
     point& nearestPoint
 ) const
 {
-    tree_.shapes().findNearest
-    (
-        indices,
-        sample,
-        nearestDistSqr,
-        minIndex,
-        nearestPoint
-    );
+    const treeDataFace& shape = tree_.shapes();
+
+    for (const label index : indices)
+    {
+        const face& f = shape.mesh().faces()[shape.faceLabels()[index]];
+
+        pointHit nearHit = f.nearestPoint(sample, shape.mesh().points());
+        scalar distSqr = sqr(nearHit.distance());
+
+        if (distSqr < nearestDistSqr)
+        {
+            nearestDistSqr = distSqr;
+            minIndex = index;
+            nearestPoint = nearHit.rawPoint();
+        }
+    }
 }
 
 
@@ -730,7 +531,7 @@ bool Foam::treeDataFace::findIntersectOp::operator()
         }
     }
 
-    const label facei = shape.objectIndex(index);
+    const label facei = shape.faceLabels_[index];
 
     const vector dir(end - start);
 
@@ -747,7 +548,7 @@ bool Foam::treeDataFace::findIntersectOp::operator()
     {
         // Note: no extra test on whether intersection is in front of us
         // since using half_ray
-        intersectionPoint = inter.point();
+        intersectionPoint = inter.hitPoint();
         return true;
     }
 

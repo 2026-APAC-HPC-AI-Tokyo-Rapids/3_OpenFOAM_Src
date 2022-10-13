@@ -217,37 +217,36 @@ public:
         //- True if the list is empty (ie, size() is zero)
         inline bool empty() const noexcept;
 
-        //- Reference to the first element of the list
-        inline T& front();
+        //- Return reference to the first element of the list
+        inline T& first();
 
-        //- Reference to first element of the list
-        inline const T& front() const;
+        //- Return reference to first element of the list
+        inline const T& first() const;
 
-        //- Reference to the last element of the list
-        inline T& back();
+        //- Return reference to the last element of the list
+        inline T& last();
 
-        //- Reference to the last element of the list
-        inline const T& back() const;
+        //- Return reference to the last element of the list
+        inline const T& last() const;
 
         //- Return const pointer to element (can be nullptr),
         //- or nullptr for out-of-range access (ie, \em with bounds checking).
         //  The return value can be tested as a bool.
         inline const T* test(const label i) const;
 
-        //- Return const pointer to element (can be nullptr),
-        //- or nullptr for out-of-range access (ie, \em with bounds checking).
-        //  The return value can be tested as a bool.
-        inline const T* get(const label i) const;
-
         //- Return pointer to element (can be nullptr),
-        //- or nullptr for out-of-range access (ie, \em with bounds checking).
+        //- \em without bounds checking.
         //  The return value can be tested as a bool.
         inline T* get(const label i);
 
         //- Return const pointer to element (can be nullptr),
-        //- or nullptr for out-of-range access (ie, \em with bounds checking).
+        //- \em without bounds checking.
+        inline const T* get(const label i) const;
+
+        //- Return const pointer to element (can be nullptr),
+        //- \em without bounds checking - same as get().
         //  The return value can be tested as a bool.
-        inline const T* set(const label i) const;
+        const T* set(const label i) const { return this->get(i); }
 
 
     // Edit
@@ -267,10 +266,10 @@ public:
         label squeezeNull();
 
         //- Append an element to the end of the list
-        inline void push_back(T* ptr);
+        inline void append(T* ptr);
 
         //- Move append another list to the end of this list.
-        inline void push_back(UPtrList<T>&& other);
+        inline void append(UPtrList<T>&& other);
 
         //- Swap content
         inline void swap(UPtrList<T>& list);
@@ -308,10 +307,8 @@ public:
         //- Return reference to the element
         inline T& operator[](const label i);
 
-        //- Deprecated(2022-09) - same as get()
-        //  \deprecated(2022-09) - use get(), set() or test() methods
-        FOAM_DEPRECATED_FOR(2022-09, "get(), set() or test() methods")
-        const T* operator()(const label i) const { return this->get(i); }
+        //- Return const pointer to the element - same as get().
+        inline const T* operator()(const label i) const;
 
         //- Copy assignment (shallow copies addresses)
         inline void operator=(const UPtrList<T>& list);
@@ -474,33 +471,6 @@ public:
             Ostream& os,
             const UPtrList<T>& list
         );
-
-
-    // Housekeeping
-
-        //- Reference to the first element of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "front()")
-        T& first() { return front(); }
-
-        //- Return reference to first element of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "front()")
-        const T& first() const { return front(); }
-
-        //- Return reference to the last element of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "back()")
-        T& last() { return back(); }
-
-        //- Return reference to the last element of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "back()")
-        const T& last() const{ return back(); }
-
-        //- Append an element to the end of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(T* ptr) { this->push_back(ptr); }
-
-        //- Move append another list to the end of this list.
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(UPtrList<T>&& other) { this->push_back(std::move(other)); }
 };
 
 

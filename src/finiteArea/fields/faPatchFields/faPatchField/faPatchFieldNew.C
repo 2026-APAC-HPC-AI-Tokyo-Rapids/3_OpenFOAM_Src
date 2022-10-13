@@ -69,14 +69,14 @@ Foam::tmp<Foam::faPatchField<Type>> Foam::faPatchField<Type>::New
     }
 
 
-    tmp<faPatchField<Type>> tpfld(ctorPtr(p, iF));
+    tmp<faPatchField<Type>> tfap = ctorPtr(p, iF);
 
-    // If constraint type: override and store patchType
+    // Check if constraint type override and store patchType if so
     if (patchTypeCtor)
     {
-        tpfld.ref().patchType() = actualPatchType;
+        tfap.ref().patchType() = actualPatchType;
     }
-    return tpfld;
+    return tfap;
 }
 
 
@@ -114,7 +114,7 @@ Foam::tmp<Foam::faPatchField<Type>> Foam::faPatchField<Type>::New
 
     if (!ctorPtr)
     {
-        if (!faPatchFieldBase::disallowGenericPatchField)
+        if (!disallowGenericFaPatchField)
         {
             ctorPtr = dictionaryConstructorTable("generic");
         }

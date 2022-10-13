@@ -39,7 +39,6 @@ SourceFiles
 #define Foam_FieldField_H
 
 #include "tmp.H"
-#include "Pair.H"
 #include "PtrList.H"
 #include "scalar.H"
 #include "direction.H"
@@ -80,6 +79,7 @@ class FieldField
     public refCount,
     public PtrList<Field<Type>>
 {
+
 public:
 
     //- Component type
@@ -153,16 +153,7 @@ public:
         tmp<FieldField<Field, Type>> T() const;
 
 
-    // Member Operators
-
-        //- Const or non-const access to a field
-        using PtrList<Field<Type>>::operator[];
-
-        //- Const access to a single field element via (fieldi, elemi)
-        inline const Type& operator[](const labelPair& index) const;
-
-        //- Non-const access to a single field element via (fieldi, elemi)
-        inline Type& operator[](const labelPair& index);
+    // Member operators
 
         //- Copy assignment
         void operator=(const FieldField<Field, Type>&);
@@ -175,9 +166,6 @@ public:
 
         //- Assign uniform value
         void operator=(const Type& val);
-
-        //- Assign uniform zero
-        void operator=(const Foam::zero);
 
         void operator+=(const FieldField<Field, Type>&);
         void operator+=(const tmp<FieldField<Field, Type>>&);

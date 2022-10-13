@@ -44,11 +44,12 @@ Foam::boundBox Foam::processorLODs::cellBox::calcSrcBox
     const label srcObji
 ) const
 {
-    boundBox bb;
+    const UList<label>& cellFaces = srcCells_[srcObji];
 
-    for (const label facei : srcCells_[srcObji])
+    boundBox bb(srcPoints_, srcFaces_[cellFaces[0]], false);
+    for (label i = 1; i < cellFaces.size(); ++i)
     {
-        bb.add(srcPoints_, srcFaces_[facei]);
+        bb.add(srcPoints_, srcFaces_[cellFaces[i]]);
     }
 
     return bb;
@@ -60,11 +61,12 @@ Foam::boundBox Foam::processorLODs::cellBox::calcTgtBox
     const label tgtObji
 ) const
 {
-    boundBox bb;
+    const UList<label>& cellFaces = tgtCells_[tgtObji];
 
-    for (const label facei : tgtCells_[tgtObji])
+    boundBox bb(tgtPoints_, tgtFaces_[cellFaces[0]], false);
+    for (label i = 1; i < cellFaces.size(); ++i)
     {
-        bb.add(tgtPoints_, tgtFaces_[facei]);
+        bb.add(tgtPoints_, tgtFaces_[cellFaces[i]]);
     }
 
     return bb;

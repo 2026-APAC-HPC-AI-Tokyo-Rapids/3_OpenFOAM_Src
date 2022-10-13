@@ -42,7 +42,7 @@ License
 #include "Time.H"
 #include "mapDistribute.H"
 #include "SubField.H"
-#include "triangle.H"
+#include "triPointRef.H"
 #include "syncTools.H"
 #include "treeDataCell.H"
 #include "DynamicField.H"
@@ -163,7 +163,7 @@ Foam::tmp<Foam::pointField> Foam::mappedPatchBase::facePoints
             mesh,
             pp.start()+facei,
             polyMesh::FACE_DIAG_TRIS
-        ).point();
+        ).rawPoint();
     }
 
     return tfacePoints;
@@ -337,7 +337,7 @@ void Foam::mappedPatchBase::findLocalSamples
                         cc,
                         celli
                     );
-                    near.first().second().first() = sample.distSqr(cc);
+                    near.first().second().first() = magSqr(cc-sample);
                     near.first().second().second() = myRank;
                     near.second() = mySampleWorld;
                 }
@@ -363,10 +363,11 @@ void Foam::mappedPatchBase::findLocalSamples
                 nearInfoWorld& near = nearest[sampleI];
 
                 near.first().first() = tree.findNearest(sample, sqr(GREAT));
-
-                near.first().second().first() =
-                    near.first().first().hitPoint().distSqr(sample);
-
+                near.first().second().first() = magSqr
+                (
+                    near.first().first().hitPoint()
+                   -sample
+                );
                 near.first().second().second() = myRank;
                 near.second() = mySampleWorld;
             }
@@ -396,21 +397,25 @@ void Foam::mappedPatchBase::findLocalSamples
                     treeBoundBox(pp.points(), pp.meshPoints()).extend
                     (
                         rndGen,
-                        1e-4,
-                        ROOTVSMALL
+                        1e-4
                     )
                 );
+                patchBb.min() -= point::uniform(ROOTVSMALL);
+                patchBb.max() += point::uniform(ROOTVSMALL);
 
                 indexedOctree<treeDataFace> boundaryTree
                 (
-                    treeDataFace(mesh, pp.range()),  // Patch faces
-
+                    treeDataFace    // all information needed to search faces
+                    (
+                        false,      // do not cache bb
+                        mesh,
+                        identity(pp.range())  // boundary faces only
+                    ),
                     patchBb,        // overall search domain
                     8,              // maxLevel
                     10,             // leafsize
                     3.0             // duplicity
                 );
-                const auto& treeData = boundaryTree.shapes();
 
                 forAll(samples, sampleI)
                 {
@@ -421,7 +426,7 @@ void Foam::mappedPatchBase::findLocalSamples
                     nearInfo = boundaryTree.findNearest
                     (
                         sample,
-                        patchBb.magSqr()
+                        magSqr(patchBb.span())
                     );
 
                     if (!nearInfo.hit())
@@ -432,10 +437,9 @@ void Foam::mappedPatchBase::findLocalSamples
                     }
                     else
                     {
-                        const point& fc = treeData.centre(nearInfo.index());
-
+                        point fc(pp[nearInfo.index()].centre(pp.points()));
                         nearInfo.setPoint(fc);
-                        near.first().second().first() = sample.distSqr(fc);
+                        near.first().second().first() = magSqr(fc-sample);
                         near.first().second().second() = myRank;
                         near.second() = mySampleWorld;
                     }
@@ -468,16 +472,19 @@ void Foam::mappedPatchBase::findLocalSamples
                     treeBoundBox(pp.points(), pp.meshPoints()).extend
                     (
                         rndGen,
-                        1e-4,
-                        ROOTVSMALL
+                        1e-4
                     )
                 );
+                patchBb.min() -= point::uniform(ROOTVSMALL);
+                patchBb.max() += point::uniform(ROOTVSMALL);
 
                 indexedOctree<treeDataPoint> boundaryTree
                 (
-                    // Patch points
-                    treeDataPoint(mesh.points(), pp.meshPoints()),
-
+                    treeDataPoint   // all information needed to search faces
+                    (
+                        mesh.points(),
+                        pp.meshPoints() // selection of points to search on
+                    ),
                     patchBb,        // overall search domain
                     8,              // maxLevel
                     10,             // leafsize
@@ -493,7 +500,7 @@ void Foam::mappedPatchBase::findLocalSamples
                     nearInfo = boundaryTree.findNearest
                     (
                         sample,
-                        patchBb.magSqr()
+                        magSqr(patchBb.span())
                     );
 
                     if (!nearInfo.hit())
@@ -504,9 +511,9 @@ void Foam::mappedPatchBase::findLocalSamples
                     }
                     else
                     {
-                        const point& pt = nearInfo.point();
+                        const point& pt = nearInfo.hitPoint();
 
-                        near.first().second().first() = sample.distSqr(pt);
+                        near.first().second().first() = magSqr(pt-sample);
                         near.first().second().second() = myRank;
                         near.second() = mySampleWorld;
                     }
@@ -546,7 +553,7 @@ void Foam::mappedPatchBase::findLocalSamples
                     const point& fc = mesh.faceCentres()[facei];
 
                     near.first().first() = pointIndexHit(true, fc, facei);
-                    near.first().second().first() = sample.distSqr(fc);
+                    near.first().second().first() = magSqr(fc-sample);
                     near.first().second().second() = myRank;
                     near.second() = mySampleWorld;
                 }
@@ -661,7 +668,7 @@ void Foam::mappedPatchBase::findSamples
 
 
     // Find nearest - globally consistent
-    Pstream::listCombineReduce
+    Pstream::listCombineAllGather
     (
         nearest,
         nearestWorldEqOp(),
@@ -683,7 +690,7 @@ void Foam::mappedPatchBase::findSamples
     //            << "    found on patchfacei:"
     //            << nearest[samplei].first().first().index() << nl
     //            << "    found at location:"
-    //            << nearest[samplei].first().first().point() << nl;
+    //            << nearest[samplei].first().first().rawPoint() << nl;
     //    }
     //    Pout<< endl;
     //}
@@ -707,7 +714,7 @@ void Foam::mappedPatchBase::findSamples
         {
             sampleProcs[sampleI] = ni.second().second();
             sampleIndices[sampleI] = ni.first().index();
-            sampleLocations[sampleI] = ni.first().point();
+            sampleLocations[sampleI] = ni.first().hitPoint();
         }
     }
 
@@ -717,8 +724,6 @@ void Foam::mappedPatchBase::findSamples
 
 void Foam::mappedPatchBase::calcMapping() const
 {
-    DebugInFunction;
-
     static bool hasWarned = false;
     if (mapPtr_)
     {
@@ -727,12 +732,6 @@ void Foam::mappedPatchBase::calcMapping() const
     }
 
     DebugInFunction << nl;
-
-
-    // Early construction of tetBasePtIs since does parallel
-    // communication which might conflict with inter-world communicator
-    // (for multi-world operation)
-    (void)patch_.boundaryMesh().mesh().tetBasePtIs();
 
     const label myComm = getCommunicator();  // Get or create
 
@@ -1046,12 +1045,6 @@ void Foam::mappedPatchBase::calcMapping() const
             }
         }
     }
-
-    updateMeshTime().setUpToDate();
-    if (sameWorld())
-    {
-        updateSampleMeshTime().setUpToDate();
-    }
 }
 
 
@@ -1102,9 +1095,6 @@ void Foam::mappedPatchBase::calcAMI() const
 
     const label myComm = getCommunicator();  // Get or create
 
-    // Pre-calculate surface (if any)
-    const auto& surf = surfPtr();
-
     const label oldWorldComm(Pstream::worldComm);
     const label oldWarnComm(Pstream::warnComm);
 
@@ -1146,7 +1136,7 @@ void Foam::mappedPatchBase::calcAMI() const
         Pstream::worldComm = myComm;
         Pstream::warnComm = Pstream::worldComm;
 
-        AMIPtr_->calculate(patch_, nbrPatch0, surf);
+        AMIPtr_->calculate(patch_, nbrPatch0, surfPtr());
 
         Pstream::warnComm = oldWarnComm;
         Pstream::worldComm = oldWorldComm;
@@ -1170,14 +1160,14 @@ void Foam::mappedPatchBase::calcAMI() const
             // Construct/apply AMI interpolation to determine addressing
             // and weights. Have patch_ for src faces, 0 faces for the
             // target side
-            AMIPtr_->calculate(patch_, dummyPatch, surf);
+            AMIPtr_->calculate(patch_, dummyPatch, surfPtr());
         }
         else
         {
             // Construct/apply AMI interpolation to determine addressing
             // and weights. Have 0 faces for src side, patch_ for the tgt
             // side
-            AMIPtr_->calculate(dummyPatch, patch_, surf);
+            AMIPtr_->calculate(dummyPatch, patch_, surfPtr());
         }
         // Now the AMI addressing/weights will be from src side (on masterWorld
         // processors) to tgt side (on other processors)
@@ -1776,7 +1766,7 @@ Foam::pointIndexHit Foam::mappedPatchBase::facePoint
 
                 if (hitInfo.hit() && hitInfo.distance() > 0)
                 {
-                    return pointIndexHit(true, hitInfo.point(), i-2);
+                    return pointIndexHit(true, hitInfo.hitPoint(), i-2);
                 }
 
                 fp = nextFp;

@@ -36,7 +36,9 @@ bool Foam::wallBoundedStreamLineParticle::move
     const scalar trackTime
 )
 {
-    auto& p = static_cast<typename TrackCloudType::particleType&>(*this);
+    typename TrackCloudType::particleType& p =
+        static_cast<typename TrackCloudType::particleType&>(*this);
+
 
     // Check position is inside tet
     //checkInside();
@@ -47,9 +49,14 @@ bool Foam::wallBoundedStreamLineParticle::move
     scalar tEnd = (1.0 - stepFraction())*trackTime;
     scalar maxDt = mesh().bounds().mag();
 
-    while (td.keepParticle && !td.switchProcessor && lifeTime_ > 0)
+    while
+    (
+        td.keepParticle
+    && !td.switchProcessor
+    && lifeTime_ > 0
+    )
     {
-        // Set the lagrangian time-step
+        // set the lagrangian time-step
         scalar dt = maxDt;
 
         --lifeTime_;
@@ -117,19 +124,25 @@ bool Foam::wallBoundedStreamLineParticle::move
 
         // Transfer particle data into trackingData.
         {
+            //td.allPositions_.append(sampledPositions_);
             td.allPositions_.append(vectorList());
-            td.allPositions_.last().transfer(sampledPositions_);
+            vectorList& top = td.allPositions_.last();
+            top.transfer(sampledPositions_);
         }
 
         forAll(sampledScalars_, i)
         {
+            //td.allScalars_[i].append(sampledScalars_[i]);
             td.allScalars_[i].append(scalarList());
-            td.allScalars_[i].last().transfer(sampledScalars_[i]);
+            scalarList& top = td.allScalars_[i].last();
+            top.transfer(sampledScalars_[i]);
         }
         forAll(sampledVectors_, i)
         {
+            //td.allVectors_[i].append(sampledVectors_[i]);
             td.allVectors_[i].append(vectorList());
-            td.allVectors_[i].last().transfer(sampledVectors_[i]);
+            vectorList& top = td.allVectors_[i].last();
+            top.transfer(sampledVectors_[i]);
         }
     }
 

@@ -63,7 +63,7 @@ functions
     htc
     {
         type            reactingEulerHtcModel;
-        libs            (fieldFunctionObjects);
+        libs            (reactingEulerFoamFunctionObjects);
         region          water;
         field           T.liquid;
         writeControl    writeTime;

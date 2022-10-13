@@ -28,6 +28,13 @@ License
 #include "MeshWave.H"
 #include "polyMesh.H"
 
+
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+
+template<class Type, class TrackingData>
+int Foam::MeshWave<Type, TrackingData>::dummyTrackData_ = 12345;
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 // Iterate, propagating changedFacesInfo across mesh, until no change (or
@@ -83,6 +90,9 @@ Foam::MeshWave<Type, TrackingData>::MeshWave
         td
     )
 {}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 
 // ************************************************************************* //

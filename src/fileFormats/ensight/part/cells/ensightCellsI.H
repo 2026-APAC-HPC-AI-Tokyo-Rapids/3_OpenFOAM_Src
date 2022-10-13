@@ -46,7 +46,7 @@ inline bool Foam::ensightCells::manifold() const noexcept
 }
 
 
-inline const char* Foam::ensightCells::key(const elemType etype) noexcept
+inline const char* Foam::ensightCells::key(const elemType etype)
 {
     return elemNames[etype];
 }

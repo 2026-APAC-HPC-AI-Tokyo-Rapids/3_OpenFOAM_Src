@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2014 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -207,7 +207,7 @@ Foam::pointIndexHit Foam::searchableRotatedBox::findNearest
         )
     );
 
-    boxNearest.point() = transform_.globalPosition(boxNearest.point());
+    boxNearest.rawPoint() = transform_.globalPosition(boxNearest.rawPoint());
 
     return boxNearest;
 }
@@ -240,7 +240,7 @@ Foam::pointIndexHit Foam::searchableRotatedBox::findLine
         )
     );
 
-    boxHit.point() = transform_.globalPosition(boxHit.point());
+    boxHit.rawPoint() = transform_.globalPosition(boxHit.rawPoint());
 
     return boxHit;
 }
@@ -340,7 +340,7 @@ void Foam::searchableRotatedBox::findLineAll
             hits.clear();
             hits.append(inter);
 
-            point pt = inter.point() + smallVec[pointI];
+            point pt = inter.hitPoint() + smallVec[pointI];
 
             while (((pt-start[pointI])&dirVec[pointI]) <= magSqrDirVec[pointI])
             {
@@ -359,7 +359,7 @@ void Foam::searchableRotatedBox::findLineAll
                 }
                 hits.append(inter);
 
-                pt = inter.point() + smallVec[pointI];
+                pt = inter.hitPoint() + smallVec[pointI];
             }
 
             info[pointI].transfer(hits);

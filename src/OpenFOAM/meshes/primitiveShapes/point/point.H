@@ -31,8 +31,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_point_H
-#define Foam_point_H
+#ifndef point_H
+#define point_H
 
 #include "vector.H"
 

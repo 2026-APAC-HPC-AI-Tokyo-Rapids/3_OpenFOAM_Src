@@ -69,7 +69,7 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeCollated
     // - SURF1/data/00000000/VAR2
 
     // Names "data" and "geometry" as per ensightCase:
-    const int maskWidth = 8;
+    const char* fmt  = "%08d";
     const char* mask = "data/********/";
 
 
@@ -125,72 +125,14 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeCollated
         // or just the masking part for moving geometries.
         const fileName geometryName
         (
-            "data"
-          / ensightCase::padded(maskWidth, geomIndex)
-          / ensightCase::geometryName
+            "data"/word::printf(fmt, geomIndex)/ensightCase::geometryName
         );
 
 
-        // Location for data (and possibly the geometry as well)
-        const fileName dataDir
-        (
-            baseDir/"data"/ensightCase::padded(maskWidth, timeIndex)
-        );
-
-        // As per mkdir -p "data/00000000"
-        mkDir(dataDir);
-
-
-        const fileName geomFile(baseDir/geometryName);
-
-        // Ensight Geometry
-        ensightOutputSurface part
-        (
-            surf.points(),
-            surf.faces(),
-            geomFile.name()
-        );
-
-        if (!exists(geomFile))
-        {
-            if (verbose_)
-            {
-                Info<< "Writing geometry to " << geomFile.name() << endl;
-            }
-
-            // Two-argument form for path-name to avoid validating base-dir
-            ensightGeoFile osGeom
-            (
-                geomFile.path(),
-                geomFile.name(),
-                writeFormat_
-            );
-            part.write(osGeom); // serial
-        }
-
-        // Write field
-        ensightFile osField
-        (
-            dataDir,
-            varName,
-            writeFormat_
-        );
-
-        if (verbose_)
-        {
-            Info<< "Writing field file to " << osField.name() << endl;
-        }
-
-        // Write field (serial only)
-        osField.write(ensightPTraits<Type>::typeName);
-        osField.newline();
-        part.writeData(osField, tfield(), this->isPointData());
-
-
-        // Update case file
+        // Do case file
         if (stateChanged)
         {
-            OFstream osCase(outputFile, IOstreamOption::ASCII);
+            OFstream osCase(outputFile, IOstream::ASCII);
 
             // Format options
             osCase.setf(ios_base::left);
@@ -259,7 +201,7 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeCollated
                       : " per element: 1  "  // time-set 1
                     )
                     << setw(15) << varName << ' '
-                    << mask << ensight::FileName(varName).c_str() << nl;
+                    << mask << varName << nl;
             }
 
             osCase
@@ -280,6 +222,58 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeCollated
 
             osCase << "# end" << nl;
         }
+
+
+        // Location for data (and possibly the geometry as well)
+        fileName dataDir = baseDir/"data"/word::printf(fmt, timeIndex);
+
+        // As per mkdir -p "data/00000000"
+        mkDir(dataDir);
+
+
+        const fileName geomFile(baseDir/geometryName);
+
+        // Ensight Geometry
+        ensightOutputSurface part
+        (
+            surf.points(),
+            surf.faces(),
+            geomFile.name()
+        );
+
+        if (!exists(geomFile))
+        {
+            if (verbose_)
+            {
+                Info<< "Writing geometry to " << geomFile.name() << endl;
+            }
+
+            // Two-argument form for path-name to avoid validating base-dir
+            ensightGeoFile osGeom
+            (
+                geomFile.path(),
+                geomFile.name(),
+                writeFormat_
+            );
+            part.write(osGeom); // serial
+        }
+
+        // Write field
+        ensightFile osField
+        (
+            dataDir,
+            varName,
+            writeFormat_
+        );
+
+        if (verbose_)
+        {
+            Info<< "Writing field file to " << osField.name() << endl;
+        }
+
+        // Write field (serial only)
+        osField.writeKeyword(ensightPTraits<Type>::typeName);
+        part.writeData(osField, tfield(), this->isPointData());
 
         // Timestamp in the directory for future reference
         {

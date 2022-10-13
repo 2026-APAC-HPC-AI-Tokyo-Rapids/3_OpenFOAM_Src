@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,17 +29,6 @@ Class
 Description
     A time-varying form of a mapped fixed value boundary condition.
 
-Usage
-    \table
-        Property     | Description                      | Required | Default
-        setAverage   | Use average value                | no | false
-        perturb      | Perturb points for regular geometries | no | 1e-5
-        points       | Name of points file              | no | points
-        fieldTable   | Alternative field name to sample | no | this field name
-        mapMethod    | Type of mapping                  | no | planar
-        offset       | Offset to mapped values          | no | Zero
-    \endtable
-
 See also
     Foam::timeVaryingMappedFixedValueFvPatchField
 
@@ -49,14 +37,13 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_timeVaryingMappedFixedValuePointPatchField_H
-#define Foam_timeVaryingMappedFixedValuePointPatchField_H
+#ifndef timeVaryingMappedFixedValuePointPatchField_H
+#define timeVaryingMappedFixedValuePointPatchField_H
 
 #include "fixedValuePointPatchField.H"
-#include "Function1.H"
-#include "Pair.H"
 #include "instantList.H"
 #include "pointToPointPlanarInterpolation.H"
+#include "Function1.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -72,55 +59,46 @@ class timeVaryingMappedFixedValuePointPatchField
 :
     public fixedValuePointPatchField<Type>
 {
-    // Private Data
-
-        //- If true adjust the mapped field to maintain average value
-        bool setAverage_;
-
-        //- Fraction of perturbation (fraction of bounding box) to add
-        scalar perturb_;
+    // Private data
 
         //- Name of the field data table, defaults to the name of the field
         word fieldTableName_;
 
-        //- Name of points file (default: "points")
-        word pointsName_;
+        //- If true adjust the mapped field to maintain average value
+        Switch setAverage_;
 
-        //- Interpolation scheme to use (default is empty == "planar")
+        //- Fraction of perturbation (fraction of bounding box) to add
+        scalar perturb_;
+
+        //- Interpolation scheme to use
         word mapMethod_;
 
-        //- 2D interpolation (for 'planar' mapMethod)
+        //- 2D interpolation (for 'planarInterpolation' mapMethod)
         autoPtr<pointToPointPlanarInterpolation> mapperPtr_;
 
         //- List of boundaryData time directories
         instantList sampleTimes_;
 
-        //- The first/second sample indices in sampleTimes
-        labelPair sampleIndex_;
+        //- Current starting index in sampleTimes
+        label startSampleTime_;
 
-        //- The average values at first/second sampleIndex_ (if setAverage)
-        Pair<Type> sampleAverage_;
+        //- Interpolated values from startSampleTime
+        Field<Type> startSampledValues_;
 
-        //- The interpolated values at first/second sampleIndex_
-        Pair<Field<Type>> sampleValues_;
+        //- If setAverage: starting average value
+        Type startAverage_;
+
+        //- Current end index in sampleTimes
+        label endSampleTime_;
+
+        //- Interpolated values from endSampleTime
+        Field<Type> endSampledValues_;
+
+        //- If setAverage: end average value
+        Type endAverage_;
 
         //- Time varying offset values to interpolated data
         autoPtr<Function1<Type>> offset_;
-
-
-    // Private Member Functions
-
-        //- Find boundary data between time 't' and interpolate
-        void checkTable(const scalar t);
-
-        //- Update field and average value using interpolation at
-        //- given instant index
-        void updateSampledValues
-        (
-            const label sampleIndex,
-            Field<Type>& field,
-            Type& avg
-        ) const;
 
 
 public:
@@ -190,7 +168,13 @@ public:
         }
 
 
-    // Member Functions
+    // Member functions
+
+        // Utility functions
+
+            //- Find boundary data inbetween current time and interpolate
+            void checkTable();
+
 
         // Mapping functions
 

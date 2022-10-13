@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,18 +29,19 @@ License
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-template<class GeometricField, class AnyType>
+template<class GeometricField, class Type>
 const typename GeometricField::Patch& Foam::fvPatch::lookupPatchField
 (
     const word& name,
     const GeometricField*,
-    const AnyType*
+    const Type*
 ) const
 {
-    return
-        boundaryMesh().mesh().thisDb().template
+    return patchField<GeometricField, Type>
+    (
+        boundaryMesh().mesh().objectRegistry::template
             lookupObject<GeometricField>(name)
-            .boundaryField()[this->index()];
+    );
 }
 
 

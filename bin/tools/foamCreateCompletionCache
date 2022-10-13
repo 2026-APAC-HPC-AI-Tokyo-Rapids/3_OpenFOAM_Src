@@ -6,10 +6,11 @@
 #   \\  /    A nd           | www.openfoam.com
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
-#     Copyright (C) 2017-2022 OpenCFD Ltd.
+#     Copyright (C) 2017-2019 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
-#     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
+#     This file is part of OpenFOAM, licensed under GNU General Public License
+#     <http://www.gnu.org/licenses/>.
 #
 # Script
 #     foamCreateCompletionCache
@@ -165,7 +166,7 @@ extractOptions()
             -e '/^ \{8\}/d;' \
             -e 's/^ *//; /^$/d; /^[^-]/d; /^--/d; /^-help-man/d;' \
             -e '/^-hostRoots /d; /^-roots /d;' \
-            -e '/^-lib /d; /^-no-libs /d;' \
+            -e '/^-lib /d;' \
             -e '/^-[a-z]*-switch /d;' \
             -e 'y/,/ /; s/=.*$/=/;' \
             -e '/^-[^ ]* </{ s/^\(-[^ ]* <\).*$/\1/; p; d }' \
@@ -194,14 +195,11 @@ extractOptions()
 #------------------------------------------------------------------------------
 
 # Default to standard search directories and a few scripts from bin/
-[ "$#" -gt 0 ] || set -- ${searchDirs} paraFoam wmake
+[ "$#" -gt 0 ] || set -- ${searchDirs} paraFoam
 
 for item
 do
-    if command -v "$item" >/dev/null
-    then
-        extractOptions "$item"
-    elif [ -d "$item" ]
+    if [ -d "$item" ]
     then
         # Process directory for applications - sort with ignore-case
         echo "[directory] $item" 1>&2
@@ -210,6 +208,9 @@ do
         do
             extractOptions $appName
         done
+    elif command -v "$item" >/dev/null
+    then
+        extractOptions $item
     else
         echo "No such file or directory: $item" 1>&2
     fi

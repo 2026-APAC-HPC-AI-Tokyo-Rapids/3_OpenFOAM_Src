@@ -5,7 +5,7 @@ include $(GENERAL_RULES)/standard
 
 # Fujitsu-specific
 # ----
-COMP_OPENMP = -fopenmp
+COMP_OPENMP = -DUSE_OMP -fopenmp
 LINK_OPENMP = -lfjomp
 # ----
 

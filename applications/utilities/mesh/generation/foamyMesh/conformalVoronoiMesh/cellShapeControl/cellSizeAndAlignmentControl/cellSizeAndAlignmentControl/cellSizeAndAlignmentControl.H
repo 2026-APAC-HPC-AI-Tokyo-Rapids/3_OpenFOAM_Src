@@ -153,7 +153,7 @@ public:
                 return name_;
             }
 
-            Switch forceInitialPointInsertion() const noexcept
+            const Switch& forceInitialPointInsertion() const
             {
                 return forceInitialPointInsertion_;
             }

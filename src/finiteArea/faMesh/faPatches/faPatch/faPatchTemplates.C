@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,31 +31,12 @@ License
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::faPatch::patchInternalField
-(
-    const UList<Type>& f,
-    const labelUList& edgeFaces,
-    Field<Type>& pfld
-) const
-{
-    pfld.resize(size());
-
-    forAll(pfld, i)
-    {
-        pfld[i] = f[edgeFaces[i]];
-    }
-}
-
-
-template<class Type>
 Foam::tmp<Foam::Field<Type>> Foam::faPatch::patchInternalField
 (
     const UList<Type>& f
 ) const
 {
-    auto tpfld = tmp<Field<Type>>::New(size());
-    patchInternalField(f, this->edgeFaces(), tpfld.ref());
-    return tpfld;
+    return patchInternalField(f, this->edgeFaces());
 }
 
 
@@ -66,30 +47,25 @@ Foam::tmp<Foam::Field<Type>> Foam::faPatch::patchInternalField
     const labelUList& edgeFaces
 ) const
 {
-    auto tpfld = tmp<Field<Type>>::New(size());
-    patchInternalField(f, edgeFaces, tpfld.ref());
-    return tpfld;
+    auto tpif = tmp<Field<Type>>::New(size());
+    auto& pif = tpif.ref();
+
+    forAll(pif, facei)
+    {
+        pif[facei] = f[edgeFaces[facei]];
+    }
+
+    return tpif;
 }
 
 
-template<class Type>
-void Foam::faPatch::patchInternalField
-(
-    const UList<Type>& f,
-    Field<Type>& pfld
-) const
-{
-    patchInternalField(f, this->edgeFaces(), pfld);
-}
-
-
-template<class GeometricField, class AnyType>
+template<class GeometricField, class Type>
 const typename GeometricField::Patch& Foam::faPatch::patchField
 (
     const GeometricField& gf
 ) const
 {
-    return gf.boundaryField()[this->index()];
+    return gf.boundaryField()[index()];
 }
 
 

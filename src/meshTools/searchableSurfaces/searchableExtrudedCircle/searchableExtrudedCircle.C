@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -89,23 +89,31 @@ Foam::searchableExtrudedCircle::searchableExtrudedCircle
     const edgeList& edges = eMesh.edges();
     bounds() = boundBox(points, false);
 
-    // Make the boundBox into a perfect cube around its centre
-    const scalar halfWidth = mag(0.5*bounds().span());
+    vector halfSpan(0.5*bounds().span());
+    point ctr(bounds().centre());
 
-    bounds().reset(bounds().centre());
-    bounds().grow(halfWidth);
+    bounds().min() = ctr - mag(halfSpan) * vector::one;
+    bounds().max() = ctr + mag(halfSpan) * vector::one;
+
+    // Calculate bb of all points
+    treeBoundBox bb(bounds());
 
     // Slightly extended bb. Slightly off-centred just so on symmetric
     // geometry there are less face/edge aligned items.
-    treeBoundBox bb(bounds());
-    bb.grow(ROOTVSMALL);
+    bb.min() -= point::uniform(ROOTVSMALL);
+    bb.max() += point::uniform(ROOTVSMALL);
 
     edgeTree_.reset
     (
         new indexedOctree<treeDataEdge>
         (
-            treeDataEdge(edges, points),   // All edges
-
+            treeDataEdge
+            (
+                false,                  // do not cache bb
+                edges,
+                points,
+                identity(edges.size())
+            ),
             bb,     // overall search domain
             8,      // maxLevel
             10,     // leafsize
@@ -182,7 +190,7 @@ void Foam::searchableExtrudedCircle::findNearest
         if (info[i].hit())
         {
             // Derive distance to nearest surface from distance to nearest edge
-            const vector d(samples[i] - info[i].point());
+            const vector d(samples[i] - info[i].hitPoint());
             const scalar s(mag(d));
 
             if (s < ROOTVSMALL)
@@ -199,7 +207,7 @@ void Foam::searchableExtrudedCircle::findNearest
                 }
                 else
                 {
-                    info[i].setPoint(info[i].point() + d/s*radius_);
+                    info[i].setPoint(info[i].hitPoint() + d/s*radius_);
                 }
             }
         }
@@ -218,12 +226,11 @@ void Foam::searchableExtrudedCircle::findParametricNearest
 {
     const edgeMesh& mesh = eMeshPtr_();
     const indexedOctree<treeDataEdge>& tree = edgeTree_();
-    const auto& treeData = tree.shapes();
     const edgeList& edges = mesh.edges();
     const pointField& points = mesh.points();
     const labelListList& pointEdges = mesh.pointEdges();
 
-    const scalar maxDistSqr = bounds().magSqr();
+    const scalar maxDistSqr(Foam::magSqr(bounds().span()));
 
     // Normalise lambdas
     const scalarField lambdas
@@ -239,11 +246,11 @@ void Foam::searchableExtrudedCircle::findParametricNearest
 
     const pointIndexHit startInfo = tree.findNearest(start, maxDistSqr);
     curvePoints[0] = startInfo.hitPoint();
-    axialVecs[0] = treeData.line(startInfo.index()).vec();
+    axialVecs[0] = edges[startInfo.index()].vec(points);
 
     const pointIndexHit endInfo = tree.findNearest(end, maxDistSqr);
     curvePoints.last() = endInfo.hitPoint();
-    axialVecs.last() = treeData.line(endInfo.index()).vec();
+    axialVecs.last() = edges[endInfo.index()].vec(points);
 
 
 
@@ -439,14 +446,16 @@ void Foam::searchableExtrudedCircle::getNormal
     normal.setSize(info.size());
     normal = Zero;
 
-    const scalar distSqr = bounds().magSqr();
-
     forAll(info, i)
     {
         if (info[i].hit())
         {
             // Find nearest on curve
-            pointIndexHit curvePt = tree.findNearest(info[i].point(), distSqr);
+            pointIndexHit curvePt = tree.findNearest
+            (
+                info[i].hitPoint(),
+                Foam::magSqr(bounds().span())
+            );
 
             normal[i] = info[i].hitPoint()-curvePt.hitPoint();
 

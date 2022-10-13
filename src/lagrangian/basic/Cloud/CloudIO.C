@@ -51,7 +51,7 @@ void Foam::Cloud<ParticleType>::readCloudUniformProperties()
         db(),
         IOobject::MUST_READ_IF_MODIFIED,
         IOobject::NO_WRITE,
-        IOobject::NO_REGISTER
+        false
     );
 
     if (dictObj.typeHeaderOk<IOdictionary>(true))
@@ -97,14 +97,14 @@ void Foam::Cloud<ParticleType>::writeCloudUniformProperties() const
             db(),
             IOobject::NO_READ,
             IOobject::NO_WRITE,
-            IOobject::NO_REGISTER
+            false
         )
     );
 
     labelList np(Pstream::nProcs(), Zero);
     np[Pstream::myProcNo()] = ParticleType::particleCount_;
 
-    Pstream::listCombineReduce(np, maxEqOp<label>());
+    Pstream::listCombineAllGather(np, maxEqOp<label>());
 
     uniformPropsDict.add
     (
@@ -121,7 +121,7 @@ void Foam::Cloud<ParticleType>::writeCloudUniformProperties() const
 
     uniformPropsDict.writeObject
     (
-        IOstreamOption(IOstreamOption::ASCII, time().writeCompression()),
+        IOstreamOption(IOstream::ASCII, time().writeCompression()),
         true
     );
 }
@@ -155,7 +155,7 @@ void Foam::Cloud<ParticleType>::initCloud(const bool checkClass)
     // Ask for the tetBasePtIs to trigger all processors to build
     // them, otherwise, if some processors have no particles then
     // there is a comms mismatch.
-    (void)polyMesh_.tetBasePtIs();
+    polyMesh_.tetBasePtIs();
 }
 
 
@@ -177,8 +177,8 @@ Foam::Cloud<ParticleType>::Cloud
 {
     checkPatches();
 
-    (void)polyMesh_.tetBasePtIs();
-    (void)polyMesh_.oldCellCentres();
+    polyMesh_.tetBasePtIs();
+    polyMesh_.oldCellCentres();
 
     initCloud(checkClass);
 }
@@ -190,7 +190,7 @@ template<class ParticleType>
 Foam::IOobject Foam::Cloud<ParticleType>::fieldIOobject
 (
     const word& fieldName,
-    IOobjectOption::readOption rOpt
+    const IOobject::readOption r
 ) const
 {
     return IOobject
@@ -198,9 +198,9 @@ Foam::IOobject Foam::Cloud<ParticleType>::fieldIOobject
         fieldName,
         time().timeName(),
         *this,
-        rOpt,
+        r,
         IOobject::NO_WRITE,
-        IOobject::NO_REGISTER
+        false
     );
 }
 
@@ -274,7 +274,10 @@ void Foam::Cloud<ParticleType>::readFromFiles
     (
         *this,
         time().timeName(),
-        IOobject::NO_REGISTER
+        "",
+        IOobject::MUST_READ,
+        IOobject::NO_WRITE,
+        false
     );
 
     const wordRes::filter pred(selectFields, excludeFields);

@@ -64,23 +64,23 @@ inline Ostream& report
 int main(int argc, char *argv[])
 {
     CircularBuffer<label> buf1(1); report(buf1);
-    buf1.push_back(10); report(buf1);
+    buf1.append(10); report(buf1);
 
     Info<< buf1.range_one() << nl;
 
-    buf1.push_back(20); report(buf1);
-    buf1.push_back(30); report(buf1);
+    buf1.append(20); report(buf1);
+    buf1.append(30); report(buf1);
     buf1.push_back(40); report(buf1);
     buf1.push_front(-50); report(buf1);
-    buf1.push_back(60); report(buf1);
-    buf1.push_back(labelList({70,80,90})); report(buf1);
+    buf1.append(60); report(buf1);
+    buf1.append(labelList({70,80,90})); report(buf1);
 
     Info<< nl << "access: " << buf1 << nl;
 
     Info<< buf1[-12] << nl;
 
     Info<< "found: " << buf1.found(40) << nl;
-    buf1.push_uniq(100); report(buf1);
+    buf1.appendUniq(100); report(buf1);
 
     buf1 = Zero; report(buf1);
 
@@ -88,11 +88,11 @@ int main(int argc, char *argv[])
 
     while (buf1.size() > 2)
     {
-        buf1.pop_front();
+        (void) buf1.pop_front();
     }
     report(buf1);
 
-    buf1.push_back(identity(5)); report(buf1);
+    buf1.append(identity(5)); report(buf1);
 
     buf1.info(Info);
     Info<< buf1 << nl;
@@ -122,8 +122,6 @@ int main(int argc, char *argv[])
         }
         Info<< endl;
     }
-
-    Info<< nl << "list: " << flatOutput(buf2.list()) << nl;
 
     Info<< "normal: " << flatOutput(buf2) << nl;
     buf2.reverse();

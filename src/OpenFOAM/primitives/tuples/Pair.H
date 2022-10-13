@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,12 +39,12 @@ See also
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_Pair_H
-#define Foam_Pair_H
+#ifndef Pair_H
+#define Pair_H
 
 #include "FixedList.H"
 #include "Istream.H"
-#include <utility>  // For std::move
+#include <utility>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -70,19 +70,10 @@ class Pair
 {
 public:
 
-    // Generated Methods
+    // Constructors
 
         //- Default construct
         Pair() = default;
-
-        //- The front() accessor (from FixedList) has no purpose
-        void front() = delete;
-
-        //- The back() accessor (from FixedList) has no purpose
-        void back() = delete;
-
-
-    // Constructors
 
         //- Copy construct from components
         inline Pair(const T& f, const T& s);
@@ -113,17 +104,17 @@ public:
 
     // Access
 
-        //- Access the first element
-        const T& first() const noexcept { return this->template get<0>(); }
+        //- Return first element
+        using FixedList<T, 2>::first;
 
-        //- Access the first element
-        T& first() noexcept { return this->template get<0>(); }
+        //- Return last element
+        using FixedList<T, 2>::last;
 
-        //- Access the second element
-        const T& second() const noexcept { return this->template get<1>(); }
+        //- Return second element, which is also the last element
+        inline const T& second() const noexcept;
 
-        //- Access the second element
-        T& second() noexcept { return this->template get<1>(); }
+        //- Return second element, which is also the last element
+        inline T& second() noexcept;
 
         //- Return other element
         inline const T& other(const T& a) const;

@@ -188,7 +188,7 @@ void Foam::PatchTools::calcBounds
     bitSet pointUsed(points.size());
 
     nPoints = 0;
-    bb.reset();
+    bb = boundBox::invertedBox;
 
     for (const auto& f : p)
     {

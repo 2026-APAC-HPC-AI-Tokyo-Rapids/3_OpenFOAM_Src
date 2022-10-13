@@ -60,7 +60,7 @@ Foam::repatchPolyTopoChanger::repatchPolyTopoChanger(polyMesh& mesh)
 
 void Foam::repatchPolyTopoChanger::changePatches
 (
-    polyPatchList& patches
+    const List<polyPatch*>& patches
 )
 {
     if (meshModPtr_)
@@ -73,18 +73,6 @@ void Foam::repatchPolyTopoChanger::changePatches
     meshModPtr_.reset(nullptr);
     mesh_.removeBoundary();
     mesh_.addPatches(patches);
-}
-
-
-void Foam::repatchPolyTopoChanger::changePatches
-(
-    const List<polyPatch*>& patches
-)
-{
-    // Acquire ownership of the pointers
-    polyPatchList plist(const_cast<List<polyPatch*>&>(patches));
-
-    changePatches(plist);
 }
 
 

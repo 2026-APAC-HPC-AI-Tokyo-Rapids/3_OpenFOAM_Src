@@ -91,12 +91,6 @@ protected:
 
 public:
 
-    // Public Data
-
-        //- Flag to write log into Info
-        bool log;
-
-
     // Constructors
 
         //- Construct null
@@ -127,7 +121,7 @@ public:
 
 
     //- Destructor
-    virtual ~subModelBase() = default;
+    virtual ~subModelBase();
 
 
     // Member Functions

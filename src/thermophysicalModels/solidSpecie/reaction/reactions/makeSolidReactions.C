@@ -29,7 +29,6 @@ License
 #include "makeSolidReaction.H"
 
 #include "solidArrheniusReactionRate.H"
-#include "solidIsothermalReactionRate.H"
 
 #include "solidThermoPhysicsTypes.H"
 
@@ -46,8 +45,7 @@ License
     defineTemplateTypeNameAndDebug(solidReaction##Thermo, 0);                  \
     defineTemplateTypeNameAndDebug(Reaction##Thermo, 0);                       \
                                                                                \
-    makeSolidIRReactions(Thermo, solidArrheniusReactionRate)                   \
-    makeSolidIRReactions(Thermo, solidIsothermalReactionRate)
+    makeSolidIRReactions(Thermo, solidArrheniusReactionRate)
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

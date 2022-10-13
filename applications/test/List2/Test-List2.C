@@ -40,6 +40,8 @@ Description
 #include "OFstream.H"
 #include "cpuTime.H"
 
+#include <initializer_list>
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 using namespace Foam;

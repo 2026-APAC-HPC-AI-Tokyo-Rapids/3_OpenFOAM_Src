@@ -723,6 +723,10 @@ Foam::fileNameList Foam::readDir
     // also used as increment if initial size found to be insufficient
     static constexpr int maxNnames = 100;
 
+    // Basic sanity: cannot strip '.gz' from directory names
+    const bool stripgz = filtergz && (type != fileName::DIRECTORY);
+    const word extgz("gz");
+
     fileNameList dirEntries;
 
     // Iterate contents (ignores an empty directory name)
@@ -758,39 +762,32 @@ Foam::fileNameList Foam::readDir
         // Validate filename without quotes, etc in the name.
         // No duplicate slashes to strip - dirent will not have them anyhow.
 
-        fileName name(fileName::validate(item));
+        const fileName name(fileName::validate(item));
         if (name != item)
         {
             ++nFailed;
         }
         else if
         (
-            (type == fileName::Type::DIRECTORY)
-         || (type == fileName::Type::FILE && !fileName::isBackup(name))
+            (type == fileName::DIRECTORY)
+         || (type == fileName::FILE && !fileName::isBackup(name))
         )
         {
-            fileName::Type detected = (directory/name).type();
-
-            if (detected == type)
+            if ((directory/name).type() == type)
             {
-                // Only strip '.gz' from non-directory names
-                if
-                (
-                    filtergz
-                 && (detected != fileName::Type::DIRECTORY)
-                 && name.has_ext("gz")
-                )
-                {
-                    name.remove_ext();
-                }
-
                 if (nEntries >= dirEntries.size())
                 {
                     dirEntries.resize(dirEntries.size() + maxNnames);
                 }
 
-                dirEntries[nEntries] = std::move(name);
-                ++nEntries;
+                if (stripgz && name.hasExt(extgz))
+                {
+                    dirEntries[nEntries++] = name.lessExt();
+                }
+                else
+                {
+                    dirEntries[nEntries++] = name;
+                }
             }
         }
     }
@@ -940,21 +937,10 @@ bool Foam::ln(const fileName& src, const fileName& dst)
 
     if (MSwindows::debug)
     {
-        Info<< "MSwindows does not support softlinks" << endl;
+        Info<< "MSwindows does not support ln - softlinking" << endl;
     }
 
     return false;
-}
-
-
-Foam::fileName Foam::readLink(const fileName& link)
-{
-    if (MSwindows::debug)
-    {
-        Info<< "MSwindows does not support softlinks" << endl;
-    }
-
-    return fileName();
 }
 
 
@@ -965,7 +951,7 @@ bool Foam::mv(const fileName& src, const fileName& dst, const bool followLink)
         Info<< "Move : " << src << " to " << dst << endl;
     }
 
-    // Ignore empty names => always false
+    // Ignore an empty names => always false
     if (src.empty() || dst.empty())
     {
         return false;
@@ -1047,31 +1033,20 @@ bool Foam::rm(const fileName& file)
 }
 
 
-bool Foam::rmDir
-(
-    const fileName& directory,
-    const bool silent,
-    const bool emptyOnly
-)
+bool Foam::rmDir(const fileName& directory, const bool silent)
 {
-    if (directory.empty())
-    {
-        return false;
-    }
-
     // Iterate contents (ignores an empty directory name)
     // Also retain hidden files/dirs for removal
 
     MSwindows::directoryIterator dirIter(directory, true);
+
     if (!dirIter.exists())
     {
-        if (!silent && !emptyOnly)
+        if (!silent)
         {
             WarningInFunction
-                << "Cannot open directory " << directory << endl;
+                << "cannot open directory " << directory << endl;
         }
-
-        return false;
     }
 
     if (MSwindows::debug)
@@ -1080,8 +1055,9 @@ bool Foam::rmDir
             << " : removing directory " << directory << endl;
     }
 
+
     // Process each directory entry, counting any errors encountered
-    int nErrors = 0;
+    label nErrors = 0;
 
     for (/*nil*/; dirIter; ++dirIter)
     {
@@ -1093,22 +1069,12 @@ bool Foam::rmDir
 
         const fileName path(fileName::concat(directory, item));
 
-        fileName::Type detected = path.type(false);  // No followLink
-
-        if (detected == fileName::DIRECTORY)
+        if (path.type(false) == fileName::DIRECTORY)
         {
-            // Call silently for lower levels
-            if (!rmDir(path, true, emptyOnly))
+            if (!rmDir(path, true))  // Only report errors at the top-level
             {
                 ++nErrors;
             }
-        }
-        else if (emptyOnly)
-        {
-            // Only remove empty directories (not files)
-            ++nErrors;
-
-            // POSIX has extra handling for dead symlinks...
         }
         else
         {
@@ -1119,28 +1085,29 @@ bool Foam::rmDir
         }
     }
 
-    if (nErrors == 0)
+    if (nErrors)
     {
-        // No errors encountered - try to remove the top-level
-
+        if (!silent)
+        {
+            WarningInFunction
+                << "failed to remove directory " << directory << nl
+                << "could not remove " << nErrors << " sub-entries" << endl;
+        }
+    }
+    else
+    {
         if (!::RemoveDirectory(directory.c_str()))
         {
-            nErrors = -1;  // A top-level error
+            ++nErrors;
+            if (!silent)
+            {
+                WarningInFunction
+                    << "failed to remove directory " << directory << endl;
+            }
         }
     }
 
-    if (nErrors && !silent && !emptyOnly)
-    {
-        WarningInFunction
-            << "Failed to remove directory " << directory << endl;
-
-        if (nErrors > 0)
-        {
-            Info<< "could not remove " << nErrors << " sub-entries" << endl;
-        }
-    }
-
-    return (nErrors == 0);
+    return !nErrors;
 }
 
 
@@ -1271,7 +1238,7 @@ void* Foam::dlOpen(const fileName& libName, const bool check)
     if
     (
         !handle
-     && !libName.has_path()
+     && libName.find('/') == std::string::npos
      && !libso.starts_with("lib")
     )
     {

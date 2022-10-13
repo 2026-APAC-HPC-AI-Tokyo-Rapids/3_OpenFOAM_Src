@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -64,13 +64,14 @@ void Foam::surfaceDisplacementPointPatchVectorField::calcProjection
     // we're guaranteed to hit something.
 
     //- Per point projection vector:
-    const scalar projectLen = mesh.bounds().mag();
+    const scalar projectLen = mag(mesh.bounds().max()-mesh.bounds().min());
 
     // For case of fixed projection vector:
     vector projectVec(Zero);
     if (projectMode_ == FIXEDNORMAL)
     {
-        projectVec = projectLen * normalised(projectDir_);
+        vector n = projectDir_/mag(projectDir_);
+        projectVec = projectLen*n;
     }
 
 
@@ -125,7 +126,7 @@ void Foam::surfaceDisplacementPointPatchVectorField::calcProjection
             else if (nearest[i].hit())
             {
                 displacement[i] =
-                    nearest[i].point()
+                    nearest[i].hitPoint()
                   - points0[meshPoints[i]];
             }
             else
@@ -216,7 +217,7 @@ void Foam::surfaceDisplacementPointPatchVectorField::calcProjection
             {
                 // Found nearest.
                 displacement[i] =
-                    nearest[i].point()
+                    nearest[i].hitPoint()
                   - points0[meshPoints[i]];
             }
             else
@@ -225,21 +226,24 @@ void Foam::surfaceDisplacementPointPatchVectorField::calcProjection
 
                 if (rightHit[i].hit())
                 {
-                    if
-                    (
-                        !leftHit[i].hit()
-                    ||
-                        (
-                            start[i].distSqr(rightHit[i].point())
-                          < start[i].distSqr(leftHit[i].point())
-                        )
-                    )
+                    if (leftHit[i].hit())
                     {
-                        interPt = rightHit[i];
+                        if
+                        (
+                            magSqr(rightHit[i].hitPoint()-start[i])
+                          < magSqr(leftHit[i].hitPoint()-start[i])
+                        )
+                        {
+                            interPt = rightHit[i];
+                        }
+                        else
+                        {
+                            interPt = leftHit[i];
+                        }
                     }
                     else
                     {
-                        interPt = leftHit[i];
+                        interPt = rightHit[i];
                     }
                 }
                 else
@@ -255,9 +259,9 @@ void Foam::surfaceDisplacementPointPatchVectorField::calcProjection
                 {
                     if (wedgePlane_ >= 0 && wedgePlane_ <= vector::nComponents)
                     {
-                        interPt.point()[wedgePlane_] += offset[i];
+                        interPt.rawPoint()[wedgePlane_] += offset[i];
                     }
-                    displacement[i] = interPt.point() - points0[meshPoints[i]];
+                    displacement[i] = interPt.rawPoint()-points0[meshPoints[i]];
                 }
                 else
                 {

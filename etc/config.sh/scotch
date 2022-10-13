@@ -6,7 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2011-2016 OpenFOAM Foundation
-#     Copyright (C) 2017-2022 OpenCFD Ltd.
+#     Copyright (C) 2017-2021 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -30,8 +30,6 @@
 #
 #     Can also disable by renaming/removing this file or by creating an empty
 #     file with the same name at a user or site location.
-#
-# regressions noted in scotch-v7.0.1
 #------------------------------------------------------------------------------
 # USER EDITABLE PART: Changes made here may be lost with the next upgrade
 

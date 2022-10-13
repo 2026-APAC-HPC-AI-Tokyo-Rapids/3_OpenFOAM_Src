@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,8 +51,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_functionObjects_parProfiling_H
-#define Foam_functionObjects_parProfiling_H
+#ifndef functionObjects_parProfiling_H
+#define functionObjects_parProfiling_H
 
 #include "functionObject.H"
 
@@ -61,7 +61,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
+// Forward declaration of classes
 class Time;
 
 namespace functionObjects
@@ -92,7 +92,7 @@ public:
 
     // Constructors
 
-        //- Construct from Time and dictionary. Enables profilingPstream
+        //- Construct from Time and dictionary
         parProfiling
         (
             const word& name,
@@ -101,7 +101,7 @@ public:
         );
 
 
-    //- Destructor. Disables profilingPstream
+    //- Destructor
     virtual ~parProfiling();
 
 

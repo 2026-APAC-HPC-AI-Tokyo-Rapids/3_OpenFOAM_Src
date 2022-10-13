@@ -118,7 +118,7 @@ public:
         autoPtr<IATEsource> clone() const
         {
             NotImplemented;
-            return nullptr;
+            return autoPtr<IATEsource>(nullptr);
         }
 
 

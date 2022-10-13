@@ -101,9 +101,6 @@ int main(int argc, char *argv[])
 
     printInfo(idl1);
 
-    Info<< "list() = ";
-    idl1.list().writeList(Info, 0) << endl;
-
     for (const label val : { 10, 30, 40, 50, 90, 80, 120 } )
     {
         testFind(val, idl1);
@@ -149,7 +146,7 @@ int main(int argc, char *argv[])
     {
         Info<<"Writing output to " << binaryOutput << endl;
 
-        OFstream os(binaryOutput, IOstreamOption::BINARY);
+        OFstream os(binaryOutput, IOstream::BINARY);
 
         os.writeEntry("idl1", idl1);
         os.writeEntry("idl2", idl2);
@@ -185,7 +182,7 @@ int main(int argc, char *argv[])
 
         // MPI barrier
         bool barrier = true;
-        Pstream::broadcast(barrier);
+        Pstream::scatter(barrier);
     }
 
 

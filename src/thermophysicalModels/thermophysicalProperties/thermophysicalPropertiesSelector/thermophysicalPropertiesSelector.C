@@ -49,13 +49,9 @@ thermophysicalPropertiesSelector
 {
     const word name(dict.first()->keyword());
 
-    // Handle sub-dictionary or primitive entry
-
-    const dictionary* subDictPtr = dict.findDict(name);
-
-    if (subDictPtr)
+    if (dict.isDict(name))
     {
-        propertiesPtr_ = ThermophysicalProperties::New(*subDictPtr);
+        propertiesPtr_ = ThermophysicalProperties::New(dict.subDict(name));
     }
     else
     {

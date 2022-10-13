@@ -193,7 +193,10 @@ int main(int argc, char *argv[])
         meshBb[Pstream::myProcNo()] = List<treeBoundBox>
         (
             1,
-            treeBoundBox(mesh.points()).extend(rndGen, 1e-3)
+            treeBoundBox
+            (
+                boundBox(mesh.points(), false)
+            ).extend(rndGen, 1e-3)
         );
         Pstream::allGatherList(meshBb);
     }
@@ -240,7 +243,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            bbs = List<treeBoundBox>(1, treeBoundBox::null());
+            bbs = List<treeBoundBox>(1, treeBoundBox(boundBox::invertedBox));
         }
 
         dictionary dict;
@@ -249,7 +252,7 @@ int main(int argc, char *argv[])
         dict.add("bounds", bbs);
 
         // Scatter patch information
-        Pstream::broadcast(s.patches());
+        Pstream::scatter(s.patches());
 
         // Construct distributedTrisurfaceMesh from components
         IOobject notReadIO(io);

@@ -39,8 +39,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_ThermoSurfaceFilm_H
-#define Foam_ThermoSurfaceFilm_H
+#ifndef ThermoSurfaceFilm_H
+#define ThermoSurfaceFilm_H
 
 #include "KinematicSurfaceFilm.H"
 #include "UPtrList.H"
@@ -61,21 +61,16 @@ class ThermoSurfaceFilm
 {
 protected:
 
-    // Data Types
+    // Protected Data
 
         //- Convenience typedef to the cloud's parcel type
         typedef typename CloudType::parcelType parcelType;
 
         typedef typename
-            regionModels::areaSurfaceFilmModels::liquidFilmBase
-            areaFilm;
+            regionModels::areaSurfaceFilmModels::liquidFilmBase areaFilm;
 
         typedef typename
-            regionModels::surfaceFilmModels::surfaceFilmRegionModel
-            regionFilm;
-
-
-    // Protected Data
+            regionModels::surfaceFilmModels::surfaceFilmRegionModel regionFilm;
 
         //- Reference to the cloud thermo package
         const SLGThermo& thermo_;
@@ -94,6 +89,12 @@ protected:
 
         // Injection from sheet (ejection) helper functions
 
+            virtual void cacheFilmFields
+            (
+                const label primaryPatchi,
+                const areaFilm&
+            );
+
             //- Cache the film fields in preparation for injection
             virtual void cacheFilmFields
             (
@@ -101,9 +102,6 @@ protected:
                 const label primaryPatchi,
                 const regionFilm&
             );
-
-            //- Cache the finite area film fields in preparation for injection
-            virtual void cacheFilmFields(const areaFilm&);
 
             //- Set the individual parcel properties
             virtual void setParcelProperties
@@ -157,8 +155,8 @@ public:
 
         // I-O
 
-            //- Write surface film info
-            virtual void info();
+            //- Write surface film info to stream
+            virtual void info(Ostream& os);
 };
 
 

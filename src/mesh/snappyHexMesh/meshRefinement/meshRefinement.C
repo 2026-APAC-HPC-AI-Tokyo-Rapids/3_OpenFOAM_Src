@@ -353,8 +353,8 @@ void Foam::meshRefinement::updateIntersections(const labelList& changedFaces)
     bitSet isMasterFace(syncTools::getMasterFaces(mesh_));
 
     {
-        const label nMasterFaces =
-            returnReduce(isMasterFace.count(), sumOp<label>());
+        label nMasterFaces = isMasterFace.count();
+        reduce(nMasterFaces, sumOp<label>());
 
         label nChangedFaces = 0;
         forAll(changedFaces, i)
@@ -423,7 +423,9 @@ void Foam::meshRefinement::updateIntersections(const labelList& changedFaces)
     // case in general since same vectors but just to make sure.
     syncTools::syncFaceList(mesh_, surfaceIndex_, maxEqOp<label>());
 
-    label nTotHits = returnReduce(countHits(), sumOp<label>());
+    label nHits = countHits();
+    label nTotHits = returnReduce(nHits, sumOp<label>());
+
 
     if (!dryRun_)
     {
@@ -1971,7 +1973,7 @@ Foam::autoPtr<Foam::mapDistributePolyMesh> Foam::meshRefinement::balance
             labelList nProcCells(distributor.countCells(distribution));
             Pout<< "Wanted distribution:" << nProcCells << endl;
 
-            Pstream::listCombineReduce(nProcCells, plusEqOp<label>());
+            Pstream::listCombineAllGather(nProcCells, plusEqOp<label>());
 
             Pout<< "Wanted resulting decomposition:" << endl;
             forAll(nProcCells, proci)
@@ -2778,8 +2780,7 @@ Foam::label Foam::meshRefinement::findCell
     (void)mesh.tetBasePtIs();
 
     label celli = mesh.findCell(p, findCellMode);
-
-    if (returnReduceAnd(celli < 0))
+    if (returnReduce(celli, maxOp<label>()) == -1)
     {
         // See if we can perturb a bit
         celli = mesh.findCell(p+perturbVec, findCellMode);
@@ -3228,11 +3229,10 @@ void Foam::meshRefinement::distribute(const mapDistributePolyMesh& map)
         Random rndGen(653213);
 
         // Get local mesh bounding box. Single box for now.
-        List<treeBoundBox> meshBb
-        (
-            1,
-            treeBoundBox(mesh_.points()).extend(rndGen, 1e-4)
-        );
+        List<treeBoundBox> meshBb(1);
+        treeBoundBox& bb = meshBb[0];
+        bb = treeBoundBox(mesh_.points());
+        bb = bb.extend(rndGen, 1e-4);
 
         // Distribute all geometry (so refinementSurfaces and shellSurfaces)
         searchableSurfaces& geometry =
@@ -3693,7 +3693,7 @@ void Foam::meshRefinement::dumpIntersections(const fileName& prefix) const
             {
                 meshTools::writeOBJ(str, start[i]);
                 verti++;
-                meshTools::writeOBJ(str, surfaceHitInfo[i].point());
+                meshTools::writeOBJ(str, surfaceHitInfo[i].hitPoint());
                 verti++;
                 meshTools::writeOBJ(str, end[i]);
                 verti++;
@@ -3803,7 +3803,7 @@ const Foam::dictionary& Foam::meshRefinement::subDict
         auto& err = FatalIOErrorInFunction(dict);
 
         err << "Entry '" << keyword << "' not found in dictionary "
-            << dict.relativeName() << nl;
+            << dict.name() << nl;
 
         if (noExit)
         {
@@ -3827,14 +3827,14 @@ Foam::ITstream& Foam::meshRefinement::lookup
     enum keyType::option matchOpt
 )
 {
-    const entry* eptr = dict.findEntry(keyword, matchOpt);
+    const auto finder(dict.csearch(keyword, matchOpt));
 
-    if (!eptr)
+    if (!finder.good())
     {
         auto& err = FatalIOErrorInFunction(dict);
 
         err << "Entry '" << keyword << "' not found in dictionary "
-            << dict.relativeName() << nl;
+            << dict.name() << nl;
 
         if (noExit)
         {
@@ -3847,7 +3847,7 @@ Foam::ITstream& Foam::meshRefinement::lookup
         }
     }
 
-    return eptr->stream();
+    return finder.ref().stream();
 }
 
 

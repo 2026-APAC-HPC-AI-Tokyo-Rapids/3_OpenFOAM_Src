@@ -5,7 +5,7 @@
 #   \\  /    A nd           | www.openfoam.com
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
-#     Copyright (C) 2018-2022 OpenCFD Ltd.
+#     Copyright (C) 2018-2020 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -33,9 +33,6 @@
 #     WM_COMPILER_LIB_ARCH
 #     DEB_TARGET_MULTIARCH
 #
-# Possible Dependencies
-#     - dpkg-architecture
-#
 #------------------------------------------------------------------------------
 
 if [ -z "$WMAKE_SCRIPTS_SYSFUNCTIONS" ]
@@ -43,17 +40,10 @@ then
     # Load once, but do not rely on this variable elsewhere
     WMAKE_SCRIPTS_SYSFUNCTIONS=loaded
 
-    # Handle debian multi-arch...
-    # but dpkg-architecture command may also be missing
-    if [ -z "$DEB_TARGET_MULTIARCH" ] && [ -f /etc/debian_version ]
+    # Debian multi-arch, ignore missing/bad dpkg-architecture.
+    if [ -z "$DEB_TARGET_MULTIARCH" ]
     then
-        DEB_TARGET_MULTIARCH="$(dpkg-architecture -qDEB_TARGET_MULTIARCH 2>/dev/null || true)"
-        if [ -z "$DEB_TARGET_MULTIARCH" ] && [ "${WM_ARCH#linux}" != "${WM_ARCH}" ]
-        then
-            # Reasonable guess at a multi-arch name (eg, x86_64-linux-gnu)
-            # TODO: aarch64 -> arm64 ?
-            DEB_TARGET_MULTIARCH="$(uname -m)-linux-gnu"
-        fi
+        DEB_TARGET_MULTIARCH=$(dpkg-architecture -qDEB_TARGET_MULTIARCH 2>/dev/null || true)
     fi
 
     # True if OS is <darwin>.
@@ -222,7 +212,7 @@ then
     findLibrary()
     {
         local prefixDir localDir searchDir searchName
-        local file found ext zshsplit
+        local file ext
 
         searchDir=true
 
@@ -274,15 +264,6 @@ then
 
             ## echo "search: $# $@" 1>&2
 
-            # Split extLibraries on space: zsh needs shwordsplit for that
-            if [ -n "$ZSH_VERSION" ]
-            then
-                # $- contains 'y' if shwordsplit already active
-                zshsplit=1
-                case "$-" in (*y*) unset zshsplit;; esac
-                setopt shwordsplit
-            fi
-
             for searchDir in "$@"
             do
                 [ -n "$searchDir" ] || continue
@@ -291,23 +272,14 @@ then
                     file="$prefixDir/$searchDir/$searchName$ext"
                     if [ -f "$file" ] && [ -r "$file" ]
                     then
-                        found="$file"  # Found
-                        break 2
+                        echo "$file"  # Found
+                        return 0
                     fi
                 done
             done
 
         else
             # Directed search
-
-            # Split extLibraries on space: zsh needs shwordsplit for that
-            if [ -n "$ZSH_VERSION" ]
-            then
-                # $- contains 'y' if shwordsplit already active
-                zshsplit=1
-                case "$-" in (*y*) unset zshsplit;; esac
-                setopt shwordsplit
-            fi
 
             for file
             do
@@ -316,23 +288,11 @@ then
                 do
                     if [ -f "$file$ext" ] && [ -r "$file$ext" ]
                     then
-                        found="$file$ext"  # Found
-                        break 2
+                        echo "$file$ext"  # Found
+                        return 0
                     fi
                 done
             done
-        fi
-
-        # Restore old shwordsplit (zsh)
-        if [ -n "$zshsplit" ]
-        then
-            unsetopt shwordsplit
-        fi
-
-        if [ -n "$found" ]
-        then
-            echo "$found"
-            return 0
         fi
 
         return 2

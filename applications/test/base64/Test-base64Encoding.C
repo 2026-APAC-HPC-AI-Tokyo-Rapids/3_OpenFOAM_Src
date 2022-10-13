@@ -39,6 +39,7 @@ Description
 #include "Pair.H"
 
 #include <sstream>
+#include <initializer_list>
 
 using namespace Foam;
 

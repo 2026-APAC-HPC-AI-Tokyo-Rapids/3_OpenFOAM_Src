@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -38,17 +38,17 @@ if (doLagrangian)
         Info<< "Cloud " << cloudName << " (";
 
         const bool cloudExists =
-            returnReduceOr(currentCloudDirs.found(cloudName));
+            returnReduce(currentCloudDirs.found(cloudName), orOp<bool>());
 
         {
             autoPtr<ensightFile> os = ensCase.newCloud(cloudName);
 
             ensightOutput::writeCloudPositions
             (
-                os.ref(),
                 mesh,
                 cloudName,
-                cloudExists
+                cloudExists,
+                os
             );
 
             Info<< " positions";
@@ -82,38 +82,30 @@ if (doLagrangian)
                 const bool oldParRun = Pstream::parRun(false);
                 fieldExists = fieldObject.typeHeaderOk<IOField<scalar>>(false);
                 Pstream::parRun(oldParRun);  // Restore parallel state
-                Pstream::reduceOr(fieldExists);
+                reduce(fieldExists, orOp<bool>());
             }
 
             bool wrote = false;
-            do
+            if (fieldType == scalarIOField::typeName)
             {
-                #undef  ensight_WRITE_CLOUD_FIELD
-                #define ensight_WRITE_CLOUD_FIELD(PrimitiveType)              \
-                                                                              \
-                if (fieldType == IOField<PrimitiveType>::typeName)            \
-                {                                                             \
-                    autoPtr<ensightFile> os =                                 \
-                        ensCase.newCloudData<PrimitiveType>                   \
-                        (                                                     \
-                            cloudName,                                        \
-                            fieldName                                         \
-                        );                                                    \
-                                                                              \
-                    wrote = ensightOutput::readWriteCloudField<PrimitiveType> \
-                    (                                                         \
-                        os.ref(),                                             \
-                        fieldObject,                                          \
-                        fieldExists                                           \
-                    );                                                        \
-                    break;                                                    \
-                }
+                autoPtr<ensightFile> os =
+                    ensCase.newCloudData<scalar>(cloudName, fieldName);
 
-                ensight_WRITE_CLOUD_FIELD(scalar);
-                ensight_WRITE_CLOUD_FIELD(vector);
+                wrote = ensightOutput::writeCloudField<scalar>
+                (
+                    fieldObject, fieldExists, os
+                );
+            }
+            else if (fieldType == vectorIOField::typeName)
+            {
+                autoPtr<ensightFile> os =
+                    ensCase.newCloudData<vector>(cloudName, fieldName);
 
-                #undef ensight_WRITE_CLOUD_FIELD
-            } while (false);
+                wrote = ensightOutput::writeCloudField<vector>
+                (
+                    fieldObject, fieldExists, os
+                );
+            }
 
             if (wrote)
             {

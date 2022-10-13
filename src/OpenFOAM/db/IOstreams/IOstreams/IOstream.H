@@ -60,9 +60,9 @@ using std::ios_base;
 using std::istream;
 using std::ostream;
 
-using std::cerr;
 using std::cin;
 using std::cout;
+using std::cerr;
 
 // Additional constructors and methods (as per v2012 and earlier)
 #define Foam_IOstream_extras
@@ -147,7 +147,7 @@ protected:
         //- Set stream state to be good
         void setGood() noexcept
         {
-            ioState_ = std::ios_base::goodbit;
+            ioState_ = std::ios_base::iostate(0);
         }
 
 
@@ -169,7 +169,7 @@ public:
         explicit IOstream(IOstreamOption streamOpt = IOstreamOption())
         :
             IOstreamOption(streamOpt),
-            ioState_(std::ios_base::goodbit),
+            ioState_(std::ios_base::iostate(0)),
             openClosed_(CLOSED),
             sizeofLabel_(static_cast<unsigned char>(sizeof(label))),
             sizeofScalar_(static_cast<unsigned char>(sizeof(scalar))),
@@ -194,8 +194,12 @@ public:
 
     // Access
 
-        //- The name of the stream.
+        //- Return the name of the stream.
+        //  Useful for Fstream to remember the filename
         virtual const fileName& name() const;
+
+        //- Return stream name for modification
+        virtual fileName& name();
 
         //- Return the name of the stream relative to the current case.
         //  Uses argList::envRelativePath()
@@ -229,7 +233,7 @@ public:
         //- True if next operation might succeed
         bool good() const noexcept
         {
-            return ioState_ == 0;  // == goodbit
+            return ioState_ == 0;
         }
 
         //- True if end of input seen
@@ -327,7 +331,7 @@ public:
         //  \return the previous value
         label lineNumber(const label num) noexcept
         {
-            label old(lineNumber_);
+            const label old(lineNumber_);
             lineNumber_ = num;
             return old;
         }
@@ -436,31 +440,31 @@ inline IOstream& operator<<(IOstream& io, IOstreamManip f)
 
 inline IOstream& dec(IOstream& io)
 {
-    io.setf(std::ios_base::dec, std::ios_base::basefield);
+    io.setf(ios_base::dec, ios_base::dec|ios_base::hex|ios_base::oct);
     return io;
 }
 
 inline IOstream& hex(IOstream& io)
 {
-    io.setf(std::ios_base::hex, std::ios_base::basefield);
+    io.setf(ios_base::hex, ios_base::dec|ios_base::hex|ios_base::oct);
     return io;
 }
 
 inline IOstream& oct(IOstream& io)
 {
-    io.setf(std::ios_base::oct, std::ios_base::basefield);
+    io.setf(ios_base::oct, ios_base::dec|ios_base::hex|ios_base::oct);
     return io;
 }
 
 inline IOstream& fixed(IOstream& io)
 {
-    io.setf(std::ios_base::fixed, std::ios_base::floatfield);
+    io.setf(ios_base::fixed, ios_base::floatfield);
     return io;
 }
 
 inline IOstream& scientific(IOstream& io)
 {
-    io.setf(std::ios_base::scientific, std::ios_base::floatfield);
+    io.setf(ios_base::scientific, ios_base::floatfield);
     return io;
 }
 

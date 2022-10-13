@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2018 Bernhard Gschaider
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -82,7 +82,8 @@ inline bool Foam::expressions::exprResult::deleteChecked()
 template<class Type>
 inline bool Foam::expressions::exprResult::readChecked
 (
-    const entry& e,
+    const word& key,
+    const dictionary& dict,
     const label len,
     const bool uniform
 )
@@ -95,7 +96,7 @@ inline bool Foam::expressions::exprResult::readChecked
 
         if (uniform)
         {
-            const Type val(e.get<Type>());
+            const Type val(dict.get<Type>(key));
 
             size_ = len;
             fieldPtr_ = new Field<Type>(size_, val);
@@ -105,7 +106,7 @@ inline bool Foam::expressions::exprResult::readChecked
         else
         {
             size_ = len;
-            fieldPtr_ = new Field<Type>(e, size_);
+            fieldPtr_ = new Field<Type>(key, dict, size_);
         }
 
         isUniform_ = uniform;

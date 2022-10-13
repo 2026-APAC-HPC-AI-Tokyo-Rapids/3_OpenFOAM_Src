@@ -101,10 +101,9 @@ SourceFiles
 #include "fileName.H"
 #include "typeInfo.H"
 #include "autoPtr.H"
+#include "IOstreamOption.H"
 #include "InfoProxy.H"
 #include "Enum.H"
-#include "IOobjectOption.H"
-#include "IOstreamOption.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -121,12 +120,26 @@ class objectRegistry;
 \*---------------------------------------------------------------------------*/
 
 class IOobject
-:
-    public IOobjectOption
 {
 public:
 
     // Public Data Types
+
+        //- Enumeration defining the read options
+        enum readOption : char
+        {
+            NO_READ = 0,
+            MUST_READ = 1,
+            MUST_READ_IF_MODIFIED = 3,
+            READ_IF_PRESENT = 4
+        };
+
+        //- Enumeration defining the write options
+        enum writeOption : char
+        {
+            NO_WRITE = 0,
+            AUTO_WRITE = 0x10
+        };
 
         //- Enumeration defining the valid states of an IOobject
         enum objectState : char
@@ -156,16 +169,7 @@ private:
         static bool bannerEnabled_;
 
 
-    // Private Data (NB: byte-flags first for better alignment)
-
-        //- The IOobject state
-        objectState objState_;
-
-        //- The sizeof (label) in bytes, possibly read from the header
-        unsigned char sizeofLabel_;
-
-        //- The sizeof (scalar) in bytes, possibly read from the header
-        unsigned char sizeofScalar_;
+    // Private Data
 
         //- Name
         word name_;
@@ -181,6 +185,27 @@ private:
 
         //- Local path component
         fileName local_;
+
+        //- Read option
+        readOption rOpt_;
+
+        //- Write option
+        writeOption wOpt_;
+
+        //- Should object created with this IOobject be registered?
+        bool registerObject_;
+
+        //- Is object same for all processors?
+        bool globalObject_;
+
+        //- IOobject state
+        objectState objState_;
+
+        //- The sizeof (label) in bytes, possibly read from the header
+        unsigned char sizeofLabel_;
+
+        //- The sizeof (scalar) in bytes, possibly read from the header
+        unsigned char sizeofScalar_;
 
         //- Reference to the objectRegistry
         const objectRegistry& db_;
@@ -330,62 +355,26 @@ public:
     // Constructors
 
         //- Construct from name, instance, registry, io options
-        //  (default: NO_READ, NO_WRITE, register, non-global)
         IOobject
         (
             const word& name,
             const fileName& instance,
             const objectRegistry& registry,
-            IOobjectOption ioOpt = IOobjectOption()
-        );
-
-        //- Construct from name, instance, local, registry, io options
-        //  (default: NO_READ, NO_WRITE, register, non-global)
-        IOobject
-        (
-            const word& name,
-            const fileName& instance,
-            const fileName& local,
-            const objectRegistry& registry,
-            IOobjectOption ioOpt = IOobjectOption()
-        );
-
-        //- Construct from path, registry, io options.
-        //  (default: NO_READ, NO_WRITE, register, non-global)
-        //
-        //  Uses fileNameComponents() to split path into components.
-        //  A path that starts with a '/' is regarded as a file system path.
-        //  Paths starting with either './' or '../' are relative to
-        //  current working directory (and replaced with absolute equivalents).
-        //  All other paths are considered to be relative to the case.
-        IOobject
-        (
-            const fileName& path,
-            const objectRegistry& registry,
-            IOobjectOption ioOpt = IOobjectOption()
-        );
-
-        //- Construct from name, instance, registry, io options
-        inline IOobject
-        (
-            const word& name,
-            const fileName& instance,
-            const objectRegistry& registry,
-            IOobjectOption::readOption rOpt,
-            IOobjectOption::writeOption wOpt = IOobjectOption::NO_WRITE,
+            readOption rOpt = NO_READ,
+            writeOption wOpt = NO_WRITE,
             bool registerObject = true,
             bool globalObject = false
         );
 
         //- Construct from name, instance, local, registry, io options
-        inline IOobject
+        IOobject
         (
             const word& name,
             const fileName& instance,
             const fileName& local,
             const objectRegistry& registry,
-            IOobjectOption::readOption rOpt,
-            IOobjectOption::writeOption wOpt = IOobjectOption::NO_WRITE,
+            readOption rOpt = NO_READ,
+            writeOption wOpt = NO_WRITE,
             bool registerObject = true,
             bool globalObject = false
         );
@@ -396,12 +385,12 @@ public:
         //  Paths starting with either './' or '../' are relative to
         //  current working directory (and replaced with absolute equivalents).
         //  All other paths are considered to be relative to the case.
-        inline IOobject
+        IOobject
         (
             const fileName& path,
             const objectRegistry& registry,
-            IOobjectOption::readOption rOpt,
-            IOobjectOption::writeOption wOpt = IOobjectOption::NO_WRITE,
+            readOption rOpt = NO_READ,
+            writeOption wOpt = NO_WRITE,
             bool registerObject = true,
             bool globalObject = false
         );
@@ -413,20 +402,10 @@ public:
         IOobject(const IOobject& io, const word& name);
 
         //- Copy construct, resetting name and local component
-        inline IOobject
-        (
-            const IOobject& io,
-            const word& name,
-            const fileName& local
-        );
+        IOobject(const IOobject& io, const word& name, const fileName& local);
 
         //- Copy construct, resetting read/write options
-        inline IOobject
-        (
-            const IOobject& io,
-            IOobjectOption::readOption rOpt,
-            IOobjectOption::writeOption wOpt
-        );
+        IOobject(const IOobject& io, readOption rOpt, writeOption wOpt);
 
 
         //- Clone
@@ -473,6 +452,18 @@ public:
             name_ = newName;
         }
 
+        //- Should object created with this IOobject be registered?
+        inline bool registerObject() const noexcept;
+
+        //- Change registration preference, return previous value
+        inline bool registerObject(bool on) noexcept;
+
+        //- Is object same for all processors?
+        inline bool globalObject() const noexcept;
+
+        //- Change global-object status, return previous value
+        inline bool globalObject(bool on) noexcept;
+
         //- The sizeof (label) in bytes, possibly read from the header
         inline unsigned labelByteSize() const noexcept;
 
@@ -498,6 +489,21 @@ public:
 
         //- Return pointer to meta-data (if any) or nullptr
         virtual const dictionary* findMetaData() const noexcept;
+
+
+    // Read/write options
+
+        //- The read option
+        inline readOption readOpt() const noexcept;
+
+        //- Change the read option, return previous value
+        inline readOption readOpt(readOption opt) noexcept;
+
+        //- The write option
+        inline writeOption writeOpt() const noexcept;
+
+        //- Change the write option, return previous value
+        inline writeOption writeOpt(writeOption opt) noexcept;
 
 
     // Path components
@@ -539,7 +545,7 @@ public:
         //- The object path relative to the root
         fileName objectRelPath() const;
 
-        //- Redirect to fileHandler filePath, searching locally.
+        //- Helper for filePath that searches locally.
         //  When search is false, simply use the current instance,
         //  otherwise search previous instances.
         fileName localFilePath
@@ -548,7 +554,7 @@ public:
             const bool search=true
         ) const;
 
-        //- Redirect to fileHandler filePath, searching up if in parallel.
+        //- Helper for filePath that searches up if in parallel
         //  When search is false, simply use the current instance,
         //  otherwise search previous instances.
         fileName globalFilePath
@@ -644,6 +650,25 @@ public:
 
         //- Copy assignment, copies all values (except the registry)
         void operator=(const IOobject& io);
+
+
+    // Housekeeping
+
+        //- Access to the read option
+        //  \deprecated(2021-03) - use readOpt(readOption)
+        readOption& readOpt() noexcept { return rOpt_; }
+
+        //- Access to the write option
+        //  \deprecated(2021-03) - use writeOpt(writeOption)
+        writeOption& writeOpt() noexcept { return wOpt_; }
+
+        //- Access to the register object option
+        //  \deprecated(2021-03) - use registerObject(bool)
+        bool& registerObject() noexcept { return registerObject_; }
+
+        //- Access to the global object option
+        //  \deprecated(2021-03) - use globalObject(bool)
+        bool& globalObject() noexcept { return globalObject_; }
 };
 
 

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -76,14 +76,12 @@ bool Foam::ccm::writer::newFieldNode
     ccmID& fieldNode
 ) const
 {
-    const dictionary* subDictPtr = nameMapping.findDict(fieldName);
-
-    if (!subDictPtr)
+    if (!nameMapping.found(fieldName) || !nameMapping.isDict(fieldName))
     {
         return false;
     }
 
-    const dictionary& dict = *subDictPtr;
+    const dictionary& dict = nameMapping.subDict(fieldName);
 
     word shortName;
     if (!dict.readIfPresent("name", shortName))
@@ -167,11 +165,9 @@ void Foam::ccm::writer::writeSolution
     dictionary nameMapping(defaultNameMapping);
 
     // Merge without overwrite
-    const dictionary* subDictPtr = remapDict.findDict("fields");
-
-    if (subDictPtr)
+    if (remapDict.isDict("fields"))
     {
-        nameMapping |= *subDictPtr;
+        nameMapping |= remapDict.subDict("fields");
     }
 
 

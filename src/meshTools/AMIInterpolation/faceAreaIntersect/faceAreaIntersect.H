@@ -44,7 +44,7 @@ SourceFiles
 #include "FixedList.H"
 #include "plane.H"
 #include "face.H"
-#include "triangle.H"
+#include "triPoints.H"
 #include "Enum.H"
 #include "searchableSurface.H"
 
@@ -130,6 +130,12 @@ private:
             const label negI,
             const label posI
         ) const;
+
+        //- Return triangle area
+        inline scalar triArea(const triPoints& t) const;
+
+        //- Return triangle centre
+        inline vector triCentroid(const triPoints& t) const;
 
         //- Slice triangle with plane and generate new cut sub-triangles
         void triSliceWithPlane

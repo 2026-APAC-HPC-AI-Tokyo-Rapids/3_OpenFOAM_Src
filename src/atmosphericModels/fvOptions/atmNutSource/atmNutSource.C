@@ -92,7 +92,7 @@ Foam::fv::atmNutSource::atmNutSource
 
     const tmp<volScalarField>& tnut = turbPtr->nut();
 
-    if (tnut.is_reference())
+    if (!tnut.isTmp())
     {
         fieldNames_[0] = tnut().name();
     }

@@ -1,15 +1,14 @@
 #------------------------------------------------------------------------------
 # mingw is gcc, but new enough to support c++14
-# NB: gnu++14 (not c++14) to ensure __STRICT_ANSI__ is not defined
 #------------------------------------------------------------------------------
 include $(GENERAL_RULES)/Gcc/c++
 
-CC         := x86_64-w64-mingw32-g++ -std=gnu++14
-c++ARCH    := -m64 -pthread
+c++ARCH     = -m64 -pthread
 
-ifneq (,$(strip $(WM_COMPILE_OPTION)))
-    sinclude $(DEFAULT_RULES)/c++$(WM_COMPILE_OPTION)
-endif
+# With gnu++14 (not c++14) to ensure __STRICT_ANSI__ is not defined
+CC          = x86_64-w64-mingw32-g++ -std=gnu++14
+
+include $(RULES)/c++$(WM_COMPILE_OPTION)
 
 c++FLAGS    = \
     $(c++ARCH) $(GFLAGS) $(c++WARN) $(c++OPT) $(c++DBUG) $(ptFLAGS) \
@@ -32,11 +31,13 @@ LINKLIBSO   = $(CC) $(c++FLAGS) -shared \
     -Wl,--enable-runtime-pseudo-reloc \
     -Wl,--enable-auto-import \
     -Wl,--enable-auto-image-base \
-    -Wl,--strip-all
+    -Wl,--strip-all \
+    $(FOAM_EXTRA_LDFLAGS)
 
 LINKEXE     = $(CC) $(c++FLAGS) \
     -Wl,--enable-auto-import \
     -Wl,--strip-all \
-    -Wl,--force-exe-suffix
+    -Wl,--force-exe-suffix \
+    $(FOAM_EXTRA_LDFLAGS)
 
 #------------------------------------------------------------------------------

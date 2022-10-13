@@ -94,7 +94,7 @@ Foam::label Foam::metisLikeDecomp::decomposeGeneral
             }
             else
             {
-                UIPstream::read
+                IPstream::read
                 (
                     commsType,
                     proci,
@@ -118,7 +118,7 @@ Foam::label Foam::metisLikeDecomp::decomposeGeneral
         {
             SubList<label> procSlot(xadj, numCells);
 
-            UOPstream::write
+            OPstream::write
             (
                 commsType,
                 UPstream::masterNo(),
@@ -130,9 +130,9 @@ Foam::label Foam::metisLikeDecomp::decomposeGeneral
         }
     }
 
-    // Wait for outstanding requests
     if (commsType == UPstream::commsTypes::nonBlocking)
     {
+        // Wait for all to finish
         UPstream::waitRequests(startOfRequests);
     }
 
@@ -149,7 +149,13 @@ Foam::label Foam::metisLikeDecomp::decomposeGeneral
 
     // Ignore zero-sized weights ... and poorly sized ones too
     List<scalar> allWeights;
-    if (returnReduceAnd(cWeights.size() == globalCells.localSize()))
+    if
+    (
+        returnReduce
+        (
+            (cWeights.size() == globalCells.localSize()), andOp<bool>()
+        )
+    )
     {
         allWeights = globalCells.gather(cWeights);
     }

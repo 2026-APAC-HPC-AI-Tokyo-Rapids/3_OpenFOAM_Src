@@ -1,5 +1,5 @@
-    // Volume-to surface mapping object
-    const volSurfaceMapping vsm(aMesh);
+    // Create volume-to surface mapping object
+    volSurfaceMapping vsm(aMesh);
 
     volScalarField Cvf
     (

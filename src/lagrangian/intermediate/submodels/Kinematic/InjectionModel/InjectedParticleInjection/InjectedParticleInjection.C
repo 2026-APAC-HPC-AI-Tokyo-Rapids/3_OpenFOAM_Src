@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -62,7 +62,8 @@ void Foam::InjectedParticleInjection<CloudType>::initialise()
     {
         List<List<scalar>> procTime(Pstream::nProcs());
         procTime[Pstream::myProcNo()].transfer(time);
-        Pstream::allGatherList(procTime);
+        Pstream::gatherList(procTime);
+        Pstream::scatterList(procTime);
         time =
             ListListOps::combine<List<scalar>>
             (
@@ -71,7 +72,8 @@ void Foam::InjectedParticleInjection<CloudType>::initialise()
 
         List<List<point>> procPosition(Pstream::nProcs());
         procPosition[Pstream::myProcNo()].transfer(position);
-        Pstream::allGatherList(procPosition);
+        Pstream::gatherList(procPosition);
+        Pstream::scatterList(procPosition);
         position =
             ListListOps::combine<List<point>>
             (
@@ -80,7 +82,8 @@ void Foam::InjectedParticleInjection<CloudType>::initialise()
 
         List<List<scalar>> procD(Pstream::nProcs());
         procD[Pstream::myProcNo()].transfer(diameter);
-        Pstream::allGatherList(procD);
+        Pstream::gatherList(procD);
+        Pstream::scatterList(procD);
         diameter =
             ListListOps::combine<List<scalar>>
             (
@@ -89,7 +92,8 @@ void Foam::InjectedParticleInjection<CloudType>::initialise()
 
         List<List<vector>> procU(Pstream::nProcs());
         procU[Pstream::myProcNo()].transfer(U);
-        Pstream::allGatherList(procU);
+        Pstream::gatherList(procU);
+        Pstream::scatterList(procU);
         U =
             ListListOps::combine<List<vector>>
             (
@@ -364,9 +368,9 @@ bool Foam::InjectedParticleInjection<CloudType>::validInjection
 
 
 template<class CloudType>
-void Foam::InjectedParticleInjection<CloudType>::info()
+void Foam::InjectedParticleInjection<CloudType>::info(Ostream& os)
 {
-    InjectionModel<CloudType>::info();
+    InjectionModel<CloudType>::info(os);
 
     if (this->writeTime())
     {

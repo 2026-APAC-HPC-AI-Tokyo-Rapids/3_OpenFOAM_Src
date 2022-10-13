@@ -92,8 +92,6 @@ Usage
        sum           | Sum of values
        add           | Add values (same as sum)
        subtract      | Subtract values from first entry
-       divide        | Divide first entry by values
-       cmptDivide    | Divide first entry by componentwise values
        min           | Minimum value
        max           | Maximum value
        average       | Average value
@@ -108,12 +106,12 @@ Usage
 
 SourceFiles
     multiFieldValue.C
-    multiFieldValueImpl.C
+    multiFieldValueTemplates.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_functionObjects_multiFieldValue_H
-#define Foam_functionObjects_multiFieldValue_H
+#ifndef functionObjects_multiFieldValue_H
+#define functionObjects_multiFieldValue_H
 
 #include "stateFunctionObject.H"
 #include "writeFile.H"
@@ -147,8 +145,6 @@ public:
             opSum,              //!< Sum of values
             opAdd,              //!< Add values (same as sum)
             opSubtract,         //!< Subtract values from first entry
-            opDivide,           //!< Divide first entry by values
-            opCmptDivide,       //!< Divide first entry by values componentwise
             opMin,              //!< Minimum value
             opMax,              //!< Maximum value
             opAverage           //!< Average value
@@ -244,6 +240,12 @@ public:
 } // End namespace fieldValues
 } // End namespace functionObjects
 } // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#ifdef NoRepository
+    #include "multiFieldValueTemplates.C"
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

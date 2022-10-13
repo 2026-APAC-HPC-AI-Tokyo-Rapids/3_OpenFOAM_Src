@@ -107,7 +107,7 @@ void Foam::schemesLookup::read(const dictionary& dict)
 Foam::schemesLookup::schemesLookup
 (
     const objectRegistry& obr,
-    IOobjectOption::readOption rOpt,
+    const IOobject::readOption rOpt,
     const word& dictName,
     const dictionary* fallback
 )
@@ -144,10 +144,10 @@ Foam::schemesLookup::schemesLookup
     if
     (
         readOpt() == IOobject::MUST_READ
-     || (isReadOptional() && headerOk())
+     || (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
     )
     {
-        readOpt(IOobject::MUST_READ_IF_MODIFIED);
+        readOpt() = IOobject::MUST_READ_IF_MODIFIED;
         addWatch();
     }
 

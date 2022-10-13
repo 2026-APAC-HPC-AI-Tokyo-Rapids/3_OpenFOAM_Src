@@ -29,6 +29,7 @@ License
 #include "FixedList.H"
 #include "List.H"
 #include "token.H"
+#include <algorithm>
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 

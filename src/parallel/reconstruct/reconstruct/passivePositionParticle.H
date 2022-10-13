@@ -38,8 +38,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_passivePositionParticle_H
-#define Foam_passivePositionParticle_H
+#ifndef passivePositionParticle_H
+#define passivePositionParticle_H
 
 #include "particle.H"
 #include "IOstream.H"
@@ -82,6 +82,7 @@ public:
             location_(position())
         {}
 
+
         //- Construct from components (supplied location)
         passivePositionParticle
         (
@@ -96,6 +97,7 @@ public:
             particle(mesh, coordinates, celli, tetFacei, tetPti),
             location_(position)
         {}
+
 
         //- Construct from Istream
         passivePositionParticle
@@ -163,39 +165,39 @@ public:
 
     // Member Functions
 
-        //- The cached particle position
-        const point& location() const noexcept
-        {
-            return location_;
-        }
-
-        //- Write the particle position and cell id
-        //  Uses cached location() instead of calculated position()
-        virtual void writePosition(Ostream& os) const
-        {
-            if (os.format() == IOstreamOption::ASCII)
+            //- Return current particle position
+            inline const point& location() const
             {
-                os  << location() << token::SPACE << cell();
-            }
-            else
-            {
-                positionsCompat1706 p;
-
-                const size_t s =
-                (
-                    offsetof(positionsCompat1706, facei)
-                  - offsetof(positionsCompat1706, position)
-                );
-
-                p.position = location();
-                p.celli = cell();
-
-                os.write(reinterpret_cast<const char*>(&p.position), s);
+                return location_;
             }
 
-            // Check state of Ostream
-            os.check(FUNCTION_NAME);
-        }
+            //- Write the particle position and cell id
+            virtual void writePosition(Ostream& os) const
+            {
+                // Use cached location() instead of calculated position()
+                if (os.format() == IOstream::ASCII)
+                {
+                    os  << location() << token::SPACE << cell();
+                }
+                else
+                {
+                    positionsCompat1706 p;
+
+                    const size_t s =
+                    (
+                        offsetof(positionsCompat1706, facei)
+                      - offsetof(positionsCompat1706, position)
+                    );
+
+                    p.position = location();
+                    p.celli = cell();
+
+                    os.write(reinterpret_cast<const char*>(&p.position), s);
+                }
+
+                // Check state of Ostream
+                os.check(FUNCTION_NAME);
+            }
 };
 
 

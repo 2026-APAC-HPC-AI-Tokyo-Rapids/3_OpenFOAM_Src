@@ -124,36 +124,16 @@ inline const T* Foam::UPtrList<T>::test(const label i) const
 
 
 template<class T>
-inline const T* Foam::UPtrList<T>::get(const label i) const
-{
-    return (i >= 0 && i < ptrs_.size()) ? ptrs_[i] : nullptr;
-}
-
-
-template<class T>
 inline T* Foam::UPtrList<T>::get(const label i)
 {
-    return (i >= 0 && i < ptrs_.size()) ? ptrs_[i] : nullptr;
+    return ptrs_[i];
 }
 
 
 template<class T>
-inline const T* Foam::UPtrList<T>::set(const label i) const
+inline const T* Foam::UPtrList<T>::get(const label i) const
 {
-    return (i >= 0 && i < ptrs_.size()) ? ptrs_[i] : nullptr;
-}
-
-
-template<class T>
-inline T* Foam::UPtrList<T>::set(const label i, T* ptr)
-{
-    T* old = ptrs_[i];
-    if (old == ptr)
-    {
-        return nullptr;  // Content did not change
-    }
-    ptrs_[i] = ptr;
-    return old;
+    return ptrs_[i];
 }
 
 
@@ -179,28 +159,28 @@ inline void Foam::UPtrList<T>::transfer(UPtrList<T>& list)
 
 
 template<class T>
-inline T& Foam::UPtrList<T>::front()
+inline T& Foam::UPtrList<T>::first()
 {
     return this->operator[](0);
 }
 
 
 template<class T>
-inline const T& Foam::UPtrList<T>::front() const
+inline const T& Foam::UPtrList<T>::first() const
 {
     return this->operator[](0);
 }
 
 
 template<class T>
-inline T& Foam::UPtrList<T>::back()
+inline T& Foam::UPtrList<T>::last()
 {
     return this->operator[](this->size()-1);
 }
 
 
 template<class T>
-inline const T& Foam::UPtrList<T>::back() const
+inline const T& Foam::UPtrList<T>::last() const
 {
     return this->operator[](this->size()-1);
 }
@@ -214,17 +194,30 @@ inline void Foam::UPtrList<T>::resize(const label newLen)
 
 
 template<class T>
-inline void Foam::UPtrList<T>::push_back(T* ptr)
+inline void Foam::UPtrList<T>::append(T* ptr)
 {
-    ptrs_.push_back(ptr);
+    ptrs_.append(ptr);
 }
 
 
 template<class T>
-inline void Foam::UPtrList<T>::push_back(UPtrList<T>&& other)
+inline void Foam::UPtrList<T>::append(UPtrList<T>&& other)
 {
-    ptrs_.push_back(other.ptrs_);
+    ptrs_.append(other.ptrs_);
     other.ptrs_.clear();
+}
+
+
+template<class T>
+inline T* Foam::UPtrList<T>::set(const label i, T* ptr)
+{
+    T* old = ptrs_[i];
+    if (old == ptr)
+    {
+        return nullptr;  // Content did not change
+    }
+    ptrs_[i] = ptr;
+    return old;
 }
 
 
@@ -268,6 +261,13 @@ inline T& Foam::UPtrList<T>::operator[](const label i)
     }
 
     return *ptr;
+}
+
+
+template<class T>
+inline const T* Foam::UPtrList<T>::operator()(const label i) const
+{
+    return ptrs_[i];
 }
 
 

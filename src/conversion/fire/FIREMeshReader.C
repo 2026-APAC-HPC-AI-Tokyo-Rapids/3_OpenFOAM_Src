@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -342,8 +342,8 @@ void Foam::fileFormats::FIREMeshReader::reorganize()
 
 void Foam::fileFormats::FIREMeshReader::addPatches(polyMesh& mesh) const
 {
-    // Create patches
-    polyPatchList newPatches(patchSizes_.size());
+    // create patches
+    List<polyPatch*> newPatches(patchSizes_.size());
 
     label meshFaceI = nInternalFaces_;
 
@@ -355,18 +355,14 @@ void Foam::fileFormats::FIREMeshReader::addPatches(polyMesh& mesh) const
             << endl;
 
         // don't know anything better - just make it a wall
-        newPatches.set
+        newPatches[patchI] = new polyPatch
         (
+            patchNames_[patchI],
+            patchSizes_[patchI],
+            meshFaceI,
             patchI,
-            new polyPatch
-            (
-                patchNames_[patchI],
-                patchSizes_[patchI],
-                meshFaceI,
-                patchI,
-                mesh.boundaryMesh(),
-                word::null
-            )
+            mesh.boundaryMesh(),
+            word::null
         );
 
         meshFaceI += patchSizes_[patchI];
@@ -380,7 +376,7 @@ void Foam::fileFormats::FIREMeshReader::addPatches(polyMesh& mesh) const
 
 bool Foam::fileFormats::FIREMeshReader::readGeometry(const scalar scaleFactor)
 {
-    IOstreamOption::streamFormat fmt = IOstreamOption::ASCII;
+    IOstreamOption::streamFormat fmt = IOstream::ASCII;
 
     const word ext(geometryFile_.ext());
 
@@ -391,11 +387,11 @@ bool Foam::fileFormats::FIREMeshReader::readGeometry(const scalar scaleFactor)
         FIRECore::fileExt3d fireFileType = FIRECore::file3dExtensions[ext];
         if (fireFileType == FIRECore::POLY_ASCII)
         {
-            fmt = IOstreamOption::ASCII;
+            fmt = IOstream::ASCII;
         }
         else if (fireFileType == FIRECore::POLY_BINARY)
         {
-            fmt = IOstreamOption::BINARY;
+            fmt = IOstream::BINARY;
         }
         else
         {

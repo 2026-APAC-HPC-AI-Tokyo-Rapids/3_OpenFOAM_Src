@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -160,7 +160,7 @@ bool writeZones
         // Force writing as ASCII
         writeOk = meshObject.regIOobject::writeObject
         (
-            IOstreamOption(IOstreamOption::ASCII, compression),
+            IOstreamOption(IOstream::ASCII, compression),
             true
         );
     }
@@ -223,7 +223,7 @@ bool writeOptionalMeshObject
 
     // Make sure all know if there is a valid class name
     wordList classNames(1, io.headerClassName());
-    Pstream::combineReduce(classNames, uniqueEqOp<word>());
+    Pstream::combineAllGather(classNames, uniqueEqOp<word>());
 
     // Check for correct type
     if (classNames[0] == T::typeName)
@@ -355,7 +355,7 @@ int main(int argc, char *argv[])
             runTime
         );
 
-        if (runTime.writeFormat() == IOstreamOption::ASCII)
+        if (runTime.writeFormat() == IOstream::ASCII)
         {
             // Only do zones when converting from binary to ascii
             // The other way gives problems since working on dictionary level.
@@ -429,7 +429,7 @@ int main(int argc, char *argv[])
             )
         );
 
-        Pstream::combineReduce(lagrangianDirs, uniqueEqOp<fileName>());
+        Pstream::combineAllGather(lagrangianDirs, uniqueEqOp<fileName>());
 
         if (!lagrangianDirs.empty())
         {
@@ -466,7 +466,7 @@ int main(int argc, char *argv[])
                 )
             );
 
-            Pstream::combineReduce(cloudDirs, uniqueEqOp<fileName>());
+            Pstream::combineAllGather(cloudDirs, uniqueEqOp<fileName>());
 
             forAll(cloudDirs, i)
             {
@@ -492,7 +492,7 @@ int main(int argc, char *argv[])
                 );
 
                 // Combine with all other cloud objects
-                Pstream::combineReduce(cloudFields, uniqueEqOp<word>());
+                Pstream::combineAllGather(cloudFields, uniqueEqOp<word>());
 
                 for (const word& name : cloudFields)
                 {

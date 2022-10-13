@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,11 +28,8 @@ License
 
 #include "boundBox.H"
 #include "PstreamReduceOps.H"
+#include "tmp.H"
 #include "plane.H"
-#include "hexCell.H"
-#include "triangle.H"
-#include "MinMax.H"
-#include "Random.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -48,6 +45,17 @@ const Foam::boundBox Foam::boundBox::invertedBox
     point::uniform(-ROOTVGREAT)
 );
 
+const Foam::faceList Foam::boundBox::faces
+({
+    // Point and face order as per hex cellmodel
+    face({0, 4, 7, 3}),  // 0: x-min, left
+    face({1, 2, 6, 5}),  // 1: x-max, right
+    face({0, 1, 5, 4}),  // 2: y-min, bottom
+    face({3, 7, 6, 2}),  // 3: y-max, top
+    face({0, 3, 2, 1}),  // 4: z-min, back
+    face({4, 5, 6, 7})   // 5: z-max, front
+});
+
 const Foam::FixedList<Foam::vector, 6> Foam::boundBox::faceNormals
 ({
     vector(-1,  0,  0), // 0: x-min, left
@@ -59,26 +67,7 @@ const Foam::FixedList<Foam::vector, 6> Foam::boundBox::faceNormals
 });
 
 
-// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
-
-const Foam::faceList& Foam::boundBox::hexFaces()
-{
-    return hexCell::modelFaces();
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-Foam::boundBox::boundBox(const boundBox& bb, const bool doReduce)
-:
-    boundBox(bb)
-{
-    if (doReduce)
-    {
-        reduce();
-    }
-}
-
 
 Foam::boundBox::boundBox(const UList<point>& points, bool doReduce)
 :
@@ -126,30 +115,30 @@ Foam::boundBox::boundBox
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-Foam::tmp<Foam::pointField> Foam::boundBox::hexCorners() const
+Foam::tmp<Foam::pointField> Foam::boundBox::points() const
 {
-    auto tpts = tmp<pointField>::New(boundBox::nPoints());
-    auto& pts = tpts.ref();
+    auto tpt = tmp<pointField>::New(8);
+    auto& pt = tpt.ref();
 
-    pts[0] = hexCorner<0>();
-    pts[1] = hexCorner<1>();
-    pts[2] = hexCorner<2>();
-    pts[3] = hexCorner<3>();
-    pts[4] = hexCorner<4>();
-    pts[5] = hexCorner<5>();
-    pts[6] = hexCorner<6>();
-    pts[7] = hexCorner<7>();
+    pt[0] = min_;                                   // min-x, min-y, min-z
+    pt[1] = point(max_.x(), min_.y(), min_.z());    // max-x, min-y, min-z
+    pt[2] = point(max_.x(), max_.y(), min_.z());    // max-x, max-y, min-z
+    pt[3] = point(min_.x(), max_.y(), min_.z());    // min-x, max-y, min-z
+    pt[4] = point(min_.x(), min_.y(), max_.z());    // min-x, min-y, max-z
+    pt[5] = point(max_.x(), min_.y(), max_.z());    // max-x, min-y, max-z
+    pt[6] = max_;                                   // max-x, max-y, max-z
+    pt[7] = point(min_.x(), max_.y(), max_.z());    // min-x, max-y, max-z
 
-    return tpts;
+    return tpt;
 }
 
 
 Foam::tmp<Foam::pointField> Foam::boundBox::faceCentres() const
 {
-    auto tpts = tmp<pointField>::New(boundBox::nFaces());
+    auto tpts = tmp<pointField>::New(6);
     auto& pts = tpts.ref();
 
-    for (direction facei = 0; facei < boundBox::nFaces(); ++facei)
+    forAll(pts, facei)
     {
         pts[facei] = faceCentre(facei);
     }
@@ -162,6 +151,13 @@ Foam::point Foam::boundBox::faceCentre(const direction facei) const
 {
     point pt = boundBox::centre();
 
+    if (facei > 5)
+    {
+        FatalErrorInFunction
+            << "face should be [0..5]"
+            << abort(FatalError);
+    }
+
     switch (facei)
     {
         case 0: pt.x() = min().x(); break;  // 0: x-min, left
@@ -170,15 +166,18 @@ Foam::point Foam::boundBox::faceCentre(const direction facei) const
         case 3: pt.y() = max().y(); break;  // 3: y-max, top
         case 4: pt.z() = min().z(); break;  // 4: z-min, back
         case 5: pt.z() = max().z(); break;  // 5: z-max, front
-        default:
-        {
-            FatalErrorInFunction
-                << "Face:" << int(facei) << " should be [0..5]"
-                << abort(FatalError);
-        }
     }
 
     return pt;
+}
+
+
+void Foam::boundBox::inflate(const scalar s)
+{
+    const vector ext = vector::one*s*mag();
+
+    min_ -= ext;
+    max_ += ext;
 }
 
 
@@ -189,11 +188,12 @@ void Foam::boundBox::reduce()
 }
 
 
-Foam::boundBox Foam::boundBox::returnReduce(const boundBox& bb)
+bool Foam::boundBox::intersect(const boundBox& bb)
 {
-    boundBox work(bb);
-    work.reduce();
-    return work;
+    min_ = ::Foam::max(min_, bb.min_);
+    max_ = ::Foam::min(max_, bb.max_);
+
+    return valid();
 }
 
 
@@ -205,168 +205,25 @@ bool Foam::boundBox::intersects(const plane& pln) const
         return false;
     }
 
-    // Check as below(1) or above(2) - stop when it cuts both
-    int side = 0;
+    bool above = false;
+    bool below = false;
 
-    #undef  doLocalCode
-    #define doLocalCode(Idx)                                                  \
-    {                                                                         \
-        side |= (pln.whichSide(hexCorner<Idx>()) == plane::BACK ? 1 : 2);     \
-        if (side == 3) return true;  /* Both below and above: done */         \
-    }
+    tmp<pointField> tpts(points());
+    const auto& pts = tpts();
 
-    // Each box corner
-    doLocalCode(0);
-    doLocalCode(1);
-    doLocalCode(2);
-    doLocalCode(3);
-    doLocalCode(4);
-    doLocalCode(5);
-    doLocalCode(6);
-    doLocalCode(7);
-
-    #undef doLocalCode
-
-    return false;
-}
-
-
-bool Foam::boundBox::intersects(const triPointRef& tri) const
-{
-    // Require a full 3D box
-    if (nDim() != 3)
+    for (const point& p : pts)
     {
-        return false;
-    }
-
-    // Simplest check - if any points are inside
-    if (contains(tri.a()) || contains(tri.b()) || contains(tri.c()))
-    {
-        return true;
-    }
-
-
-    // Extent of box points projected onto axis
-    const auto project_box = []
-    (
-        const boundBox& bb,
-        const vector& axis,
-        scalarMinMax& extent
-    ) -> void
-    {
-        extent.reset(axis & bb.hexCorner<0>());
-        extent.add(axis & bb.hexCorner<1>());
-        extent.add(axis & bb.hexCorner<2>());
-        extent.add(axis & bb.hexCorner<3>());
-        extent.add(axis & bb.hexCorner<4>());
-        extent.add(axis & bb.hexCorner<5>());
-        extent.add(axis & bb.hexCorner<6>());
-        extent.add(axis & bb.hexCorner<7>());
-    };
-
-
-    // Use separating axis theorem to determine if triangle and
-    // (axis-aligned) bounding box intersect.
-
-    scalarMinMax tri_extent(0);
-    scalarMinMax box_extent(0);
-    const boundBox& bb = *this;
-
-    // 1.
-    // Test separating axis defined by the box normals
-    // (project triangle points)
-    // - do first (largely corresponds to normal bound box rejection test)
-    //
-    // No intersection if extent of projected triangle points are outside
-    // of the box range
-
-    {
-        // vector::X
-        tri_extent.reset(tri.a().x());
-        tri_extent.add(tri.b().x());
-        tri_extent.add(tri.c().x());
-
-        box_extent.reset(bb.min().x(), bb.max().x());
-
-        if (!tri_extent.overlaps(box_extent))
+        if (pln.sideOfPlane(p) == plane::FRONT)
         {
-            return false;
+            above = true;
         }
-
-        // vector::Y
-        tri_extent.reset(tri.a().y());
-        tri_extent.add(tri.b().y());
-        tri_extent.add(tri.c().y());
-
-        box_extent.reset(bb.min().y(), bb.max().y());
-
-        if (!tri_extent.overlaps(box_extent))
+        else
         {
-            return false;
-        }
-
-        // vector::Z
-        tri_extent.reset(tri.a().z());
-        tri_extent.add(tri.b().z());
-        tri_extent.add(tri.c().z());
-
-        box_extent.reset(bb.min().z(), bb.max().z());
-
-        if (!tri_extent.overlaps(box_extent))
-        {
-            return false;
+            below = true;
         }
     }
 
-
-    // 2.
-    // Test separating axis defined by the triangle normal
-    // (project box points)
-    // - can use area or unit normal since any scaling is applied to both
-    //   sides of the comparison.
-    // - by definition all triangle points lie in the plane defined by
-    //   the normal. It doesn't matter which of the points we use to define
-    //   the triangle offset (extent) when projected onto the triangle normal
-
-    vector axis = tri.areaNormal();
-
-    tri_extent.reset(axis & tri.a());
-    project_box(bb, axis, box_extent);
-
-    if (!tri_extent.overlaps(box_extent))
-    {
-        return false;
-    }
-
-
-    // 3.
-    // Test separating axes defined by the triangle edges, which are the
-    // cross product of the edge vectors and the box face normals
-
-    for (const vector& edgeVec : { tri.vecA(), tri.vecB(), tri.vecC() })
-    {
-        for (direction faceDir = 0; faceDir < vector::nComponents; ++faceDir)
-        {
-            axis = Zero;
-            axis[faceDir] = 1;
-
-            axis = (edgeVec ^ axis);
-
-            // project tri
-            tri_extent.reset(axis & tri.a());
-            tri_extent.add(axis & tri.b());
-            tri_extent.add(axis & tri.c());
-
-            project_box(bb, axis, box_extent);
-
-            if (!tri_extent.overlaps(box_extent))
-            {
-                return false;
-            }
-        }
-    }
-
-    return true;
+    return (above && below);
 }
 
 
@@ -408,53 +265,14 @@ bool Foam::boundBox::containsAny(const UList<point>& points) const
 }
 
 
-Foam::point Foam::boundBox::nearest(const point& p) const
+Foam::point Foam::boundBox::nearest(const point& pt) const
 {
     // Clip the point to the range of the bounding box
-    return point
-    (
-        Foam::min(Foam::max(p.x(), min_.x()), max_.x()),
-        Foam::min(Foam::max(p.y(), min_.y()), max_.y()),
-        Foam::min(Foam::max(p.z(), min_.z()), max_.z())
-    );
-}
+    const scalar surfPtx = Foam::max(Foam::min(pt.x(), max_.x()), min_.x());
+    const scalar surfPty = Foam::max(Foam::min(pt.y(), max_.y()), min_.y());
+    const scalar surfPtz = Foam::max(Foam::min(pt.z(), max_.z()), min_.z());
 
-
-void Foam::boundBox::inflate(Random& rndGen, const scalar factor)
-{
-    vector newSpan(span());
-
-    // Make 3D
-    const scalar minSpan = factor * Foam::mag(newSpan);
-
-    for (direction dir = 0; dir < vector::nComponents; ++dir)
-    {
-        newSpan[dir] = Foam::max(newSpan[dir], minSpan);
-    }
-
-    min_ -= cmptMultiply(factor*rndGen.sample01<vector>(), newSpan);
-    max_ += cmptMultiply(factor*rndGen.sample01<vector>(), newSpan);
-}
-
-
-void Foam::boundBox::inflate
-(
-    Random& rndGen,
-    const scalar factor,
-    const scalar delta
-)
-{
-    inflate(rndGen, factor);
-    grow(delta);
-}
-
-
-// * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
-
-void Foam::boundBox::operator&=(const boundBox& bb)
-{
-    min_ = ::Foam::max(min_, bb.min_);
-    max_ = ::Foam::min(max_, bb.max_);
+    return point(surfPtx, surfPty, surfPtz);
 }
 
 
@@ -462,7 +280,7 @@ void Foam::boundBox::operator&=(const boundBox& bb)
 
 Foam::Ostream& Foam::operator<<(Ostream& os, const boundBox& bb)
 {
-    if (os.format() == IOstreamOption::ASCII)
+    if (os.format() == IOstream::ASCII)
     {
         os << bb.min_ << token::SPACE << bb.max_;
     }
@@ -482,7 +300,7 @@ Foam::Ostream& Foam::operator<<(Ostream& os, const boundBox& bb)
 
 Foam::Istream& Foam::operator>>(Istream& is, boundBox& bb)
 {
-    if (is.format() == IOstreamOption::ASCII)
+    if (is.format() == IOstream::ASCII)
     {
         is >> bb.min_ >> bb.max_;
     }

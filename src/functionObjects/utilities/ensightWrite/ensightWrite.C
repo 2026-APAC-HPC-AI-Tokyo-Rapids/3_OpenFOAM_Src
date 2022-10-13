@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,7 +26,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "ensightWrite.H"
-#include "ensightOutput.H"
 #include "Time.H"
 #include "polyMesh.H"
 #include "addToRunTimeSelectionTable.H"
@@ -48,39 +47,21 @@ namespace functionObjects
 }
 }
 
-// Implementation
-#include "ensightWriteImpl.C"
-
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 Foam::label Foam::functionObjects::ensightWrite::writeAllVolFields
 (
     const fvMeshSubset& proxy,
-    const wordHashSet& candidateNames
+    const wordHashSet& acceptField
 )
 {
     label count = 0;
 
-    ensightOutput::floatBufferType scratch;
-
-    {
-        #undef  doLocalCode
-        #define doLocalCode(PrimitiveType)              \
-            count += writeVolFieldsImpl<PrimitiveType>  \
-            (                                           \
-                scratch,                                \
-                proxy,                                  \
-                candidateNames                          \
-            );
-
-        doLocalCode(scalar);
-        doLocalCode(vector);
-        doLocalCode(sphericalTensor);
-        doLocalCode(symmTensor);
-        doLocalCode(tensor);
-
-        #undef doLocalCode
-    }
+    count += writeVolFields<scalar>(proxy, acceptField);
+    count += writeVolFields<vector>(proxy, acceptField);
+    count += writeVolFields<sphericalTensor>(proxy, acceptField);
+    count += writeVolFields<symmTensor>(proxy, acceptField);
+    count += writeVolFields<tensor>(proxy, acceptField);
 
     return count;
 }
@@ -105,7 +86,6 @@ Foam::functionObjects::ensightWrite::ensightWrite
     consecutive_(false),
     meshState_(polyMesh::TOPO_CHANGE),
     selectFields_(),
-    blockFields_(),
     selection_(),
     meshSubset_(mesh_),
     ensCase_(nullptr),
@@ -160,11 +140,6 @@ bool Foam::functionObjects::ensightWrite::read(const dictionary& dict)
     {
         list.uniq();
         writeOpts_.patchSelection(list);
-    }
-    if (dict.readIfPresent("excludePatches", list))
-    {
-        list.uniq();
-        writeOpts_.patchExclude(list);
     }
 
     if (dict.readIfPresent("faceZones", list))
@@ -240,37 +215,17 @@ bool Foam::functionObjects::ensightWrite::write()
         ensMesh_().write(os);
     }
 
-
-    // Output fields MUST be specified to avoid accidentally
-    // writing everything. Can still use ".*" for everything
-
-    wordHashSet candidateNames(0);
-
-    if (!selectFields_.empty())
-    {
-        if (!blockFields_.empty())
-        {
-            // With 'allow' and 'deny' filters
-            wordRes::filter filter(selectFields_, blockFields_);
-
-            candidateNames = mesh_.names<void>(filter);
-        }
-        else
-        {
-            // With 'allow' filter only
-            candidateNames = mesh_.names<void>(selectFields_);
-        }
-    }
+    wordHashSet acceptField(mesh_.names<void>(selectFields_));
 
     // Prune restart fields
-    candidateNames.filterKeys
+    acceptField.filterKeys
     (
         [](const word& k){ return k.ends_with("_0"); },
         true // prune
     );
 
     Log << type() << " " << name() << " write: (";
-    writeAllVolFields(meshSubset_, candidateNames);
+    writeAllVolFields(meshSubset_, acceptField);
 
     Log << " )" << nl;
 

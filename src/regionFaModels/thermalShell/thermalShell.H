@@ -71,8 +71,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_regionModels_thermalShell_H
-#define Foam_regionModels_thermalShell_H
+#ifndef thermalShell_H
+#define thermalShell_H
 
 #include "volFieldsFwd.H"
 #include "thermalShellModel.H"
@@ -155,7 +155,7 @@ public:
         thermalShell
         (
             const word& modelType,
-            const fvMesh& mesh,
+            const fvPatch& patch,
             const dictionary& dict
         );
 

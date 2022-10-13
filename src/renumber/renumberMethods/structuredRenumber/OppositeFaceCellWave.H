@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -44,8 +44,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_OppositeFaceCellWave_H
-#define Foam_OppositeFaceCellWave_H
+#ifndef OppositeFaceCellWave_H
+#define OppositeFaceCellWave_H
 
 #include "FaceCellWave.H"
 
@@ -55,31 +55,10 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                  Class OppositeFaceCellWaveBase Declaration
+                  Class OppositeFaceCellWaveName Declaration
 \*---------------------------------------------------------------------------*/
 
-class OppositeFaceCellWaveBase
-{
-protected:
-
-    // Protected Data
-
-        //- For every entry in changedCells (i.e. the cell front) gives
-        //  the face that it needs to transfer to
-        DynamicList<label> changedOppositeFaces_;
-
-
-public:
-
-    //- Runtime type information
-    ClassName("OppositeFaceCellWave");
-
-
-    // Constructors
-
-        //- Construct with mesh reference (for sizing)
-        OppositeFaceCellWaveBase(const polyMesh& mesh);
-};
+TemplateName(OppositeFaceCellWave);
 
 
 /*---------------------------------------------------------------------------*\
@@ -90,9 +69,16 @@ template<class Type, class TrackingData = int>
 class OppositeFaceCellWave
 :
     public FaceCellWave<Type, TrackingData>,
-    public OppositeFaceCellWaveBase
+    public OppositeFaceCellWaveName
 {
 protected:
+
+    // Protected Data
+
+        //- For every entry in changedCells (i.e. the cell front) gives
+        //  the face that it needs to transfer to
+        DynamicList<label> changedOppositeFaces_;
+
 
    // Protected Member Functions
 
@@ -121,7 +107,7 @@ public:
             UList<Type>& allFaceInfo,
             UList<Type>& allCellInfo,
             const label maxIter,
-            TrackingData& td = FaceCellWaveBase::dummyTrackData_
+            TrackingData& td = FaceCellWave<Type, TrackingData>::dummyTrackData_
         );
 
 

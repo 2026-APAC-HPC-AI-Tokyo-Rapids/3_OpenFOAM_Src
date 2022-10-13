@@ -32,7 +32,6 @@ heatTransferCoeff/heatTransferCoeffModels/heatTransferCoeffModel/heatTransferCoe
 heatTransferCoeff/heatTransferCoeffModels/heatTransferCoeffModel/heatTransferCoeffModelNew.C
 heatTransferCoeff/heatTransferCoeffModels/fixedReferenceTemperature/fixedReferenceTemperature.C
 heatTransferCoeff/heatTransferCoeffModels/localReferenceTemperature/localReferenceTemperature.C
-heatTransferCoeff/heatTransferCoeffModels/faceZoneReferenceTemperature/faceZoneReferenceTemperature.C
 heatTransferCoeff/heatTransferCoeffModels/ReynoldsAnalogy/ReynoldsAnalogy.C
 heatTransferCoeff/reactingEulerHtcModel/reactingEulerHtcModel.C
 heatTransferCoeff/multiphaseInterHtcModel/multiphaseInterHtcModel.C
@@ -67,10 +66,6 @@ surfaceInterpolate/surfaceInterpolate.C
 
 regionSizeDistribution/regionSizeDistribution.C
 histogram/histogram.C
-histogram/histogramModels/histogramModel/histogramModel.C
-histogram/histogramModels/histogramModel/histogramModelNew.C
-histogram/histogramModels/equalBinWidth/equalBinWidth.C
-histogram/histogramModels/unequalBinWidth/unequalBinWidth.C
 
 fieldExpression/fieldExpression.C
 components/components.C
@@ -142,13 +137,6 @@ DMD/DMD.C
 DMD/DMDModels/DMDModel/DMDModel.C
 DMD/DMDModels/DMDModel/DMDModelNew.C
 DMD/DMDModels/derived/STDMD/STDMD.C
-
-resolutionIndex/resolutionIndex.C
-resolutionIndex/resolutionIndexModels/resolutionIndexModel/resolutionIndexModel.C
-resolutionIndex/resolutionIndexModels/resolutionIndexModel/resolutionIndexModelNew.C
-resolutionIndex/resolutionIndexModels/PopeIndex/PopeIndex.C
-resolutionIndex/resolutionIndexModels/CelikNuIndex/CelikNuIndex.C
-resolutionIndex/resolutionIndexModels/CelikEtaIndex/CelikEtaIndex.C
 
 age/age.C
 comfort/comfort.C

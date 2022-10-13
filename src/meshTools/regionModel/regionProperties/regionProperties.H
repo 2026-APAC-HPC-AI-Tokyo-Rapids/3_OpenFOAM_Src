@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,8 +39,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_regionProperties_H
-#define Foam_regionProperties_H
+#ifndef regionProperties_H
+#define regionProperties_H
 
 #include "HashTable.H"
 #include "wordList.H"
@@ -69,11 +69,11 @@ public:
         //- Construct from Time
         explicit regionProperties(const Time& runTime);
 
-        //- Construct from Time with specified read option
+        //- Construct from Time with specified read options
         regionProperties
         (
             const Time& runTime,
-            IOobjectOption::readOption rOpt
+            IOobject::readOption rOpt
         );
 
 

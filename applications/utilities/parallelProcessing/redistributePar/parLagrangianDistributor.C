@@ -89,11 +89,10 @@ void Foam::parLagrangianDistributor::findClouds
     }
 
     // Synchronise cloud names
-    Pstream::combineReduce(cloudNames, ListOps::uniqueEqOp<word>());
-    Foam::sort(cloudNames);  // Consistent order
+    Pstream::combineGather(cloudNames, ListOps::uniqueEqOp<word>());
+    Pstream::broadcast(cloudNames);
 
-    objectNames.clear();
-    objectNames.resize(cloudNames.size());
+    objectNames.setSize(cloudNames.size());
 
     for (const fileName& localCloudName : localCloudDirs)
     {
@@ -125,11 +124,11 @@ void Foam::parLagrangianDistributor::findClouds
         }
     }
 
-    // Synchronise objectNames (per cloud)
-    for (wordList& objNames : objectNames)
+    // Synchronise objectNames
+    forAll(objectNames, i)
     {
-        Pstream::combineReduce(objNames, ListOps::uniqueEqOp<word>());
-        Foam::sort(objNames);  // Consistent order
+        Pstream::combineGather(objectNames[i], ListOps::uniqueEqOp<word>());
+        Pstream::broadcast(objectNames[i]);
     }
 }
 
@@ -292,7 +291,7 @@ Foam::parLagrangianDistributor::distributeLagrangianPositions
         nsTransPs[sendProcI] = subMap[sendProcI].size();
     }
     // Send sizes across. Note: blocks.
-    Pstream::combineReduce(sizes, Pstream::listEq());
+    Pstream::combineAllGather(sizes, Pstream::listEq());
 
     labelListList constructMap(Pstream::nProcs());
     label constructSize = 0;

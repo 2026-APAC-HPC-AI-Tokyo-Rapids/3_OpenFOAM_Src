@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -58,7 +58,6 @@ Description
 #include "fvOptions.H"
 #include "simpleControl.H"
 #include "dynamicFvMesh.H"
-#include "oversetPatchPhiErr.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -100,11 +99,6 @@ int main(int argc, char *argv[])
             fvOptions.constrain(TEqn);
             TEqn.solve();
             fvOptions.correct(T);
-
-            if (oversetPatchErrOutput)
-            {
-                oversetPatchPhiErr(TEqn, tdummyPhi.ref());
-            }
         }
 
         #include "write.H"

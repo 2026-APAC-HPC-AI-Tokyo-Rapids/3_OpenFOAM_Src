@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,7 +32,7 @@ Group
 
 Description
     SpalartAllmarasDES DES turbulence model for incompressible and
-    compressible flows.
+    compressible flows
 
     Reference:
     \verbatim
@@ -44,12 +44,11 @@ Description
 
     Including the low Reynolds number correction documented in
     \verbatim
-        Spalart, P. R., Deck, S., Shur, M. L., Squires,
-        K. D., Strelets, M. K., & Travin, A. (2006).
-        A new version of detached-eddy simulation,
-        resistant to ambiguous grid densities.
-        Theoretical and computational fluid dynamics, 20(3), 181-195.
-        DOI:10.1007/s00162-006-0015-0
+        Spalart, P. R., Deck, S., Shur, M.L., Squires, K.D., Strelets, M.Kh,
+        Travin, A. (2006).
+        A new version of detached-eddy simulation, resistant to ambiguous grid
+        densities.
+        Theor. Comput. Fluid Dyn., 20, 181-195.
     \endverbatim
 
 Note
@@ -62,10 +61,9 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_SpalartAllmarasDES_H
-#define Foam_SpalartAllmarasDES_H
+#ifndef SpalartAllmarasDES_H
+#define SpalartAllmarasDES_H
 
-#include "SpalartAllmarasBase.H"
 #include "DESModel.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -82,7 +80,7 @@ namespace LESModels
 template<class BasicTurbulenceModel>
 class SpalartAllmarasDES
 :
-    public SpalartAllmarasBase<DESModel<BasicTurbulenceModel>>
+    public DESModel<BasicTurbulenceModel>
 {
     // Private Member Functions
 
@@ -95,47 +93,86 @@ class SpalartAllmarasDES
 
 protected:
 
-    // Protected Data
-
-        //- Switch to activate grey-area enhanced sigma-(D)DES
-        Switch useSigma_;
+    // Protected data
 
         // Model constants
 
-            //- DES coefficient
-            dimensionedScalar CDES_;
+            dimensionedScalar sigmaNut_;
+            dimensionedScalar kappa_;
 
-            //- Flag for low Reynolds number correction
-            Switch lowReCorrection_;
-            dimensionedScalar fwStar_;
+            dimensionedScalar Cb1_;
+            dimensionedScalar Cb2_;
+            dimensionedScalar Cw1_;
+            dimensionedScalar Cw2_;
+            dimensionedScalar Cw3_;
+            dimensionedScalar Cv1_;
+            dimensionedScalar Cs_;
+            dimensionedScalar CDES_;
+            dimensionedScalar ck_;
+
+
+            // Low Reynolds number correction
+
+                Switch lowReCorrection_;
+                dimensionedScalar Ct3_;
+                dimensionedScalar Ct4_;
+                dimensionedScalar fwStar_;
+
+
+        // Fields
+
+            volScalarField nuTilda_;
+
+            //- Wall distance
+            //  Note: different to wall distance in parent RASModel
+            //  which is for near-wall cells only
+            const volScalarField& y_;
 
 
     // Protected Member Functions
 
-        //- Return the low Reynolds number correction function
-        virtual tmp<volScalarField> psi
+        tmp<volScalarField> chi() const;
+
+        tmp<volScalarField> fv1(const volScalarField& chi) const;
+
+        tmp<volScalarField> fv2
         (
             const volScalarField& chi,
             const volScalarField& fv1
         ) const;
 
-        //- Return the LES length scale
-        virtual tmp<volScalarField> lengthScaleLES
-        (
-            const volScalarField& chi,
-            const volScalarField& fv1
-        ) const;
+        tmp<volScalarField> ft2(const volScalarField& chi) const;
 
-        //- Return the production term
-        virtual tmp<volScalarField> Stilda
+        tmp<volScalarField> Omega(const volTensorField& gradU) const;
+
+        tmp<volScalarField> Stilda
         (
             const volScalarField& chi,
             const volScalarField& fv1,
-            const volTensorField& gradU,
+            const volScalarField& Omega,
             const volScalarField& dTilda
         ) const;
 
-        //- Return the length scale
+        tmp<volScalarField> r
+        (
+            const volScalarField& nur,
+            const volScalarField& Omega,
+            const volScalarField& dTilda
+        ) const;
+
+        tmp<volScalarField> fw
+        (
+            const volScalarField& Omega,
+            const volScalarField& dTilda
+        ) const;
+
+        tmp<volScalarField> psi
+        (
+            const volScalarField& chi,
+            const volScalarField& fv1
+        ) const;
+
+        //- Length scale
         virtual tmp<volScalarField> dTilda
         (
             const volScalarField& chi,
@@ -143,7 +180,9 @@ protected:
             const volTensorField& gradU
         ) const;
 
+        void correctNut(const volScalarField& fv1);
         virtual void correctNut();
+
 
 public:
 
@@ -181,8 +220,22 @@ public:
         //- Re-read model coefficients if they have changed
         virtual bool read();
 
+        //- Return the effective diffusivity for nuTilda
+        tmp<volScalarField> DnuTildaEff() const;
+
+        //- Return SGS kinetic energy
+        virtual tmp<volScalarField> k() const;
+
+        tmp<volScalarField> nuTilda() const
+        {
+            return nuTilda_;
+        }
+
         //- Return the LES field indicator
         virtual tmp<volScalarField> LESRegion() const;
+
+        //- Correct nuTilda and related properties
+        virtual void correct();
 };
 
 

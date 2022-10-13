@@ -69,19 +69,19 @@ meshTools/meshTools.C
 algorithms = algorithms
 
 pWave = $(algorithms)/PointEdgeWave
-$(pWave)/PointEdgeWaveBase.C
+$(pWave)/PointEdgeWaveName.C
 $(pWave)/pointEdgePoint.C
 
 patchWave = $(algorithms)/PatchEdgeFaceWave
-$(patchWave)/PatchEdgeFaceWaveBase.C
+$(patchWave)/PatchEdgeFaceWaveName.C
 $(patchWave)/patchEdgeFaceInfo.C
 $(patchWave)/patchPatchDist.C
 $(patchWave)/patchEdgeFaceRegions.C
 
 
 meshWave = $(algorithms)/MeshWave
-$(meshWave)/MeshWaveBase.C
-$(meshWave)/FaceCellWaveBase.C
+$(meshWave)/MeshWaveName.C
+$(meshWave)/FaceCellWaveName.C
 
 
 regionSplit/regionSplit.C
@@ -89,8 +89,10 @@ regionSplit/localPointRegion.C
 
 regionSplit2D/regionSplit2D.C
 
+indexedOctree/treeDataEdge.C
 indexedOctree/treeDataFace.C
-indexedOctree/treeDataPrimitivePatchBase.C
+indexedOctree/treeDataPoint.C
+indexedOctree/treeDataPrimitivePatchName.C
 indexedOctree/treeDataTriSurface.C
 
 
@@ -161,7 +163,6 @@ $(cellSources)/topoSetCellSource/topoSetCellSource.C
 $(cellSources)/boundaryToCell/boundaryToCell.C
 $(cellSources)/boxToCell/boxToCell.C
 $(cellSources)/cellToCell/cellToCell.C
-$(cellSources)/clipPlaneToCell/clipPlaneToCell.C
 $(cellSources)/cylinderAnnulusToCell/cylinderAnnulusToCell.C
 $(cellSources)/cylinderToCell/cylinderToCell.C
 $(cellSources)/faceToCell/faceToCell.C
@@ -187,7 +188,6 @@ $(faceSources)/topoSetFaceSource/topoSetFaceSource.C
 $(faceSources)/boundaryToFace/boundaryToFace.C
 $(faceSources)/boxToFace/boxToFace.C
 $(faceSources)/cellToFace/cellToFace.C
-$(faceSources)/clipPlaneToFace/clipPlaneToFace.C
 $(faceSources)/cylinderAnnulusToFace/cylinderAnnulusToFace.C
 $(faceSources)/cylinderToFace/cylinderToFace.C
 $(faceSources)/faceToFace/faceToFace.C
@@ -205,7 +205,6 @@ pointSources = topoSet/pointSources
 $(pointSources)/topoSetPointSource/topoSetPointSource.C
 $(pointSources)/boxToPoint/boxToPoint.C
 $(pointSources)/cellToPoint/cellToPoint.C
-$(pointSources)/clipPlaneToPoint/clipPlaneToPoint.C
 $(pointSources)/cylinderToPoint/cylinderToPoint.C
 $(pointSources)/faceToPoint/faceToPoint.C
 $(pointSources)/labelToPoint/labelToPoint.C
@@ -224,7 +223,6 @@ $(faceZoneSources)/setToFaceZone/setToFaceZone.C
 $(faceZoneSources)/setAndNormalToFaceZone/setAndNormalToFaceZone.C
 $(faceZoneSources)/searchableSurfaceToFaceZone/searchableSurfaceToFaceZone.C
 $(faceZoneSources)/planeToFaceZone/planeToFaceZone.C
-$(faceZoneSources)/cellToFaceZone/cellToFaceZone.C
 
 cellZoneSources = topoSet/cellZoneSources
 $(cellZoneSources)/topoSetCellZoneSource/topoSetCellZoneSource.C
@@ -327,8 +325,7 @@ PatchFunction1/PatchFunction1/patchFunction1Base.C
 PatchFunction1/makePatchFunction1s.C
 PatchFunction1/coordinateScaling/coordinateScalings.C
 PatchFunction1/CodedField/makeCodedFields.C
-
-PatchFunction1/MappedFile/MappedFileFilterField.C
+PatchFunction1/MappedFile/rawIOFields.C
 
 meshStructure/meshStructure.C
 

@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_tetOverlapVolume_H
-#define Foam_tetOverlapVolume_H
+#ifndef tetOverlapVolume_H
+#define tetOverlapVolume_H
 
 #include "FixedList.H"
 #include "labelList.H"
@@ -47,7 +47,6 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
 class primitiveMesh;
 class polyMesh;
 
@@ -57,7 +56,7 @@ class polyMesh;
 
 class tetOverlapVolume
 {
-    // Private Classes
+    // Private classes
 
         //- tetPoints handling : sum resulting volumes
         class sumMomentOp
@@ -185,14 +184,14 @@ public:
 
     // Constructors
 
-        //- Default construct
-        tetOverlapVolume() = default;
+        //- Null constructor
+        tetOverlapVolume();
 
 
     // Public members
 
         //- Return a list of cells in meshA which overlaps with cellBI in
-        //- meshB
+        // meshB
         labelList overlappingCells
         (
             const polyMesh& meshA,

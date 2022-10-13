@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_TimeState_H
-#define Foam_TimeState_H
+#ifndef TimeState_H
+#define TimeState_H
 
 #include "dimensionedScalar.H"
 

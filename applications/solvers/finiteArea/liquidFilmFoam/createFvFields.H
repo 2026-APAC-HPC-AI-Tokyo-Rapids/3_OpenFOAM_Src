@@ -1,6 +1,3 @@
-// Volume-to surface mapping object
-const volSurfaceMapping vsm(aMesh);
-
 volVectorField U
 (
     IOobject
@@ -29,3 +26,6 @@ volScalarField H
     mesh,
     dimensionedScalar(dimLength, Zero)
 );
+
+// Create volume-to surface mapping object
+volSurfaceMapping vsm(aMesh);

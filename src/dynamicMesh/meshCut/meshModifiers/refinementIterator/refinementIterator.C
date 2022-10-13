@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -108,7 +108,10 @@ Foam::Map<Foam::label> Foam::refinementIterator::setRefinement
         // Determine cut pattern.
         cellCuts cuts(mesh_, cellWalker_, currentRefCells);
 
-        if (!returnReduceOr(cuts.nLoops()))
+        label nCuts = cuts.nLoops();
+        reduce(nCuts, sumOp<label>());
+
+        if (nCuts == 0)
         {
             if (debug)
             {
@@ -263,12 +266,13 @@ Foam::Map<Foam::label> Foam::refinementIterator::setRefinement
         }
 
         // Stop only if all finished or all can't refine any further.
-        stop = returnReduceAnd(nRefCells == 0 || nRefCells == oldRefCells);
+        stop = (nRefCells == 0) || (nRefCells == oldRefCells);
+        reduce(stop, andOp<bool>());
     }
     while (!stop);
 
 
-    if (returnReduceAnd(nRefCells == oldRefCells))
+    if (returnReduce((nRefCells == oldRefCells), andOp<bool>()))
     {
         WarningInFunction
             << "stopped refining."

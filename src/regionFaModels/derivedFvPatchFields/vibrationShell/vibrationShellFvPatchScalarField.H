@@ -79,16 +79,10 @@ class vibrationShellFvPatchScalarField
 :
     public mixedFvPatchField<scalar>
 {
-    // Typedefs
-
-        //- The finite-area region model
-        typedef regionModels::vibrationShellModel baffleType;
-
-
     // Private Data
 
-        //- The vibration shell
-        autoPtr<baffleType> baffle_;
+        //- Thermal baffle
+        autoPtr<regionModels::vibrationShellModel> baffle_;
 
         //- Dictionary
         dictionary dict_;

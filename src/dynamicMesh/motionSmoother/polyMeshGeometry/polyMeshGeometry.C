@@ -28,8 +28,8 @@ License
 
 #include "polyMeshGeometry.H"
 #include "polyMeshTetDecomposition.H"
-#include "pyramid.H"
-#include "tetrahedron.H"
+#include "pyramidPointFaceRef.H"
+#include "tetPointRef.H"
 #include "syncTools.H"
 #include "unitConversion.H"
 #include "primitiveMeshTools.H"
@@ -61,10 +61,8 @@ void Foam::polyMeshGeometry::updateFaceCentresAndAreas
         // and to avoid round-off error-related problems
         if (nPoints == 3)
         {
-            faceCentres_[facei] =
-                triPointRef::centre(p[f[0]], p[f[1]], p[f[2]]);
-            faceAreas_[facei] =
-                triPointRef::areaNormal(p[f[0]], p[f[1]], p[f[2]]);
+            faceCentres_[facei] = (1.0/3.0)*(p[f[0]] + p[f[1]] + p[f[2]]);
+            faceAreas_[facei] = 0.5*((p[f[1]] - p[f[0]])^(p[f[2]] - p[f[0]]));
         }
         else
         {
@@ -129,7 +127,7 @@ void Foam::polyMeshGeometry::updateCellCentresAndVols
 
         // Estimate the cell centre and bounding box using the face centres
         vector cEst(Zero);
-        boundBox bb;
+        boundBox bb(boundBox::invertedBox);
 
         for (const label facei : cFaces)
         {
@@ -1633,12 +1631,12 @@ bool Foam::polyMeshGeometry::checkFaceTwist
                 {
                     vector triArea
                     (
-                        triPointRef::areaNormal
+                        triPointRef
                         (
                             p[f[fpI]],
                             p[f.nextLabel(fpI)],
                             fc
-                        )
+                        ).areaNormal()
                     );
 
                     scalar magTri = mag(triArea);
@@ -1734,12 +1732,12 @@ bool Foam::polyMeshGeometry::checkTriangleTwist
 
             forAll(f, fp)
             {
-                prevN = triPointRef::areaNormal
+                prevN = triPointRef
                 (
                     p[f[fp]],
                     p[f.nextLabel(fp)],
                     fc
-                );
+                ).areaNormal();
 
                 scalar magTri = mag(prevN);
 
@@ -1761,12 +1759,12 @@ bool Foam::polyMeshGeometry::checkTriangleTwist
 
                     vector triN
                     (
-                        triPointRef::areaNormal
+                        triPointRef
                         (
                             p[f[fp]],
                             p[f.nextLabel(fp)],
                             fc
-                        )
+                        ).areaNormal()
                     );
                     scalar magTri = mag(triN);
 
@@ -2085,75 +2083,6 @@ bool Foam::polyMeshGeometry::checkCellDeterminant
 }
 
 
-bool Foam::polyMeshGeometry::checkEdgeLength
-(
-    const bool report,
-    const scalar minEdgeLength,
-    const polyMesh& mesh,
-    const labelList& checkFaces,
-    labelHashSet* setPtr
-)
-{
-    const scalar reportLenSqr(Foam::sqr(minEdgeLength));
-
-    const pointField& points = mesh.points();
-    const faceList& faces = mesh.faces();
-
-    scalar minLenSqr = sqr(GREAT);
-    scalar maxLenSqr = -sqr(GREAT);
-
-    label nSmall = 0;
-
-    for (const label facei : checkFaces)
-    {
-        const face& f = faces[facei];
-
-        forAll(f, fp)
-        {
-            label fp1 = f.fcIndex(fp);
-
-            scalar magSqrE = magSqr(points[f[fp]] - points[f[fp1]]);
-
-            if (setPtr && magSqrE < reportLenSqr)
-            {
-                if (setPtr->insert(f[fp]) || setPtr->insert(f[fp1]))
-                {
-                    nSmall++;
-                }
-            }
-
-            minLenSqr = min(minLenSqr, magSqrE);
-            maxLenSqr = max(maxLenSqr, magSqrE);
-        }
-    }
-
-    reduce(minLenSqr, minOp<scalar>());
-    reduce(maxLenSqr, maxOp<scalar>());
-
-    reduce(nSmall, sumOp<label>());
-
-    if (nSmall > 0)
-    {
-        if (report)
-        {
-            Info<< "   *Edges too small, min/max edge length = "
-                << sqrt(minLenSqr) << " " << sqrt(maxLenSqr)
-                << ", number too small: " << nSmall << endl;
-        }
-
-        return true;
-    }
-
-    if (report)
-    {
-        Info<< "    Min/max edge length = "
-            << sqrt(minLenSqr) << " " << sqrt(maxLenSqr) << " OK." << endl;
-    }
-
-    return false;
-}
-
-
 bool Foam::polyMeshGeometry::checkFaceDotProduct
 (
     const bool report,
@@ -2427,25 +2356,6 @@ bool Foam::polyMeshGeometry::checkCellDeterminant
         faceAreas_,
         checkFaces,
         affectedCells,
-        setPtr
-    );
-}
-
-
-bool Foam::polyMeshGeometry::checkEdgeLength
-(
-    const bool report,
-    const scalar minEdgeLength,
-    const labelList& checkFaces,
-    labelHashSet* setPtr
-) const
-{
-    return checkEdgeLength
-    (
-        report,
-        minEdgeLength,
-        mesh_,
-        checkFaces,
         setPtr
     );
 }

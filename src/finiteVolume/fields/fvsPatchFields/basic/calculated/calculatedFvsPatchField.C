@@ -34,7 +34,7 @@ License
 template<class Type>
 const Foam::word& Foam::fvsPatchField<Type>::calculatedType()
 {
-    return Foam::calculatedFvsPatchField<Type>::typeName;
+    return calculatedFvsPatchField<Type>::typeName;
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //

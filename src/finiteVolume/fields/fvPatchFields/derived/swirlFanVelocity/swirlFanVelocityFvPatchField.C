@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -161,7 +161,7 @@ Foam::swirlFanVelocityFvPatchField::swirlFanVelocityFvPatchField
         dict.getOrDefault
         (
             "origin",
-            returnReduceOr(patch().size())
+            returnReduce(patch().size(), maxOp<label>())
           ? gSum(patch().Cf()*patch().magSf())/gSum(patch().magSf())
           : Zero
         )

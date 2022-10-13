@@ -26,9 +26,9 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "multiphaseInterHtcModel.H"
-#include "heatTransferCoeffModel.H"
 #include "multiphaseInterSystem.H"
 #include "addToRunTimeSelectionTable.H"
+#include "dictionary.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -48,17 +48,6 @@ namespace functionObjects
 
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
-
-bool Foam::functionObjects::multiphaseInterHtcModel::calc()
-{
-    auto& htc =
-        htcModelPtr_->mesh().lookupObjectRef<volScalarField>(resultName_);
-
-    htcModelPtr_->calc(htc, q());
-
-    return true;
-}
-
 
 Foam::tmp<Foam::FieldField<Foam::Field, Foam::scalar>>
 Foam::functionObjects::multiphaseInterHtcModel::q() const
@@ -113,6 +102,19 @@ Foam::functionObjects::multiphaseInterHtcModel::q() const
 }
 
 
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+
+bool Foam::functionObjects::multiphaseInterHtcModel::calc()
+{
+    auto& htc =
+        htcModelPtr_->mesh().lookupObjectRef<volScalarField>(resultName_);
+
+    htcModelPtr_->calc(htc, q());
+
+    return true;
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::functionObjects::multiphaseInterHtcModel::multiphaseInterHtcModel
@@ -123,7 +125,7 @@ Foam::functionObjects::multiphaseInterHtcModel::multiphaseInterHtcModel
 )
 :
     fieldExpression(name, runTime, dict),
-    htcModelPtr_(heatTransferCoeffModel::New(dict, mesh_, fieldName_))
+    htcModelPtr_(nullptr)
 {
     read(dict);
 
@@ -155,10 +157,14 @@ bool Foam::functionObjects::multiphaseInterHtcModel::read
     const dictionary& dict
 )
 {
-    if (!fieldExpression::read(dict) || !htcModelPtr_->read(dict))
+    if (!fieldExpression::read(dict))
     {
         return false;
     }
+
+    htcModelPtr_ = heatTransferCoeffModel::New(dict, mesh_, fieldName_);
+
+    htcModelPtr_->read(dict);
 
     return true;
 }

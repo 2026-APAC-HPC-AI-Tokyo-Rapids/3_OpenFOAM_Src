@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2017 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,7 +31,7 @@ License
 #include "pointIOField.H"
 #include "scalarIOField.H"
 #include "triadIOField.H"
-#include "tetrahedron.H"
+#include "tetPointRef.H"
 #include "plane.H"
 #include "transform.H"
 #include "meshTools.H"
@@ -132,7 +132,10 @@ Foam::word Foam::cellShapeControlMesh::meshSubDir = "cellShapeControlMesh";
 //
 //        if (spokeHit.hit())
 //        {
-//            scalar spokeHitDistance = spokeHit.point().dist(pt);
+//            scalar spokeHitDistance = mag
+//            (
+//                spokeHit.hitPoint() - pt
+//            );
 //
 //            if (spokeHitDistance < closestSpokeHitDistance)
 //            {
@@ -156,7 +159,10 @@ Foam::word Foam::cellShapeControlMesh::meshSubDir = "cellShapeControlMesh";
 //
 //        if (spokeHit.hit())
 //        {
-//            scalar spokeHitDistance = spokeHit.point().dist(mirrorPt);
+//            scalar spokeHitDistance = mag
+//            (
+//                spokeHit.hitPoint() - mirrorPt
+//            );
 //
 //            if (spokeHitDistance < closestSpokeHitDistance)
 //            {
@@ -196,10 +202,10 @@ Foam::word Foam::cellShapeControlMesh::meshSubDir = "cellShapeControlMesh";
 //        FatalErrorInFunction
 //            << "Parallel normals detected in spoke search." << nl
 //            << "point: " << pt << nl
-//            << "closest surface point: " << surfHit.point() << nl
-//            << "closest spoke hit: " << closestSpokeHit.point() << nl
-//            << "np: " << surfHit.point() + np << nl
-//            << "ns: " << closestSpokeHit.point() + na << nl
+//            << "closest surface point: " << surfHit.hitPoint() << nl
+//            << "closest spoke hit: " << closestSpokeHit.hitPoint() << nl
+//            << "np: " << surfHit.hitPoint() + np << nl
+//            << "ns: " << closestSpokeHit.hitPoint() + na << nl
 //            << exit(FatalError);
 //    }
 //

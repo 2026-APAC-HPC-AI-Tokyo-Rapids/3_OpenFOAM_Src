@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,11 +55,11 @@ const Foam::word liquidFilmName("liquidFilm");
 liquidFilmBase::liquidFilmBase
 (
     const word& modelType,
-    const fvMesh& mesh,
+    const fvPatch& p,
     const dictionary& dict
 )
 :
-    regionFaModel(mesh, liquidFilmName, modelType, dict, true),
+    regionFaModel(p, liquidFilmName, modelType, dict, true),
 
     momentumPredictor_
     (
@@ -233,7 +233,7 @@ liquidFilmBase::liquidFilmBase
 
     addedMassTotal_(0),
 
-    faOptions_(Foam::fa::options::New(primaryMesh()))
+    faOptions_(Foam::fa::options::New(p))
 {
     const areaVectorField& ns = regionMesh().faceAreaNormals();
 
@@ -295,39 +295,29 @@ Foam::tmp<Foam::areaVectorField> liquidFilmBase::Uw() const
             dimensionedVector(dimVelocity, Zero)
         )
     );
-    auto& Uw = tUw.ref();
 
-    if (primaryMesh().moving())
+    areaVectorField& Uw = tUw.ref();
+
+    const polyPatch& pp = primaryMesh().boundaryMesh()[patch_.index()];
+
+    if
+    (
+        primaryMesh().moving()
+     && isA<movingWallVelocityFvPatchVectorField>(pp)
+    )
     {
-        const labelList& patches = regionMesh().whichPolyPatches();
+        const movingWallVelocityFvPatchVectorField& wpp =
+            refCast<const movingWallVelocityFvPatchVectorField>(pp);
 
-        // Set up mapping values per patch
+        tmp<vectorField> tUwall = wpp.Uwall();
 
-        PtrMap<vectorField> patchValues(2*patches.size());
+         // Map Up to area
+        tmp<vectorField> UsWall = vsmPtr_->mapToSurface(tUwall());
 
-        for (const label patchi : patches)
-        {
-            const auto* wpp = isA<movingWallVelocityFvPatchVectorField>
-            (
-                primaryMesh().boundaryMesh()[patchi]
-            );
+        const vectorField& nHat =
+            regionMesh().faceAreaNormals().internalField();
 
-            if (wpp)
-            {
-                patchValues.set(patchi, wpp->Uwall());
-            }
-        }
-
-        if (patchValues.size())
-        {
-            // Map Up to area
-            tmp<vectorField> UsWall = vsmPtr_->mapToSurface(patchValues);
-
-            const vectorField& nHat =
-                regionMesh().faceAreaNormals().internalField();
-
-            Uw.primitiveFieldRef() = UsWall() - nHat*(UsWall() & nHat);
-        }
+        Uw.primitiveFieldRef() = UsWall() - nHat*(UsWall() & nHat);
     }
 
     return tUw;
@@ -360,8 +350,12 @@ Foam::tmp<Foam::areaVectorField> liquidFilmBase::Us() const
 
 Foam::tmp<Foam::areaVectorField> liquidFilmBase::Up() const
 {
+    const label patchi = patch_.index();
+
     const volVectorField& Uprimary =
         primaryMesh().lookupObject<volVectorField>(UName_);
+
+    const fvPatchVectorField& Uw = Uprimary.boundaryField()[patchi];
 
     tmp<areaVectorField> tUp
     (
@@ -377,32 +371,23 @@ Foam::tmp<Foam::areaVectorField> liquidFilmBase::Up() const
             dimensionedVector(dimVelocity, Zero)
         )
     );
+
     areaVectorField& Up = tUp.ref();
 
+    scalarField hp(patch_.size(), Zero);
 
-    // Set up mapping values per patch
+    // map areas h to hp on primary
+    vsmPtr_->mapToField(h_, hp);
 
-    const labelList& patches = regionMesh().whichPolyPatches();
-
-    PtrMap<vectorField> patchValues(2*patches.size());
-
-    // U tangential on primary
-    for (const label patchi : patches)
-    {
-        const fvPatchVectorField& Uw = Uprimary.boundaryField()[patchi];
-
-        patchValues.set(patchi, -Uw.snGrad());
-    }
-
-
-    // Map U tang to surface
-    vsmPtr_->mapToSurface(patchValues, Up.primitiveFieldRef());
-
-    Up.primitiveFieldRef() *= h_.primitiveField();
-
-    // U tangent on surface
     const vectorField& nHat = regionMesh().faceAreaNormals().internalField();
 
+    // U tangential on primary
+    const vectorField Ust(-Uw.snGrad()*hp);
+
+    // Map U tang to surface
+    Up.primitiveFieldRef() = vsmPtr_->mapToSurface(Ust);
+
+    // U tangent on surface
     Up.primitiveFieldRef() -= nHat*(Up.primitiveField() & nHat);
 
     return tUp;
@@ -425,19 +410,21 @@ tmp<areaScalarField> liquidFilmBase::pg() const
             dimensionedScalar(dimPressure, Zero)
         )
     );
-    auto& pfg = tpg.ref();
 
-    if (!pName_.empty())
+    areaScalarField& pfg = tpg.ref();
+
+    if (pName_ != word::null)
     {
-        vsmPtr_->mapInternalToSurface
-        (
-            primaryMesh().lookupObject<volScalarField>(pName_),
-            pfg.primitiveFieldRef()
-        );
+        const volScalarField& pp =
+            primaryMesh().lookupObject<volScalarField>(pName_);
 
-        //pfg -= pRef_;
+        volScalarField::Boundary& pw =
+            const_cast<volScalarField::Boundary&>(pp.boundaryField());
+
+        //pw -= pRef_;
+
+        pfg.primitiveFieldRef() = vsmPtr_->mapInternalToSurface<scalar>(pw)();
     }
-
     return tpg;
 }
 
@@ -458,7 +445,7 @@ tmp<areaScalarField> liquidFilmBase::alpha() const
             dimensionedScalar(dimless, Zero)
         )
     );
-    auto& alpha = talpha.ref();
+    areaScalarField& alpha = talpha.ref();
 
     alpha = pos0(h_ - deltaWet_);
 

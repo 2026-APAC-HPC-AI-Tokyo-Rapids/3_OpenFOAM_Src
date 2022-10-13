@@ -132,7 +132,8 @@ private:
         //  index=1: nearest on edge.end().
         static pointIndexHit edgeNearest
         (
-            const linePointRef& line,
+            const point& start,
+            const point& end,
             const point& sample
         );
 

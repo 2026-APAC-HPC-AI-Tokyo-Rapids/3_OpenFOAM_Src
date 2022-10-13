@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,7 +56,6 @@ using namespace Foam;
 
 int main(int argc, char *argv[])
 {
-    // Normally without functionObjects, with -withFunctionObjects to enable
     argList::noFunctionObjects(true);
 
     // No -constant, no special treatment for 0/
@@ -134,7 +133,7 @@ int main(int argc, char *argv[])
     IOstreamOption streamOpt(runTime.writeFormat());
     if (args.found("ascii"))
     {
-        streamOpt.format(IOstreamOption::ASCII);
+        streamOpt.format(IOstream::ASCII);
     }
 
     forAll(times, timei)
@@ -232,7 +231,15 @@ int main(int argc, char *argv[])
 
                 dictionary& patchDict = boundaryFieldDict.subDict(patchName);
 
-                expressions::exprString valueExpr_("expression", currDict);
+                auto valueExpr_
+                (
+                    expressions::exprString::getEntry
+                    (
+                        "expression",
+                        currDict,
+                        true  // strip comments
+                    )
+                );
 
                 Info<< "Set boundaryField/" << patchName << '/'
                     << targetName << nl

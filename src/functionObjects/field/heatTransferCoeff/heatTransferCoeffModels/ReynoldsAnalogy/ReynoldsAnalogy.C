@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,13 +50,13 @@ namespace heatTransferCoeffModels
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
 
-Foam::tmp<Foam::scalarField>
+Foam::tmp<Foam::Field<Foam::scalar>>
 Foam::heatTransferCoeffModels::ReynoldsAnalogy::rho(const label patchi) const
 {
     if (rhoName_ == "rhoInf")
     {
         const label n = mesh_.boundary()[patchi].size();
-        return tmp<scalarField>::New(n, rhoRef_);
+        return tmp<Field<scalar>>::New(n, rhoRef_);
     }
     else if (mesh_.foundObject<volScalarField>(rhoName_, false))
     {
@@ -72,13 +72,13 @@ Foam::heatTransferCoeffModels::ReynoldsAnalogy::rho(const label patchi) const
 }
 
 
-Foam::tmp<Foam::scalarField>
+Foam::tmp<Foam::Field<Foam::scalar>>
 Foam::heatTransferCoeffModels::ReynoldsAnalogy::Cp(const label patchi) const
 {
     if (CpName_ == "CpInf")
     {
         const label n = mesh_.boundary()[patchi].size();
-        return tmp<scalarField>::New(n, CpRef_);
+        return tmp<Field<scalar>>::New(n, CpRef_);
     }
     else if (mesh_.foundObject<fluidThermo>(fluidThermo::dictName))
     {
@@ -114,7 +114,7 @@ Foam::heatTransferCoeffModels::ReynoldsAnalogy::devReff() const
     }
     else if (mesh_.foundObject<icoTurbModel>(icoTurbModel::propertiesName))
     {
-        const auto& turb =
+        const incompressible::turbulenceModel& turb =
             mesh_.lookupObject<icoTurbModel>(icoTurbModel::propertiesName);
 
         return turb.devReff();
@@ -180,35 +180,14 @@ Foam::heatTransferCoeffModels::ReynoldsAnalogy::Cf() const
 
         const symmTensorField& Rp = Rbf[patchi];
 
-        tmp<vectorField> tnHat = Up.patch().nf();
+        const vectorField nHat(Up.patch().nf());
 
-        tmp<scalarField> ttauByRhop = mag(tnHat & Rp);
+        const scalarField tauByRhop(mag(nHat & Rp));
 
-        Cf[patchi] = 2*ttauByRhop/magSqr(URef_);
+        Cf[patchi] = 2*tauByRhop/magSqr(URef_);
     }
 
     return tCf;
-}
-
-
-void Foam::heatTransferCoeffModels::ReynoldsAnalogy::htc
-(
-    volScalarField& htc,
-    const FieldField<Field, scalar>& q
-)
-{
-    const FieldField<Field, scalar> CfBf(Cf());
-    const scalar magU = mag(URef_);
-
-    volScalarField::Boundary& htcBf = htc.boundaryFieldRef();
-
-    for (const label patchi : patchSet_)
-    {
-        tmp<scalarField> trhop = rho(patchi);
-        tmp<scalarField> tCpp = Cp(patchi);
-
-        htcBf[patchi] = 0.5*trhop*tCpp*magU*CfBf[patchi];
-    }
 }
 
 
@@ -240,27 +219,47 @@ bool Foam::heatTransferCoeffModels::ReynoldsAnalogy::read
     const dictionary& dict
 )
 {
-    if (!heatTransferCoeffModel::read(dict))
+    if (heatTransferCoeffModel::read(dict))
     {
-        return false;
+        dict.readEntry("UInf", URef_);
+
+        dict.readIfPresent("Cp", CpName_);
+        if (CpName_ == "CpInf")
+        {
+            dict.readEntry("CpInf", CpRef_);
+        }
+
+        dict.readIfPresent("rho", rhoName_);
+        if (rhoName_ == "rhoInf")
+        {
+            dict.readEntry("rhoInf", rhoRef_);
+        }
+
+        return true;
     }
 
-    dict.readIfPresent("U", UName_);
-    dict.readEntry("UInf", URef_);
+    return false;
+}
 
-    dict.readIfPresent("Cp", CpName_);
-    if (CpName_ == "CpInf")
+
+void Foam::heatTransferCoeffModels::ReynoldsAnalogy::htc
+(
+    volScalarField& htc,
+    const FieldField<Field, scalar>& q
+)
+{
+    const FieldField<Field, scalar> CfBf(Cf());
+    const scalar magU = mag(URef_);
+
+    volScalarField::Boundary& htcBf = htc.boundaryFieldRef();
+
+    for (const label patchi : patchSet_)
     {
-        dict.readEntry("CpInf", CpRef_);
-    }
+        const scalarField rhop(rho(patchi));
+        const scalarField Cpp(Cp(patchi));
 
-    dict.readIfPresent("rho", rhoName_);
-    if (rhoName_ == "rhoInf")
-    {
-        dict.readEntry("rhoInf", rhoRef_);
+        htcBf[patchi] = 0.5*rhop*Cpp*magU*CfBf[patchi];
     }
-
-    return true;
 }
 
 

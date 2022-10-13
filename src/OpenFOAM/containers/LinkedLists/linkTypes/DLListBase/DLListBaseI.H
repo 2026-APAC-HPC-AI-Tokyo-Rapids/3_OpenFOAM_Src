@@ -99,6 +99,18 @@ Foam::DLListBase::crend() const
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
+inline bool Foam::DLListBase::link::registered() const noexcept
+{
+    return prev_ != nullptr && next_ != nullptr;
+}
+
+
+inline void Foam::DLListBase::link::deregister() noexcept
+{
+    prev_ = next_ = nullptr;
+}
+
+
 inline Foam::label Foam::DLListBase::size() const noexcept
 {
     return size_;
@@ -112,7 +124,7 @@ inline bool Foam::DLListBase::empty() const noexcept
 
 
 inline Foam::DLListBase::link*
-Foam::DLListBase::front()
+Foam::DLListBase::first()
 {
     if (!size_)
     {
@@ -125,7 +137,7 @@ Foam::DLListBase::front()
 
 
 inline const Foam::DLListBase::link*
-Foam::DLListBase::front() const
+Foam::DLListBase::first() const
 {
     if (!size_)
     {
@@ -138,7 +150,7 @@ Foam::DLListBase::front() const
 
 
 inline Foam::DLListBase::link*
-Foam::DLListBase::back()
+Foam::DLListBase::last()
 {
     if (!size_)
     {
@@ -151,7 +163,7 @@ Foam::DLListBase::back()
 
 
 inline const Foam::DLListBase::link*
-Foam::DLListBase::back() const
+Foam::DLListBase::last() const
 {
     if (!size_)
     {

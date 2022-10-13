@@ -70,8 +70,8 @@ Foam::coordSetWriters::gnuplotWriter::gnuplotWriter(const dictionary& options)
     coordSetWriter(options),
     streamOpt_
     (
-        IOstreamOption::ASCII,
-        IOstreamOption::compressionEnum("compression", options)
+        IOstream::ASCII,
+        IOstream::compressionEnum("compression", options)
     ),
     precision_
     (
@@ -158,7 +158,7 @@ bool Foam::coordSetWriters::gnuplotWriter::writeBuffered()
     os.precision(precision_);
 
     os  << "set term pngcairo" << nl
-        << "set output \"" << outputFile.stem() << ".png\"" << nl;
+        << "set output \"" << outputFile.nameLessExt() << ".png\"" << nl;
 
     label nplots = 0;
     do

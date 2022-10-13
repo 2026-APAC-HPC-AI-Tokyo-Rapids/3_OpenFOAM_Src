@@ -72,8 +72,8 @@ Foam::coordSetWriters::xmgraceWriter::xmgraceWriter(const dictionary& options)
     coordSetWriter(options),
     streamOpt_
     (
-        IOstreamOption::ASCII,
-        IOstreamOption::compressionEnum("compression", options)
+        IOstream::ASCII,
+        IOstream::compressionEnum("compression", options)
     ),
     precision_
     (

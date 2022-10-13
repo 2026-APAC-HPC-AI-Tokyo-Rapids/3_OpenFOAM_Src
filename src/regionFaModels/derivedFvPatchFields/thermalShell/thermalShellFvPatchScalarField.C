@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -45,7 +45,7 @@ thermalShellFvPatchScalarField::thermalShellFvPatchScalarField
 )
 :
     fixedValueFvPatchField<scalar>(p, iF),
-    baffle_(nullptr),
+    baffle_(),
     dict_()
 {}
 
@@ -65,7 +65,7 @@ thermalShellFvPatchScalarField::thermalShellFvPatchScalarField
         iF,
         mapper
     ),
-    baffle_(nullptr),
+    baffle_(),
     dict_(ptf.dict_)
 {}
 
@@ -78,15 +78,15 @@ thermalShellFvPatchScalarField::thermalShellFvPatchScalarField
 )
 :
     fixedValueFvPatchField<scalar>(p, iF, dict),
-    baffle_(nullptr),
+    baffle_(),
     dict_
     (
         // Copy dictionary, but without "heavy" data chunks
         dictionaryContent::copyDict
         (
             dict,
-            wordList(),  // allow
-            wordList     // deny
+            wordRes(),  // allow
+            wordRes     // deny
             ({
                 "type",  // redundant
                 "value"
@@ -94,9 +94,11 @@ thermalShellFvPatchScalarField::thermalShellFvPatchScalarField
         )
     )
 {
+    typedef regionModels::thermalShellModel baffle;
+
     if (!baffle_)
     {
-        baffle_.reset(baffleType::New(p.boundaryMesh().mesh(), dict_));
+        baffle_.reset(baffle::New(p, dict).ptr());
     }
 }
 
@@ -108,7 +110,7 @@ thermalShellFvPatchScalarField::thermalShellFvPatchScalarField
 )
 :
     fixedValueFvPatchField<scalar>(ptf, iF),
-    baffle_(nullptr),
+    baffle_(),
     dict_(ptf.dict_)
 {}
 
@@ -124,9 +126,13 @@ void thermalShellFvPatchScalarField::updateCoeffs()
 
     baffle_->evolve();
 
-    scalarField& pfld = *this;
+    volScalarField::Boundary& vfb =
+        db().lookupObjectRef<volScalarField>
+        (
+            this->internalField().name()
+        ).boundaryFieldRef();
 
-    baffle_->vsm().mapToVolumePatch(baffle_->T(), pfld, patch().index());
+    baffle_->vsm().mapToVolume(baffle_->T(), vfb);
 
     fixedValueFvPatchField<scalar>::updateCoeffs();
 }

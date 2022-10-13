@@ -7,7 +7,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2011-2016 OpenFOAM Foundation
-#     Copyright (C) 2019-2022 OpenCFD Ltd.
+#     Copyright (C) 2019-2020 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -22,14 +22,8 @@
 #     Link source files in the specified dir(s) into their respective
 #     lnInclude directories
 #
-#     Header files    : .h .H  .hh .hpp .hxx
-#     Template files  :    .C .tcc .tpp .txx
-#
-# Note
-#     OpenFOAM has historically used '.C' files both for compiled code
-#     and templated code.
-#
-# GNU make suffixes : .c .cc .C .cpp
+#     C files:      .c .h
+#     C++ files:    .C .cc .cpp .cxx .H .hh .hpp .hxx
 #
 #------------------------------------------------------------------------------
 Script="${0##*/}"                   # Need 'Script' for wmakeFunctions messages
@@ -82,9 +76,6 @@ unset optForce optUpdate optPwd
 while [ "$#" -gt 0 ]
 do
     case "$1" in
-        ('') ;;
-        (- | --) shift; break ;;  # Stop option parsing
-
         -h | -help*)
             printHelp
             ;;
@@ -112,7 +103,7 @@ do
     shift
 done
 
-[ -n "$optPwd" ] || [ "$#" -ge 1 ] || \
+[ "$optPwd" = true ] || [ "$#" -ge 1 ] || \
     die "incorrect number of arguments"
 
 #------------------------------------------------------------------------------
@@ -120,7 +111,7 @@ done
 baseDir="$1"
 
 # With -pwd, go on discovery
-if [ -n "$optPwd" ]
+if [ "$optPwd" = true ]
 then
     if [ -n "$baseDir" ]
     then
@@ -227,11 +218,12 @@ do
             \( -name lnInclude -o -name Make -o -name config -o -name noLink \) \
             -prune \
             -o \( \
-                   -name '*.[CHh]' \
+                -name '*.[CHch]' \
+                -o -name '*.cc' \
                 -o -name '*.hh' \
-                -o -name '*.tcc' \
-                -o -name '*.[ht]pp' \
-                -o -name '*.[ht]xx' \
+                -o -name '*.[ch]xx' \
+                -o -name '*.[ch]pp' \
+                -o -name '*.type' \
             \)  \
             -exec ln "$optLink" {} . \;
     )

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,20 +48,20 @@ defineRunTimeSelectionTable(vibrationShellModel, dictionary);
 vibrationShellModel::vibrationShellModel
 (
     const word& modelType,
-    const fvMesh& mesh,
+    const fvPatch& p,
     const dictionary& dict
 )
 :
-    regionFaModel(mesh, "vibratingShell", modelType, dict, true),
+    regionFaModel(p, "vibratingShell", modelType, dict, true),
     pName_(dict.get<word>("p")),
-    pa_(mesh.lookupObject<volScalarField>(pName_)),
+    pa_(p.boundaryMesh().mesh().lookupObject<volScalarField>(pName_)),
     w_
     (
         IOobject
         (
             "ws_" + regionName_,
-            primaryMesh().time().timeName(),
-            primaryMesh(),
+            p.boundaryMesh().mesh().time().timeName(),
+            p.boundaryMesh().mesh(),
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
@@ -72,18 +72,18 @@ vibrationShellModel::vibrationShellModel
         IOobject
         (
             "as_" + regionName_,
-            primaryMesh().time().timeName(),
-            primaryMesh(),
+            p.boundaryMesh().mesh().time().timeName(),
+            p.boundaryMesh().mesh(),
             IOobject::NO_READ,
             IOobject::AUTO_WRITE
         ),
         regionMesh(),
         dimensionedScalar(dimAcceleration, Zero)
     ),
-    faOptions_(Foam::fa::options::New(mesh)),
+    faOptions_(Foam::fa::options::New(p)),
     solid_(dict.subDict("solid"))
 {
-    if (faOptions_.optionList::empty())
+    if (!faOptions_.optionList::size())
     {
         Info << "No finite area options present" << endl;
     }

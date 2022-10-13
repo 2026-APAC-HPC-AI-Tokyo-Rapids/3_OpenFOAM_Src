@@ -33,8 +33,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_blendedSchemeBase_H
-#define Foam_blendedSchemeBase_H
+#ifndef blendedSchemeBase_H
+#define blendedSchemeBase_H
 
 #include "className.H"
 #include "tmp.H"
@@ -57,10 +57,12 @@ class blendedSchemeBase
 :
     public blendedSchemeBaseName
 {
+
 public:
 
     //- Constructor
-    blendedSchemeBase() = default;
+    blendedSchemeBase()
+    {}
 
     //- Destructor
     virtual ~blendedSchemeBase() = default;

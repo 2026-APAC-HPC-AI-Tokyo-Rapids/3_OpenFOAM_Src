@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -218,7 +217,7 @@ void Foam::searchableSurfaceWithGaps::findLine
     labelList compactMap;
     label nMiss = countMisses(info, compactMap);
 
-    if (returnReduceOr(nMiss))
+    if (returnReduce(nMiss, sumOp<label>()) > 0)
     {
         //Pout<< "** retesting with offset0 " << nMiss << " misses out of "
         //    << start.size() << endl;
@@ -266,14 +265,14 @@ void Foam::searchableSurfaceWithGaps::findLine
             if (plusInfo[i].hit() && minInfo[i].hit())
             {
                 info[compactMap[i]] = plusInfo[i];
-                info[compactMap[i]].point() -= offset0[i];
+                info[compactMap[i]].rawPoint() -= offset0[i];
             }
         }
 
         labelList plusMissMap;
         nMiss = countMisses(plusInfo, minInfo, plusMissMap);
 
-        if (returnReduceOr(nMiss))
+        if (returnReduce(nMiss, sumOp<label>()) > 0)
         {
             //Pout<< "** retesting with offset1 " << nMiss << " misses out of "
             //    << start.size() << endl;
@@ -318,7 +317,7 @@ void Foam::searchableSurfaceWithGaps::findLine
                 if (plusInfo[i].hit() && minInfo[i].hit())
                 {
                     info[compactMap[i]] = plusInfo[i];
-                    info[compactMap[i]].point() -= offset1[i];
+                    info[compactMap[i]].rawPoint() -= offset1[i];
                 }
             }
         }

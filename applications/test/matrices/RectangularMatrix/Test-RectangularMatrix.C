@@ -44,7 +44,8 @@ Note
 
 #include "RectangularMatrix.H"
 #include "SquareMatrix.H"
-#include "scalar.H"
+#include "floatScalar.H"
+#include "doubleScalar.H"
 #include "complex.H"
 #include "IOmanip.H"
 #include "TestTools.H"

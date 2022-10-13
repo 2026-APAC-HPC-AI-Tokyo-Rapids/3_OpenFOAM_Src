@@ -246,7 +246,7 @@ void Foam::RecycleInteraction<CloudType>::postEvolve()
 
         pBufs.finishedSends();
 
-        if (!returnReduceOr(pBufs.hasRecvData()))
+        if (!returnReduce(pBufs.hasRecvData(), orOp<bool>()))
         {
             // No parcels to recycle
             return;
@@ -349,9 +349,9 @@ void Foam::RecycleInteraction<CloudType>::postEvolve()
 
 
 template<class CloudType>
-void Foam::RecycleInteraction<CloudType>::info()
+void Foam::RecycleInteraction<CloudType>::info(Ostream& os)
 {
-    PatchInteractionModel<CloudType>::info();
+    PatchInteractionModel<CloudType>::info(os);
 
     labelListList npr0(nRemoved_.size());
     scalarListList mpr0(massRemoved_.size());
@@ -416,12 +416,12 @@ void Foam::RecycleInteraction<CloudType>::info()
         {
             const word& outPatchName =  recyclePatches_[i].first();
 
-            Log_<< "    Parcel fate: patch " <<  outPatchName
+            os  << "    Parcel fate: patch " <<  outPatchName
                 << " (number, mass)" << nl;
 
             forAll(mpr[i], indexi)
             {
-                Log_<< "      - removed  (injector " << indexToInjector[indexi]
+                os  << "      - removed  (injector " << indexToInjector[indexi]
                     << ")  = " << npr[i][indexi]
                     << ", " << mpr[i][indexi] << nl;
 
@@ -431,12 +431,12 @@ void Foam::RecycleInteraction<CloudType>::info()
 
             const word& inPatchName = recyclePatches_[i].second();
 
-            Log_<< "    Parcel fate: patch " <<  inPatchName
+            os  << "    Parcel fate: patch " <<  inPatchName
                 << " (number, mass)" << nl;
 
             forAll(mpi[i], indexi)
             {
-                Log_<< "      - injected  (injector " << indexToInjector[indexi]
+                os  << "      - injected  (injector " << indexToInjector[indexi]
                     << ")  = " << npi[i][indexi]
                     << ", " << mpi[i][indexi] << nl;
                 this->file()
@@ -452,7 +452,7 @@ void Foam::RecycleInteraction<CloudType>::info()
         {
             const word& outPatchName =  recyclePatches_[i].first();
 
-            Log_<< "    Parcel fate: patch " <<  outPatchName
+            os  << "    Parcel fate: patch " <<  outPatchName
                 << " (number, mass)" << nl
                 << "      - removed    = " << npr[i][0] << ", " << mpr[i][0]
                 << nl;
@@ -465,7 +465,7 @@ void Foam::RecycleInteraction<CloudType>::info()
         {
             const word& inPatchName = recyclePatches_[i].second();
 
-            Log_<< "    Parcel fate: patch " <<  inPatchName
+            os  << "    Parcel fate: patch " <<  inPatchName
                 << " (number, mass)" << nl
                 << "      - injected   = " << npi[i][0] << ", " << mpi[i][0]
                 << nl;

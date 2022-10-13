@@ -96,7 +96,6 @@ SourceFiles
 #include "pointIndexHit.H"
 #include "AMIPatchToPatchInterpolation.H"
 #include "coupleGroupIdentifier.H"
-#include "uniformDimensionedFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -287,16 +286,6 @@ protected:
 
             //- Dictionary storing projection surface description
             dictionary surfDict_;
-
-
-        // Mesh update IOobjects
-
-            //- Local mesh update time
-            mutable autoPtr<uniformDimensionedScalarField> updateMeshTimePtr_;
-
-            //- Sample mesh update time
-            mutable autoPtr<uniformDimensionedScalarField>
-                updateSampleMeshTimePtr_;
 
 
     // Protected Member Functions
@@ -525,14 +514,6 @@ public:
 
             //- Cached sampleRegion != mesh.name()
             inline bool sameRegion() const noexcept;
-
-            //- Local mesh update time
-            inline uniformDimensionedScalarField& updateSampleMeshTime() const;
-
-            //- Sample mesh upate time
-            inline uniformDimensionedScalarField& updateMeshTime() const;
-
-            inline bool upToDate() const;
 
             //- Return reference to the parallel distribution map
             inline const mapDistribute& map() const;

@@ -47,7 +47,7 @@ void Foam::processorLduInterface::send
      || commsType == Pstream::commsTypes::scheduled
     )
     {
-        UOPstream::write
+        OPstream::write
         (
             commsType,
             neighbProcNo(),
@@ -61,7 +61,7 @@ void Foam::processorLduInterface::send
     {
         resizeBuf(receiveBuf_, nBytes);
 
-        UIPstream::read
+        IPstream::read
         (
             commsType,
             neighbProcNo(),
@@ -77,7 +77,7 @@ void Foam::processorLduInterface::send
             static_cast<void*>(sendBuf_.data()), f.cdata(), nBytes
         );
 
-        UOPstream::write
+        OPstream::write
         (
             commsType,
             neighbProcNo(),
@@ -109,7 +109,7 @@ void Foam::processorLduInterface::receive
      || commsType == Pstream::commsTypes::scheduled
     )
     {
-        UIPstream::read
+        IPstream::read
         (
             commsType,
             neighbProcNo(),
@@ -181,7 +181,7 @@ void Foam::processorLduInterface::compressedSend
          || commsType == Pstream::commsTypes::scheduled
         )
         {
-            UOPstream::write
+            OPstream::write
             (
                 commsType,
                 neighbProcNo(),
@@ -195,7 +195,7 @@ void Foam::processorLduInterface::compressedSend
         {
             resizeBuf(receiveBuf_, nBytes);
 
-            UIPstream::read
+            IPstream::read
             (
                 commsType,
                 neighbProcNo(),
@@ -205,7 +205,7 @@ void Foam::processorLduInterface::compressedSend
                 comm()
             );
 
-            UOPstream::write
+            OPstream::write
             (
                 commsType,
                 neighbProcNo(),
@@ -252,7 +252,7 @@ void Foam::processorLduInterface::compressedReceive
         {
             resizeBuf(receiveBuf_, nBytes);
 
-            UIPstream::read
+            IPstream::read
             (
                 commsType,
                 neighbProcNo(),

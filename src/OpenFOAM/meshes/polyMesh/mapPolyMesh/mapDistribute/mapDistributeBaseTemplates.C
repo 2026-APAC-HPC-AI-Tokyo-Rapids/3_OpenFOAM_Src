@@ -520,7 +520,7 @@ void Foam::mapDistributeBase::distribute
                     sendFields[domain] =
                         accessAndFlip(field, map, subHasFlip, negOp);
 
-                    UOPstream::write
+                    OPstream::write
                     (
                         Pstream::commsTypes::nonBlocking,
                         domain,
@@ -543,7 +543,8 @@ void Foam::mapDistributeBase::distribute
                 if (domain != myRank && map.size())
                 {
                     recvFields[domain].resize(map.size());
-                    UIPstream::read
+
+                    IPstream::read
                     (
                         Pstream::commsTypes::nonBlocking,
                         domain,
@@ -554,6 +555,7 @@ void Foam::mapDistributeBase::distribute
                     );
                 }
             }
+
 
             // Set up 'send' to myself
             {
@@ -584,7 +586,8 @@ void Foam::mapDistributeBase::distribute
             }
 
 
-            // Wait for outstanding requests
+            // Wait for all to finish
+
             Pstream::waitRequests(nOutstanding);
 
 
@@ -979,7 +982,7 @@ void Foam::mapDistributeBase::distribute
                     sendFields[domain] =
                         accessAndFlip(field, map, subHasFlip, negOp);
 
-                    UOPstream::write
+                    OPstream::write
                     (
                         Pstream::commsTypes::nonBlocking,
                         domain,
@@ -1001,7 +1004,7 @@ void Foam::mapDistributeBase::distribute
 
                 if (domain != myRank && map.size())
                 {
-                    recvFields[domain].resize(map.size());
+                    recvFields[domain].setSize(map.size());
                     UIPstream::read
                     (
                         Pstream::commsTypes::nonBlocking,
@@ -1015,6 +1018,7 @@ void Foam::mapDistributeBase::distribute
             }
 
             // Set up 'send' to myself
+
             {
                 sendFields[myRank] =
                     accessAndFlip(field, subMap[myRank], subHasFlip, negOp);
@@ -1043,7 +1047,8 @@ void Foam::mapDistributeBase::distribute
             }
 
 
-            // Wait for outstanding requests
+            // Wait for all to finish
+
             Pstream::waitRequests(nOutstanding);
 
 

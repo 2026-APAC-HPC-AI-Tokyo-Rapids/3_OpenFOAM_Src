@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,7 +40,6 @@ License
 template<class Type>
 bool Foam::ensightOutput::writeVolField
 (
-    ensightOutput::floatBufferType& scratch,
     ensightFile& os,
     const GeometricField<Type, fvPatchField, volMesh>& vf,
     const ensightMesh& ensMesh
@@ -55,12 +54,13 @@ bool Foam::ensightOutput::writeVolField
     const Map<ensightFaces>& faceZoneParts = ensMesh.faceZoneParts();
     const Map<ensightFaces>& boundaryParts = ensMesh.boundaryParts();
 
+
     // Write internalMesh and cellZones - sorted by index
     for (const label zoneId : cellZoneParts.sortedToc())
     {
         const ensightCells& part = cellZoneParts[zoneId];
 
-        ensightOutput::writeField(scratch, os, vf, part, parallel);
+        ensightOutput::writeField(os, vf, part, parallel);
     }
 
 
@@ -88,7 +88,6 @@ bool Foam::ensightOutput::writeVolField
 
         ensightOutput::writeField
         (
-            scratch,
             os,
             vf.boundaryField()[patchId],
             localPart,
@@ -171,7 +170,7 @@ bool Foam::ensightOutput::writeVolField
         // - boundary faces use the corresponding patch value
 
         // Local copy of the field
-        values.resize_nocopy(part.size());
+        values.resize(part.size());
         values = Zero;
 
         auto valIter = values.begin();
@@ -190,10 +189,7 @@ bool Foam::ensightOutput::writeVolField
 
         // The field is already in the proper element order
         // - just need its corresponding sub-fields
-        ensightOutput::Detail::writeFaceSubField
-        (
-            scratch, os, values, part, parallel
-        );
+        ensightOutput::Detail::writeFaceSubField(os, values, part, parallel);
     }
 
     return true;
@@ -203,7 +199,6 @@ bool Foam::ensightOutput::writeVolField
 template<class Type>
 bool Foam::ensightOutput::writePointField
 (
-    ensightOutput::floatBufferType& scratch,
     ensightFile& os,
     const GeometricField<Type, pointPatchField, pointMesh>& pf,
     const ensightMesh& ensMesh
@@ -224,28 +219,16 @@ bool Foam::ensightOutput::writePointField
     {
         const ensightCells& part = cellZoneParts[zoneId];
 
-        labelList uniquePointLabels;
-        part.uniqueMeshPoints(mesh, uniquePointLabels, parallel);
-
         if (Pstream::master())
         {
             os.beginPart(part.index());
         }
 
-        // Skip if empty
-        if
-        (
-            parallel
-          ? returnReduceAnd(uniquePointLabels.empty())
-          : uniquePointLabels.empty()
-        )
-        {
-            continue;
-        }
+        labelList uniquePointLabels;
+        part.uniqueMeshPoints(mesh, uniquePointLabels, parallel);
 
         ensightOutput::Detail::writeFieldComponents
         (
-            scratch,
             os,
             ensightFile::coordinates,
             UIndirectList<Type>(pf.internalField(), uniquePointLabels),
@@ -261,24 +244,13 @@ bool Foam::ensightOutput::writePointField
     {
         const ensightFaces& part = boundaryParts[patchId];
 
-        labelList uniquePointLabels;
-        part.uniqueMeshPoints(mesh, uniquePointLabels, parallel);
-
         if (Pstream::master())
         {
             os.beginPart(part.index());
         }
 
-        // Skip if empty
-        if
-        (
-            parallel
-          ? returnReduceAnd(uniquePointLabels.empty())
-          : uniquePointLabels.empty()
-        )
-        {
-            continue;
-        }
+        labelList uniquePointLabels;
+        part.uniqueMeshPoints(mesh, uniquePointLabels, parallel);
 
         const auto& bfld = pf.boundaryField()[patchId];
 
@@ -300,7 +272,6 @@ bool Foam::ensightOutput::writePointField
 
             ensightOutput::Detail::writeFieldComponents
             (
-                scratch,
                 os,
                 ensightFile::coordinates,
                 UIndirectList<Type>(*vpp, uniquePointLabels),
@@ -311,7 +282,6 @@ bool Foam::ensightOutput::writePointField
         {
             ensightOutput::Detail::writeFieldComponents
             (
-                scratch,
                 os,
                 ensightFile::coordinates,
                 UIndirectList<Type>(pf.internalField(), uniquePointLabels),
@@ -327,36 +297,26 @@ bool Foam::ensightOutput::writePointField
     {
         const ensightFaces& part = faceZoneParts[zoneId];
 
-        labelList uniquePointLabels;
-        part.uniqueMeshPoints(mesh, uniquePointLabels, parallel);
-
         if (Pstream::master())
         {
             os.beginPart(part.index());
         }
 
-        // Skip if empty
-        if
-        (
-            parallel
-          ? returnReduceAnd(uniquePointLabels.empty())
-          : uniquePointLabels.empty()
-        )
-        {
-            continue;
-        }
-
         // CAVEAT - does not properly handle valuePointPatchField,
         // uses internalField only
 
-        ensightOutput::Detail::writeFieldComponents
-        (
-            scratch,
-            os,
-            ensightFile::coordinates,
-            UIndirectList<Type>(pf.internalField(), uniquePointLabels),
-            parallel
-        );
+        {
+            labelList uniquePointLabels;
+            part.uniqueMeshPoints(mesh, uniquePointLabels, parallel);
+
+            ensightOutput::Detail::writeFieldComponents
+            (
+                os,
+                ensightFile::coordinates,
+                UIndirectList<Type>(pf.internalField(), uniquePointLabels),
+                parallel
+            );
+        }
     }
 
     return true;
@@ -368,7 +328,6 @@ bool Foam::ensightOutput::writePointField
 template<class Type>
 bool Foam::ensightOutput::writeVolField
 (
-    ensightOutput::floatBufferType& scratch,
     ensightFile& os,
     const GeometricField<Type, fvPatchField, volMesh>& vf,
     const ensightMesh& ensMesh,
@@ -384,10 +343,10 @@ bool Foam::ensightOutput::writeVolField
         pfld.ref().checkOut();
         pfld.ref().rename(vf.name());
 
-        return ensightOutput::writePointField<Type>(scratch, os, pfld, ensMesh);
+        return ensightOutput::writePointField<Type>(os, pfld, ensMesh);
     }
 
-    return ensightOutput::writeVolField<Type>(scratch, os, vf, ensMesh);
+    return ensightOutput::writeVolField<Type>(os, vf, ensMesh);
 }
 
 

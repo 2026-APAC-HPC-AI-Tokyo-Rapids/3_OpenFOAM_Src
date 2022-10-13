@@ -155,8 +155,8 @@ public:
         );
 
 
-        //- Write patch interaction info
-        virtual void info();
+        //- Write patch interaction info to stream
+        virtual void info(Ostream& os);
 };
 
 

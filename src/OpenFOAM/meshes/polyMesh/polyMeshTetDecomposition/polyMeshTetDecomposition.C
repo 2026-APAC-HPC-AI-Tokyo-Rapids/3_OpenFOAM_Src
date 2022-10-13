@@ -776,7 +776,7 @@ Foam::labelList Foam::polyMeshTetDecomposition::adjustTetBasePtIs
 
     syncTools::syncFaceList(mesh, tetBasePtIs, maxEqOp<label>());
 
-    if (report && returnReduceOr(nAdapted))
+    if (report && returnReduce(nAdapted, sumOp<label>()))
     {
         Pout<< "Adapted starting point of triangulation on "
             << nAdapted << " faces." << endl;

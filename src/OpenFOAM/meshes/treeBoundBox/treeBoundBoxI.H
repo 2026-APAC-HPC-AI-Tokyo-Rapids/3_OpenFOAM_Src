@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,21 +31,27 @@ License
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-inline Foam::treeBoundBox::treeBoundBox(const point& p)
+inline Foam::treeBoundBox::treeBoundBox()
 :
-    boundBox(p)
+    boundBox()
+{}
+
+
+inline Foam::treeBoundBox::treeBoundBox(const boundBox& bb)
+:
+    boundBox(bb)
+{}
+
+
+inline Foam::treeBoundBox::treeBoundBox(const point& pt)
+:
+    boundBox(pt)
 {}
 
 
 inline Foam::treeBoundBox::treeBoundBox(const point& min, const point& max)
 :
     boundBox(min, max)
-{}
-
-
-inline Foam::treeBoundBox::treeBoundBox(const Pair<point>& bb)
-:
-    boundBox(bb)
 {}
 
 
@@ -56,6 +62,12 @@ inline Foam::treeBoundBox::treeBoundBox(Istream& is)
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+inline Foam::scalar Foam::treeBoundBox::typDim() const
+{
+    return avgDim();
+}
+
 
 inline Foam::point Foam::treeBoundBox::corner(const direction octant) const
 {
@@ -217,10 +229,12 @@ inline Foam::direction Foam::treeBoundBox::subOctant
 }
 
 
+// Returns reference to octantOrder which defines the
+// order to do the search.
 inline void Foam::treeBoundBox::searchOrder
 (
     const point& pt,
-    FixedList<direction, 8>& octantOrder
+    FixedList<direction,8>& octantOrder
 ) const
 {
     vector dist = centre() - pt;
@@ -307,70 +321,26 @@ inline void Foam::treeBoundBox::searchOrder
 }
 
 
-inline Foam::FixedList<Foam::direction, 8>
-Foam::treeBoundBox::searchOrder(const point& pt) const
-{
-    FixedList<direction, 8> octantOrder;
-    searchOrder(pt, octantOrder);
-    return octantOrder;
-}
-
-
-inline bool Foam::treeBoundBox::subOverlaps
-(
-    const direction octant,
-    const point& centre,
-    const scalar radiusSqr
-) const
-{
-    // Accelerated version of
-    //     subBbox(octant).overlaps(centre, radiusSqr)
-
-    // NB: ordering of corners is irrelevant
-    return box_sphere_overlaps
-    (
-        this->centre(),
-        corner(octant),
-        centre,
-        radiusSqr
-    );
-}
-
-
-inline bool Foam::treeBoundBox::intersects
-(
-    const linePointRef& ln,
-    point& pt
-) const
-{
-    return intersects(ln.start(), ln.end(), pt);
-}
-
-
 inline Foam::treeBoundBox Foam::treeBoundBox::extend
 (
     Random& rndGen,
-    const scalar factor
+    const scalar s
 ) const
 {
     treeBoundBox bb(*this);
 
-    bb.inflate(rndGen, factor);
+    vector newSpan = bb.span();
 
-    return bb;
-}
+    // Make 3D
+    scalar minSpan = s * Foam::mag(newSpan);
 
+    for (direction dir = 0; dir < vector::nComponents; ++dir)
+    {
+        newSpan[dir] = Foam::max(newSpan[dir], minSpan);
+    }
 
-inline Foam::treeBoundBox Foam::treeBoundBox::extend
-(
-    Random& rndGen,
-    const scalar factor,
-    const scalar delta
-) const
-{
-    treeBoundBox bb(*this);
-
-    bb.inflate(rndGen, factor, delta);
+    bb.min() -= cmptMultiply(s*rndGen.sample01<vector>(), newSpan);
+    bb.max() += cmptMultiply(s*rndGen.sample01<vector>(), newSpan);
 
     return bb;
 }

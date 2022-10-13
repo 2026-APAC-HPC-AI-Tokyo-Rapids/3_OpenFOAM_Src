@@ -157,7 +157,12 @@ void Foam::radiation::laserDTRM::initialiseReflection()
             );
         }
 
-        reflectionSwitch_ = returnReduceOr(reflections_.size());
+        if (reflections_.size())
+        {
+            reflectionSwitch_ = true;
+        }
+
+        reflectionSwitch_ = returnReduce(reflectionSwitch_, orOp<bool>());
     }
 }
 
@@ -294,12 +299,14 @@ void Foam::radiation::laserDTRM::initialise()
                     DTRMCloud_.addParticle(pPtr);
                 }
 
-                if (nMissed < 10 && returnReduceAnd(cellI < 0))
+                if (returnReduce(cellI, maxOp<label>()) == -1)
                 {
-                    ++nMissed;
-                    WarningInFunction
-                        << "Cannot find owner cell for focalPoint at "
-                        << p0 << endl;
+                    if (++nMissed <= 10)
+                    {
+                        WarningInFunction
+                            << "Cannot find owner cell for focalPoint at "
+                            << p0 << endl;
+                    }
                 }
             }
         }
@@ -692,7 +699,7 @@ void Foam::radiation::laserDTRM::calculate()
 
             for (label pointi = 0; pointi < lines.size(); pointi += 2)
             {
-                os.writeLine(lines[pointi], lines[pointi+1]);
+                os.write(linePointRef(lines[pointi], lines[pointi+1]));
             }
         }
 

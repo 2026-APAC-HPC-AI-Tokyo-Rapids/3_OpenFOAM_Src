@@ -46,9 +46,11 @@ if (doLagrangian)
     if (Pstream::parRun())
     {
         // Synchronise cloud names
-        Pstream::combineReduce(cloudNames, ListOps::uniqueEqOp<word>());
+        Pstream::combineGather(cloudNames, ListOps::uniqueEqOp<word>());
+        Pstream::broadcast(cloudNames);
     }
-    Foam::sort(cloudNames);  // Consistent order
+    // Consistent order
+    Foam::sort(cloudNames);
 
     for (const word& cloudName : cloudNames)
     {
@@ -64,7 +66,7 @@ if (doLagrangian)
             isCloud = true;
         }
 
-        if (!returnReduceOr(isCloud))
+        if (!returnReduce(isCloud, orOp<bool>()))
         {
             continue;
         }
@@ -76,7 +78,7 @@ if (doLagrangian)
         );
 
         // Are there cloud fields (globally)?
-        if (returnReduceAnd(cloudObjs.empty()))
+        if (returnReduce(cloudObjs.empty(), andOp<bool>()))
         {
             continue;
         }

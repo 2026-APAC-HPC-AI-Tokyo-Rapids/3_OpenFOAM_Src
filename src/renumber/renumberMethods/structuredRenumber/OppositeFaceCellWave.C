@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,22 +48,44 @@ void Foam::OppositeFaceCellWave<Type, TrackingData>::opposingFaceLabels
 
     const face& masterFace = this->mesh_.faces()[masterFaceLabel];
 
+    const labelList& curFaceLabels = this->mesh_.cells()[celli];
+
     oppositeFaceLabels.clear();
 
-    for (const label facei : this->mesh_.cells()[celli])
+    forAll(curFaceLabels, facei)
     {
         // Compare the face with the master
-        const face& f = this->mesh_.faces()[facei];
+        const face& curFace = this->mesh_.faces()[curFaceLabels[facei]];
 
         // Skip the master face
-        if
-        (
-            facei != masterFaceLabel
-         && !f.connected(masterFace)
-        )
+        if (curFaceLabels[facei] != masterFaceLabel)
         {
-            // Not connected : this is an opposite face
-            oppositeFaceLabels.push_back(facei);
+            bool sharedPoint = false;
+
+            // Compare every vertex of the current face against the
+            // vertices of the master face
+            forAll(curFace, pointi)
+            {
+                const label l = curFace[pointi];
+
+                forAll(masterFace, masterPointi)
+                {
+                    if (masterFace[masterPointi] == l)
+                    {
+                        sharedPoint = true;
+                        break;
+                    }
+                }
+
+                if (sharedPoint) break;
+            }
+
+            // If no points are shared, this is the opposite face
+            if (!sharedPoint)
+            {
+                // Found opposite face
+                oppositeFaceLabels.append(curFaceLabels[facei]);
+            }
         }
     }
 }
@@ -96,7 +117,7 @@ Foam::OppositeFaceCellWave<Type, TrackingData>::OppositeFaceCellWave
         0,              //maxIter,
         td
     ),
-    OppositeFaceCellWaveBase(mesh)
+    changedOppositeFaces_(this->mesh_.nCells())
 {
     // Iterate until nothing changes
     label iter = this->iterate(maxIter);
@@ -107,8 +128,8 @@ Foam::OppositeFaceCellWave<Type, TrackingData>::OppositeFaceCellWave
             << "Maximum number of iterations reached. Increase maxIter."
             << endl
             << "    maxIter:" << maxIter << endl
-            << "    nChangedCells:" << this->nChangedCells() << endl
-            << "    nChangedFaces:" << this->nChangedFaces() << endl
+            << "    nChangedCells:" << this->changedCells_.size() << endl
+            << "    nChangedFaces:" << this->changedFaces_.size() << endl
             << exit(FatalError);
     }
 }
@@ -125,8 +146,10 @@ Foam::label Foam::OppositeFaceCellWave<Type, TrackingData>::faceToCell()
 
     DynamicList<label> oppositeFaceLabels;
 
-    for (const label facei : this->changedFaces_)
+    forAll(this->changedFaces_, changedFacei)
     {
+        label facei = this->changedFaces_[changedFacei];
+
         if (!this->changedFace_.test(facei))
         {
             FatalErrorInFunction
@@ -152,7 +175,7 @@ Foam::label Foam::OppositeFaceCellWave<Type, TrackingData>::faceToCell()
 
                 if (oppositeFaceLabels.size())
                 {
-                    label sz = this->nChangedCells();
+                    label sz = this->changedCells_.size();
                     this->updateCell
                     (
                         celli,
@@ -161,14 +184,14 @@ Foam::label Foam::OppositeFaceCellWave<Type, TrackingData>::faceToCell()
                         this->propagationTol_,
                         currentWallInfo
                     );
-                    if (this->nChangedCells() > sz)
+                    if (this->changedCells_.size() > sz)
                     {
                         label oppFacei = -1;
                         if (oppositeFaceLabels.size() == 1)
                         {
-                            oppFacei = oppositeFaceLabels.front();
+                            oppFacei = oppositeFaceLabels[0];
                         }
-                        changedOppositeFaces_.push_back(oppFacei);
+                        changedOppositeFaces_.append(oppFacei);
                     }
                 }
             }
@@ -187,7 +210,7 @@ Foam::label Foam::OppositeFaceCellWave<Type, TrackingData>::faceToCell()
 
                 if (oppositeFaceLabels.size())
                 {
-                    label sz = this->nChangedCells();
+                    label sz = this->changedCells_.size();
                     this->updateCell
                     (
                         celli,
@@ -196,14 +219,14 @@ Foam::label Foam::OppositeFaceCellWave<Type, TrackingData>::faceToCell()
                         this->propagationTol_,
                         currentWallInfo2
                     );
-                    if (this->nChangedCells() > sz)
+                    if (this->changedCells_.size() > sz)
                     {
                         label oppFacei = -1;
                         if (oppositeFaceLabels.size() == 1)
                         {
-                            oppFacei = oppositeFaceLabels.front();
+                            oppFacei = oppositeFaceLabels[0];
                         }
-                        changedOppositeFaces_.push_back(oppFacei);
+                        changedOppositeFaces_.append(oppFacei);
                     }
                 }
             }
@@ -218,11 +241,16 @@ Foam::label Foam::OppositeFaceCellWave<Type, TrackingData>::faceToCell()
 
     if (debug & 2)
     {
-        Pout<< " Changed cells            : " << this->nChangedCells() << endl;
+        Pout<< " Changed cells            : " << this->changedCells_.size()
+            << endl;
     }
 
     // Sum changedCells over all procs
-    return returnReduce(this->nChangedCells(), sumOp<label>());
+    label totNChanged = this->changedCells_.size();
+
+    reduce(totNChanged, sumOp<label>());
+
+    return totNChanged;
 }
 
 
@@ -289,12 +317,16 @@ Foam::label Foam::OppositeFaceCellWave<Type, TrackingData>::cellToFace()
 
     if (debug & 2)
     {
-        Pout<< " Changed faces            : " << this->nChangedFaces()
+        Pout<< " Changed faces            : " << this->changedFaces_.size()
             << endl;
     }
 
-    // Sum changedFaces over all procs
-    return returnReduce(this->nChangedFaces(), sumOp<label>());
+    // Sum nChangedFaces over all procs
+    label totNChanged = this->changedFaces_.size();
+
+    reduce(totNChanged, sumOp<label>());
+
+    return totNChanged;
 }
 
 

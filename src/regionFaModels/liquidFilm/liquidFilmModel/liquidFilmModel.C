@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,7 +51,7 @@ void liquidFilmModel::correctThermoFields()
 {
     scalarField X(thermo_.size(), 1);
 
-    forAll(rho_, faceI)
+    forAll (rho_, faceI)
     {
         rho_[faceI] = thermo_.rho(pRef_, Tf_[faceI], X);
         mu_[faceI] = thermo_.mu(pRef_, Tf_[faceI], X);
@@ -59,7 +59,7 @@ void liquidFilmModel::correctThermoFields()
         Cp_[faceI] = thermo_.Cp(pRef_, Tf_[faceI], X);
     }
 
-    forAll(regionMesh().boundary(), patchI)
+    forAll (regionMesh().boundary(), patchI)
     {
         const scalarField& patchTf = Tf_.boundaryFieldRef()[patchI];
 
@@ -86,11 +86,11 @@ void liquidFilmModel::correctThermoFields()
 liquidFilmModel::liquidFilmModel
 (
     const word& modelType,
-    const fvMesh& mesh,
+    const fvPatch& patch,
     const dictionary& dict
 )
 :
-    liquidFilmBase(modelType, mesh, dict),
+    liquidFilmBase(modelType, patch, dict),
 
     thermo_(dict.subDict("thermo")),
 
@@ -245,8 +245,10 @@ liquidFilmModel::liquidFilmModel
 
     forces_(*this, dict)
 {
-    if (dict.readIfPresent("T0", Tref_))
+
+    if (dict.found("T0"))
     {
+        Tref_ = dict.get<scalar>("T0");
         Tf_ = dimensionedScalar("T0", dimTemperature, dict);
     }
     correctThermoFields();
@@ -314,19 +316,22 @@ void liquidFilmModel::preEvolveRegion()
     liquidFilmBase::preEvolveRegion();
 
 
+
     cloudMassTrans_ == dimensionedScalar(dimMass, Zero);
     cloudDiameterTrans_ == dimensionedScalar(dimLength, Zero);
 
     const scalar deltaT = primaryMesh().time().deltaTValue();
     const scalarField rAreaDeltaT(scalar(1)/deltaT/regionMesh().S().field());
 
-    // Map the total mass, mom [kg.m/s] and pnSource from particles
+    // Map the total mass, mom and pnSource from particles
+    rhoSp_.primitiveFieldRef() =
+        vsm().mapToSurface(massSource_.boundaryField()[patchID()]);
+    // [kg.m/s]
+    USp_.primitiveFieldRef() =
+        vsm().mapToSurface(momentumSource_.boundaryField()[patchID()]);
 
-    vsm().mapToSurface(massSource_, rhoSp_.primitiveFieldRef());
-
-    vsm().mapToSurface(momentumSource_, USp_.primitiveFieldRef());
-
-    vsm().mapToSurface(pnSource_, pnSp_.primitiveFieldRef());
+    pnSp_.primitiveFieldRef() =
+        vsm().mapToSurface(pnSource_.boundaryField()[patchID()]);
 
 
     // Calculate rate per area
@@ -350,22 +355,17 @@ void liquidFilmModel::postEvolveRegion()
 
 void liquidFilmModel::info()
 {
-    Info<< "\nSurface film: " << type() << " on patch: ";
-
-    for (const label patchi : this->primaryPatchIDs())
-    {
-        Info<< ' ' << patchi;
-    }
-    Info<< endl;
+    Info<< "\nSurface film: " << type() << " on patch: " << patchID() << endl;
 
     const DimensionedField<scalar, areaMesh>& sf = regionMesh().S();
 
     Info<< indent << "min/max(mag(Uf))    = "
-        << gMinMaxMag(Uf_.field()) << nl
+        << gMin(mag(Uf_.field())) << ", "
+        << gMax(mag(Uf_.field())) << nl
         << indent << "min/max(delta)     = "
-        << gMinMax(h_.field()) << nl
+        << gMin(h_.field()) << ", " << gMax(h_.field()) << nl
         << indent << "coverage           = "
-        << gSum(alpha()().field()*mag(sf.field()))/gSumMag(sf.field()) <<  nl
+        << gSum(alpha()().field()*mag(sf.field()))/gSum(mag(sf.field())) <<  nl
         << indent << "total mass         = "
         << gSum(availableMass_) << nl;
 

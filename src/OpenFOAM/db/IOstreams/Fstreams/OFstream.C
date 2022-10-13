@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,19 +56,12 @@ Foam::OFstream::OFstream
 
 Foam::OFstream::OFstream
 (
-    IOstreamOption::atomicType atomic,
     const fileName& pathname,
     IOstreamOption streamOpt,
-    IOstreamOption::appendType append
+    const bool append
 )
 :
-    Foam::ofstreamPointer
-    (
-        pathname,
-        streamOpt.compression(),
-        (IOstreamOption::appendType::APPEND == append),
-        (IOstreamOption::atomicType::ATOMIC == atomic)
-    ),
+    Foam::ofstreamPointer(pathname, streamOpt.compression(), append),
     OSstream(*(ofstreamPointer::get()), pathname, streamOpt)
 {
     setClosed();
@@ -101,14 +94,6 @@ Foam::OFstream::OFstream
                 << " for output\n" << info() << Foam::endl;
         }
     }
-}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::OFstream::~OFstream()
-{
-    ofstreamPointer::close(this->name());
 }
 
 
@@ -146,8 +131,15 @@ const std::ostream& Foam::OFstream::stdStream() const
 
 void Foam::OFstream::rewind()
 {
-    // Reopen (truncate) std::ostream
-    ofstreamPointer::reopen(this->name());
+    if (IOstreamOption::COMPRESSED == ofstreamPointer::whichCompression())
+    {
+        ofstreamPointer::reopen_gz(this->name() + ".gz");
+    }
+    else
+    {
+        // Reopen (truncate)
+        ofstreamPointer::reopen(this->name());
+    }
 
     // As per OSstream::rewind()
 

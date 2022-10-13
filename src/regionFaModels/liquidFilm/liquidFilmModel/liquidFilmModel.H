@@ -151,7 +151,7 @@ public:
         liquidFilmModel
         (
             const word& modelType,
-            const fvMesh& mesh,
+            const fvPatch& patch,
             const dictionary& dict
         );
 

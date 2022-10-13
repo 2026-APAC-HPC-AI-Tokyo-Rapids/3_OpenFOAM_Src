@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,12 +60,12 @@ namespace Foam
 static enum Time::stopAtControls getStopAction(const std::string& filename)
 {
     // Slurp entire input file (must exist) as a single string
-    string fileContent;
+    std::string fileContent;
 
     std::ifstream is(filename);
     std::getline(is, fileContent, '\0');
 
-    if (fileContent.contains("done"))
+    if (fileContent.find("done") != std::string::npos)
     {
         return Time::stopAtControls::saEndTime;
     }
@@ -282,9 +282,9 @@ Foam::externalFileCoupler::waitForMaster() const
         }
     }
 
-    // Send to sub-ranks. Also acts as an MPI barrier
-    int intAction(action);
-    Pstream::broadcast(intAction);
+    label intAction(action);
+
+    Pstream::scatter(intAction); // Also acts as MPI barrier
 
     return Time::stopAtControls(intAction);
 }
@@ -326,9 +326,9 @@ Foam::externalFileCoupler::waitForSlave() const
         Log << type() << ": found lock file " << lck << endl;
     }
 
-    // Send to sub-ranks. Also acts as an MPI barrier
-    int intAction(action);
-    Pstream::broadcast(intAction);
+    label intAction(action);
+
+    Pstream::scatter(intAction); // Also acts as MPI barrier
 
     return Time::stopAtControls(intAction);
 }

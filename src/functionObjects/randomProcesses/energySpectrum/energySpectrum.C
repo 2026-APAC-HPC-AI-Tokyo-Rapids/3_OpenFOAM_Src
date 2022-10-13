@@ -105,7 +105,7 @@ void Foam::functionObjects::energySpectrum::calcAndWriteSpectrum
     E /= kappaNorm;
 
     Log << "Writing spectrum" << endl;
-    autoPtr<OFstream> osPtr = newFileAtTime(name(), time_.value());
+    autoPtr<OFstream> osPtr = createFile(name(), time_.value());
     OFstream& os = osPtr.ref();
     writeFileHeader(os);
 
@@ -150,10 +150,16 @@ bool Foam::functionObjects::energySpectrum::read(const dictionary& dict)
     const boundBox meshBb(mesh_.bounds());
 
     // Assume all cells are the same size...
-    boundBox cellBb(mesh_.cellBb(0));
+    const cell& c = mesh_.cells()[0];
+    boundBox cellBb(boundBox::invertedBox);
+    forAll(c, facei)
+    {
+        const face& f = mesh_.faces()[c[facei]];
+        cellBb.add(mesh_.points(), f);
+    }
 
-    const vector L(meshBb.span());
-    const vector nCellXYZ(cmptDivide(L, cellBb.span()));
+    const vector L(meshBb.max() - meshBb.min());
+    const vector nCellXYZ(cmptDivide(L, cellBb.max() - cellBb.min()));
 
     N_ = Vector<int>
     (
@@ -163,7 +169,7 @@ bool Foam::functionObjects::energySpectrum::read(const dictionary& dict)
     );
 
     // Check that the mesh is a structured box
-    vector cellDx(cellBb.span());
+    vector cellDx(cellBb.max() - cellBb.min());
     vector expectedMax(N_.x()*cellDx.x(), N_.y()*cellDx.y(), N_.z()*cellDx.z());
     vector relativeSize(cmptDivide(L, expectedMax));
     for (direction i = 0; i < 3; ++i)
@@ -183,8 +189,8 @@ bool Foam::functionObjects::energySpectrum::read(const dictionary& dict)
     // Map into i-j-k co-ordinates
     const vectorField& C = mesh_.C();
     c0_ = returnReduce(min(C), minOp<vector>());
-    deltaC_ = returnReduce(max(C), maxOp<vector>());
-    deltaC_ -= c0_;
+    const vector cMax = returnReduce(max(C), maxOp<vector>());
+    deltaC_ = cMax - c0_;
 
     forAll(C, celli)
     {

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -42,7 +42,7 @@ namespace Foam
     // Something like an internal state field. Probably only dimensionless
     typedef DimensionedField<uint8_t, volMesh> dimUint8Field;
 
-    defineTemplateTypeNameAndDebug(dimUint8Field, 0);
+    defineTemplate2TypeNameAndDebug(dimUint8Field, 0);
 
 } // End namespace Foam
 #endif
@@ -65,7 +65,8 @@ int main(int argc, char *argv[])
                 "tensor",
                 runTime.timeName(),
                 mesh,
-                { IOobject::READ_IF_PRESENT, IOobject::NO_REGISTER }
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
             ),
             mesh,
             dimensioned<tensor>(dimless, tensor(1,2,3,4,5,6,7,8,9))
@@ -74,47 +75,6 @@ int main(int argc, char *argv[])
         Info().beginBlock("transformed")
             << tensorfld.T() << nl;
         Info().endBlock();
-
-        {
-            auto tfld =
-                DimensionedField<scalar, volMesh>::New
-                (
-                    tensorfld,
-                    "scalar",
-                    dimensioned<scalar>(14)
-                );
-
-            Info().beginBlock(tfld().type())
-                << tfld << nl;
-            Info().endBlock();
-        }
-
-        {
-            auto tfld =
-                volScalarField::New
-                (
-                    "scalar",
-                    tensorfld.mesh(),
-                    dimensioned<scalar>(5)
-                );
-
-            Info().beginBlock(tfld().type())
-                << tfld() << nl;
-            Info().endBlock();
-
-            // From dissimilar types
-            auto tfld2 =
-                volVectorField::New
-                (
-                    tfld(),
-                    "vector",
-                    dimensioned<vector>(Zero)
-                );
-
-            Info().beginBlock(tfld2().type())
-                << tfld2() << nl;
-            Info().endBlock();
-        }
     }
 
     #ifdef TEST_UINT8_FIELD

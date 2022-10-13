@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,10 +41,14 @@ namespace Foam
 Foam::windowModel::windowModel(const dictionary& dict, const label nSamples)
 :
     scalarField(nSamples),
-    overlapPercent_(dict.get<scalar>("overlapPercent")),
-    nOverlapSamples_(floor(overlapPercent_/scalar(100)*nSamples)),
+    nOverlapSamples_(0),
     nWindow_(dict.getOrDefault("nWindow", -1))
-{}
+{
+    nOverlapSamples_ = floor
+    (
+        dict.get<scalar>("overlapPercent")/scalar(100)*nSamples
+    );
+}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -52,18 +56,6 @@ Foam::windowModel::windowModel(const dictionary& dict, const label nSamples)
 Foam::label Foam::windowModel::nSamples() const
 {
     return size();
-}
-
-
-Foam::scalar Foam::windowModel::overlapPercent() const
-{
-    return overlapPercent_;
-}
-
-
-Foam::label Foam::windowModel::nOverlapSamples() const
-{
-    return nOverlapSamples_;
 }
 
 

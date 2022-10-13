@@ -28,6 +28,8 @@ License
 
 #include "IOstreams.H"
 #include "face.H"
+#include "triPointRef.H"
+#include <algorithm>  // For std::swap
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
@@ -68,14 +70,14 @@ inline Foam::triFace::triFace()
 
 inline Foam::triFace::triFace
 (
-    const label p0,
-    const label p1,
-    const label p2
-) noexcept
+    const label a,
+    const label b,
+    const label c
+)
 {
-    a() = p0;
-    b() = p1;
-    c() = p2;
+    operator[](0) = a;
+    operator[](1) = b;
+    operator[](2) = c;
 }
 
 
@@ -109,13 +111,13 @@ inline Foam::triFace::triFace(Istream& is)
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-inline bool Foam::triFace::good() const noexcept
+inline bool Foam::triFace::valid() const
 {
     return
     (
-        a() >= 0 && a() != b()
-     && b() >= 0 && b() != c()
-     && c() >= 0 && c() != a()
+        operator[](0) >= 0 && operator[](0) != operator[](1)
+     && operator[](1) >= 0 && operator[](1) != operator[](2)
+     && operator[](2) >= 0 && operator[](0) != operator[](2)
     );
 }
 
@@ -149,7 +151,7 @@ inline Foam::label Foam::triFace::collapse()
 
 inline void Foam::triFace::flip()
 {
-    std::swap(get<1>(), get<2>());
+    std::swap(operator[](1), operator[](2));
 }
 
 
@@ -157,9 +159,9 @@ inline Foam::pointField Foam::triFace::points(const UList<point>& pts) const
 {
     pointField p(3);
 
-    p[0] = pts[a()];
-    p[1] = pts[b()];
-    p[2] = pts[c()];
+    p[0] = pts[operator[](0)];
+    p[1] = pts[operator[](1)];
+    p[2] = pts[operator[](2)];
 
     return p;
 }
@@ -173,38 +175,48 @@ inline Foam::face Foam::triFace::triFaceFace() const
 
 inline Foam::triPointRef Foam::triFace::tri(const UList<point>& points) const
 {
-    return triPointRef(points[a()], points[b()], points[c()]);
+    return triPointRef
+    (
+        points[operator[](0)],
+        points[operator[](1)],
+        points[operator[](2)]
+    );
 }
 
 
 inline Foam::point Foam::triFace::centre(const UList<point>& points) const
 {
-    return triPointRef::centre(points[a()], points[b()], points[c()]);
+    return (1.0/3.0)*
+    (
+        points[operator[](0)]
+      + points[operator[](1)]
+      + points[operator[](2)]
+    );
 }
 
 
 inline Foam::vector Foam::triFace::areaNormal(const UList<point>& points) const
 {
-    return triPointRef::areaNormal(points[a()], points[b()], points[c()]);
+    // As per triPointRef(...).areaNormal()
+    return 0.5*
+    (
+        (points[operator[](1)] - points[operator[](0)])
+       ^(points[operator[](2)] - points[operator[](0)])
+    );
 }
 
 
 inline Foam::vector Foam::triFace::unitNormal(const UList<point>& points) const
 {
-    return triPointRef::unitNormal(points[a()], points[b()], points[c()]);
+    const vector n(areaNormal(points));
+    const scalar s(Foam::mag(n));
+    return s < ROOTVSMALL ? Zero : n/s;
 }
 
 
 inline Foam::scalar Foam::triFace::mag(const UList<point>& points) const
 {
     return ::Foam::mag(areaNormal(points));
-}
-
-
-inline Foam::Pair<Foam::point>
-Foam::triFace::box(const UList<point>& points) const
-{
-    return triPointRef::box(points[a()], points[b()], points[c()]);
 }
 
 
@@ -217,7 +229,7 @@ inline Foam::label Foam::triFace::nTriangles() const noexcept
 inline Foam::triFace Foam::triFace::reverseFace() const
 {
     // The starting points of the original and reverse face are identical.
-    return triFace(a(), c(), b());
+    return triFace(operator[](0), operator[](2), operator[](1));
 }
 
 
@@ -412,14 +424,14 @@ inline Foam::edgeList Foam::triFace::edges() const
 {
     edgeList theEdges(3);
 
-    theEdges[0].first()  = a();
-    theEdges[0].second() = b();
+    theEdges[0].first()  = operator[](0);
+    theEdges[0].second() = operator[](1);
 
-    theEdges[1].first()  = b();
-    theEdges[1].second() = c();
+    theEdges[1].first()  = operator[](1);
+    theEdges[1].second() = operator[](2);
 
-    theEdges[2].first()  = c();
-    theEdges[2].second() = a();
+    theEdges[2].first()  = operator[](2);
+    theEdges[2].second() = operator[](0);
 
     return theEdges;
 }
@@ -429,14 +441,14 @@ inline Foam::edgeList Foam::triFace::rcEdges() const
 {
     edgeList theEdges(3);
 
-    theEdges[0].first()  = a();
-    theEdges[0].second() = c();
+    theEdges[0].first()  = operator[](0);
+    theEdges[0].second() = operator[](2);
 
-    theEdges[1].first()  = c();
-    theEdges[1].second() = b();
+    theEdges[1].first()  = operator[](2);
+    theEdges[1].second() = operator[](1);
 
-    theEdges[2].first()  = b();
-    theEdges[2].second() = a();
+    theEdges[2].first()  = operator[](1);
+    theEdges[2].second() = operator[](0);
 
     return theEdges;
 }
@@ -444,36 +456,23 @@ inline Foam::edgeList Foam::triFace::rcEdges() const
 
 inline int Foam::triFace::edgeDirection(const Foam::edge& e) const
 {
-    if (e.first() == a())
+    if (e.first() == operator[](0))
     {
-        if (e.second() == b()) return 1;    // Forward
-        if (e.second() == c()) return -1;   // Reverse
+        if (e.second() == operator[](1)) return 1;  // Forward
+        if (e.second() == operator[](2)) return -1; // Reverse
     }
-    if (e.first() == b())
+    if (e.first() == operator[](1))
     {
-        if (e.second() == c()) return 1;    // Forward
-        if (e.second() == a()) return -1;   // Reverse
+        if (e.second() == operator[](2)) return 1;  // Forward
+        if (e.second() == operator[](0)) return -1; // Reverse
     }
-    if (e.first() == c())
+    if (e.first() == operator[](2))
     {
-        if (e.second() == a()) return 1;    // Forward
-        if (e.second() == b()) return -1;   // Reverse
+        if (e.second() == operator[](0)) return 1;  // Forward
+        if (e.second() == operator[](1)) return -1; // Reverse
     }
 
     return 0;  // Not found
-}
-
-
-// * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
-
-inline void Foam::triFace::operator+=(const label vertexOffset)
-{
-    if (vertexOffset)
-    {
-        (*this)[0] += vertexOffset;
-        (*this)[1] += vertexOffset;
-        (*this)[2] += vertexOffset;
-    }
 }
 
 

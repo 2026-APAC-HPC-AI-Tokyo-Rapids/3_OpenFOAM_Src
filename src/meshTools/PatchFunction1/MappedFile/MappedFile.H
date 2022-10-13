@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,7 +38,8 @@ Description
     Options:
     \table
       Property  | Description                       | Type  | Reqd | Deflt
-      mapMethod | Mapping method                    | word  | no   | planar
+      mapMethod | Mapping method                    | word  | no   <!--
+                -->                                 | planarInterpolation
       offset    | Time-varying offset values to interpolated data  <!--
                 -->                    | Function1\<Type\>  | no   | -
       fieldTable | Name of field data table         | word  | no   | field-name
@@ -49,42 +50,21 @@ Description
     \endtable
 
     Options for the \c mapMethod entry:
-    \table
-      Property    | Description
-      nearest     | Use nearest points only (avoids triangulation)
-      planar      | Interpolation using 2D Delaunay triangulation
-    \endtable
-
-    Options for reading and filtering:
-    \table
-      Property     | Description
-      sampleFormat | The surfaceReader format (eg, ensight)
-      sampleFile   | <case>/foo/bar/window.case
-      filterRadius | Search radius [m] for median filter neighbours
-      filterSweeps | Filter sweeps for median filter
-      readOptions  | Format options for surfaceReader format (eg, ensight)
-    \endtable
-
-Note
-    The MappedFile handling currently has two different reading types:
-    a builtin boundaryData reader (default) and a surfaceReader
-    (specified by sampleFormat and sampleFile keywords). The generic
-    surfaceReader handling does \em not support field averaging.
+    \verbatim
+      nearest               | Use nearest points only (avoids triangulation)
+      planarInterpolation   | Interpolation using 2D Delaunay triangulation
+    \endverbatim
 
 SourceFiles
     MappedFile.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_PatchFunction1Types_MappedFile_H
-#define Foam_PatchFunction1Types_MappedFile_H
+#ifndef PatchFunction1Types_MappedFile_H
+#define PatchFunction1Types_MappedFile_H
 
 #include "PatchFunction1.H"
 #include "Function1.H"
-#include "Pair.H"
-#include "instantList.H"
-#include "surfaceReader.H"
-#include "MappedFileFilterField.H"
 #include "pointToPointPlanarInterpolation.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -111,50 +91,41 @@ class MappedFile
         //- If true adjust the mapped field to maintain average value
         bool setAverage_;
 
-        //- Fraction of perturbation (fraction of bounding box) to add
-        scalar perturb_;
-
         //- Name of the field data table, defaults to the name of the field
         word fieldTableName_;
 
-        //- Name of points file (default: "points")
+        //- Fraction of perturbation (fraction of bounding box) to add
+        scalar perturb_;
+
+        //- Name of points file; default = "points"
         word pointsName_;
 
-        //- Interpolation scheme to use (default is empty == "planar")
+        //- Interpolation scheme to use
         word mapMethod_;
 
-        //- Radius for filter
-        scalar filterRadius_;
-
-        //- Number of median filter sweeps
-        label filterSweeps_;
-
-        //- Median filtering (for input values)
-        mutable autoPtr<FilterField> filterFieldPtr_;
-
-        //- Format name for surfaceReader
-        word readerFormat_;
-
-        //- File name associated with surfaceReader
-        fileName readerFile_;
-
-        //- Meshed surface with fields (for input values)
-        mutable autoPtr<surfaceReader> readerPtr_;
-
-        //- 2D interpolation (for 'planar' mapMethod)
+        //- 2D interpolation (for 'planarInterpolation' mapMethod)
         mutable autoPtr<pointToPointPlanarInterpolation> mapperPtr_;
 
         //- List of boundaryData time directories
         mutable instantList sampleTimes_;
 
-        //- The first/second sample indices in sampleTimes
-        mutable labelPair sampleIndex_;
+        //- Current starting index in sampleTimes
+        mutable label startSampleTime_;
 
-        //- The average values at first/second sampleIndex_ (if setAverage)
-        mutable Pair<Type> sampleAverage_;
+        //- Interpolated values from startSampleTime
+        mutable Field<Type> startSampledValues_;
 
-        //- The interpolated values at first/second sampleIndex_
-        mutable Pair<Field<Type>> sampleValues_;
+        //- If setAverage: starting average value
+        mutable Type startAverage_;
+
+        //- Current end index in sampleTimes
+        mutable label endSampleTime_;
+
+        //- Interpolated values from endSampleTime
+        mutable Field<Type> endSampledValues_;
+
+        //- If setAverage: end average value
+        mutable Type endAverage_;
 
         //- Time varying offset values to interpolated data
         autoPtr<Function1<Type>> offset_;
@@ -162,28 +133,7 @@ class MappedFile
 
     // Private Member Functions
 
-        //- Find boundary data between time 't' and interpolate
         void checkTable(const scalar t) const;
-
-        //- Update field and average value using interpolation at
-        //- given instant index
-        void updateSampledValues
-        (
-            const label sampleIndex,
-            Field<Type>& field,
-            Type& avg
-        ) const;
-
-        //- Construct from entry name and dictionary
-        MappedFile
-        (
-            const bool dictConstructed,
-            const polyPatch& pp,
-            const word& entryName,
-            const dictionary& dict,
-            const word& fieldTableName,
-            const bool faceValues
-        );
 
 public:
 
@@ -216,7 +166,7 @@ public:
             const word& entryName,
             const dictionary& dict,
             const word& fieldTableName,
-            const bool faceValues = true
+            const bool faceValues
         );
 
         //- Copy construct

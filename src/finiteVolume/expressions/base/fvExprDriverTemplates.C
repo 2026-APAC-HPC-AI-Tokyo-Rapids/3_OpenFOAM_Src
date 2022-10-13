@@ -58,7 +58,8 @@ bool Foam::expressions::fvExprDriver::isGlobalVariable
     // Do size checking if requested
     if (good && expectedSize >= 0)
     {
-        good = returnReduceAnd(result.size() == expectedSize);
+        good = (result.size() == expectedSize);
+        reduce(good, andOp<bool>());
 
         if (debug && !good)
         {
@@ -102,7 +103,7 @@ Foam::expressions::fvExprDriver::getVariable
         if
         (
             expectedSize < 0
-         || returnReduceAnd(vals.size() == expectedSize)
+         || returnReduce((vals.size() == expectedSize), andOp<bool>())
         )
         {
             // Return a copy of the field
@@ -317,7 +318,7 @@ Foam::tmp<GeomField> Foam::expressions::fvExprDriver::getOrReadFieldImpl
             Pout<< "sizes: " << vals.size() << ' ' << fld.size() << endl;
         }
 
-        if (returnReduceAnd(vals.size() == fld.size()))
+        if (returnReduce((vals.size() == fld.size()), andOp<bool>()))
         {
             fld.primitiveFieldRef() = vals;
         }
@@ -575,7 +576,7 @@ bool Foam::expressions::fvExprDriver::updateSet
     const label oldSize = setPtr->size();
 
     bool updated = false;
-    const auto& mesh = refCast<const polyMesh>(setPtr->db());
+    const auto& mesh = dynamicCast<const polyMesh>(setPtr->db());
 
     if (debug)
     {

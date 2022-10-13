@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2015 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -155,10 +155,10 @@ bool Foam::linearDistance::cellSize(const point& pt, scalar& size) const
 
     if (hitInfo.hit())
     {
-        const point& hitPt = hitInfo.point();
+        const point& hitPt = hitInfo.hitPoint();
         const label hitIndex = hitInfo.index();
 
-        const scalar dist = hitPt.dist(pt);
+        const scalar dist = mag(pt - hitPt);
 
         if (sideMode_ == rmBothsides)
         {

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,8 +51,7 @@ namespace Foam
 bool oversetAdjustPhi
 (
     surfaceScalarField& phi,
-    const volVectorField& U,
-    const label zoneId = -1
+    const volVectorField& U
 );
 
 } // End namespace Foam

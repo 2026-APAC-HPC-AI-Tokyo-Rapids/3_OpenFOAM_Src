@@ -60,13 +60,19 @@ class ensightFile
         static bool allowUndef_;
 
         //- Value to represent undef in results (default: 1e+37, floatVGREAT)
-        static float undefValue_;
+        static scalar undefValue_;
+
+        //- The '*' mask appropriate for subDir
+        static string mask_;
+
+        //- The printf format for zero-padded subdirectory numbers
+        static string dirFmt_;
 
 
     // Private Member Functions
 
-        //- Initialize sets the ASCII output formatting
-        void init();
+        //- Initialize by setting the ASCII output formatting
+        void initialize();
 
         //- No copy construct
         ensightFile(const ensightFile&) = delete;
@@ -77,12 +83,6 @@ class ensightFile
 
 public:
 
-    // Public Data Types
-
-        //- Ensight uses \c float not \d double for floating-point
-        typedef float floatType;
-
-
     // Static Data Members
 
         //- The keyword "coordinates"
@@ -92,7 +92,7 @@ public:
     // Static Functions
 
         //- Return a null ensightFile
-        static const ensightFile& null()
+        inline static const ensightFile& null()
         {
             return NullObjectRef<ensightFile>();
         }
@@ -100,23 +100,21 @@ public:
 
     // Constructors
 
-        //- Construct from path-name.
-        //  The path-name is adjusted for valid ensight file naming.
-        //  Always created as an atomic
+        //- Construct from pathName.
+        //  The entire pathName is checked for valid ensight naming.
         explicit ensightFile
         (
             const fileName& pathname,
-            IOstreamOption::streamFormat fmt = IOstreamOption::BINARY
+            IOstreamOption::streamFormat format = IOstreamOption::BINARY
         );
 
         //- Construct from path and name.
-        //  Only the name portion is adjusted for valid ensight file naming.
-        //  Always created as an atomic
+        //  Only the name portion is checked for valid ensight naming.
         ensightFile
         (
             const fileName& path,
             const fileName& name,
-            IOstreamOption::streamFormat fmt = IOstreamOption::BINARY
+            IOstreamOption::streamFormat format = IOstreamOption::BINARY
         );
 
 
@@ -129,18 +127,31 @@ public:
     // Access
 
         //- Return setting for whether 'undef' values are allowed in results
-        static bool allowUndef() noexcept;
+        static bool allowUndef();
+
+        //- The '*' mask appropriate for subDir
+        static string mask();
+
+        //- Consistent zero-padded numbers for subdirectories
+        static string subDir(const label);
+
+        //- Set width of subDir and mask. Default width is 8 digits.
+        //  Max width is 31 digits.
+        static void subDirWidth(const label);
+
+        //- Return current width of subDir and mask.
+        static label subDirWidth();
 
 
     // Edit
 
         //- Enable/disable use of \c undef keyword and value
-        static bool allowUndef(bool on) noexcept;
+        static bool allowUndef(bool enabled);
 
         //- Assign the value to represent undef in the results
         //  Returns the previous value
         //  NB: do not use values larger than floatScalarVGREAT
-        static float undefValue(float value) noexcept;
+        static scalar undefValue(const scalar value);
 
 
     // Output
@@ -198,10 +209,10 @@ public:
         Ostream& write(const label value, const label fieldWidth);
 
         //- Write floating-point as "%12.5e" or as binary
-        virtual Ostream& write(const float val);
+        virtual Ostream& write(const floatScalar val);
 
-        //- Write floating-point as "%12.5e" or as binary (narrowed to float)
-        virtual Ostream& write(const double val);
+        //- Write floating-point as "%12.5e" or as binary
+        virtual Ostream& write(const doubleScalar val);
 
         //- Add carriage return to ascii stream
         void newline();
@@ -216,54 +227,36 @@ public:
         void beginParticleCoordinates(const label nparticles);
 
         //- Write a list of integers
-        //  Adds newline after each value (ascii stream)
+        //  With carriage return after each value (ascii stream)
         void writeLabels(const UList<label>& list);
 
         //- Write a list of integers
-        //  Adds newline after each value (ascii stream)
+        //  With carriage return after each value (ascii stream)
         template<class Addr>
         void writeLabels(const IndirectListBase<label, Addr>& list);
 
         //- Write a list of integers as float values
-        //  Adds newline after each value (ascii stream)
+        //  With carriage return after each value (ascii stream)
         void writeList(const UList<label>& field);
 
-        //- Write a list of floats as "%12.5e" or as binary.
-        //  Adds newline after each value (ascii stream)
-        void writeList(const UList<float>& field);
+        //- Write a list of floats as "%12.5e" or as binary
+        //  With carriage return after each value (ascii stream)
+        void writeList(const UList<scalar>& field);
 
-        //- Write a list of double as "%12.5e" or as binary.
-        //- (double is narrowed to float)
-        //  Adds newline after each value (ascii stream)
-        void writeList(const UList<double>& field);
-
-        //- Write an indirect list of float as "%12.5e" or as binary
-        //  Adds newline after each value (ascii stream)
+        //- Write an indirect list of scalars as "%12.5e" or as binary
+        //  With carriage return after each value (ascii stream)
         template<class Addr>
-        void writeList(const IndirectListBase<float, Addr>& field);
-
-        //- Write an indirect list of double as "%12.5e" or as binary.
-        //- (double is narrowed to float)
-        //  Adds newline after each value (ascii stream)
-        template<class Addr>
-        void writeList(const IndirectListBase<double, Addr>& field);
+        void writeList(const IndirectListBase<scalar, Addr>& field);
 
 
     // Other Methods
 
         //- Check for any NaN in the field
-        static bool hasUndef(const UList<float>& field);
-
-        //- Check for any NaN in the field
-        static bool hasUndef(const UList<double>& field);
+        static bool isUndef(const UList<scalar>& field);
 
         //- Check for any NaN in the field
         template<class Addr>
-        static bool hasUndef(const IndirectListBase<float, Addr>& field);
-
-        //- Check for any NaN in the field
-        template<class Addr>
-        static bool hasUndef(const IndirectListBase<double, Addr>& field);
+        static bool isUndef(const IndirectListBase<scalar, Addr>& field);
 };
 
 

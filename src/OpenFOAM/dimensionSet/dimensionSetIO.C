@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,12 +38,25 @@ Foam::dimensionSet::dimensionSet
 (
     const word& entryName,
     const dictionary& dict,
-    IOobjectOption::readOption readOpt
+    const bool mandatory
 )
 :
     exponents_(Zero)
 {
-    readEntry(entryName, dict, readOpt);
+    this->readEntry(entryName, dict, mandatory);
+}
+
+
+Foam::dimensionSet::dimensionSet
+(
+    const dictionary& dict,
+    const word& entryName,
+    const bool mandatory
+)
+:
+    exponents_(Zero)
+{
+    this->readEntry(entryName, dict, mandatory);
 }
 
 
@@ -416,14 +429,9 @@ bool Foam::dimensionSet::readEntry
 (
     const word& entryName,
     const dictionary& dict,
-    IOobjectOption::readOption readOpt
+    const bool mandatory
 )
 {
-    if (readOpt == IOobjectOption::NO_READ)
-    {
-        return false;
-    }
-
     const entry* eptr = dict.findEntry(entryName, keyType::LITERAL);
 
     if (eptr)
@@ -437,7 +445,7 @@ bool Foam::dimensionSet::readEntry
 
         return true;
     }
-    else if (IOobjectOption::isReadRequired(readOpt))
+    else if (mandatory)
     {
         FatalIOErrorInFunction(dict)
             << "Entry '" << entryName << "' not found in dictionary "
@@ -671,7 +679,7 @@ Foam::Ostream& Foam::dimensionSet::write
 
     os << token::BEGIN_SQR;
 
-    if (writeUnits.valid() && os.format() == IOstreamOption::ASCII)
+    if (writeUnits.valid() && os.format() == IOstream::ASCII)
     {
         scalarField exponents(dimensionSet::nDimensions);
         for (int d=0; d < dimensionSet::nDimensions; ++d)

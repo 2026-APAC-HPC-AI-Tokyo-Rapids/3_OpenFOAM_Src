@@ -36,30 +36,59 @@ License
 
 bool Foam::ensightFile::allowUndef_ = false;
 
-float Foam::ensightFile::undefValue_ = Foam::floatScalarVGREAT;
+Foam::scalar Foam::ensightFile::undefValue_ = Foam::floatScalarVGREAT;
+
+// Default is width 8
+Foam::string Foam::ensightFile::mask_   = "********";
+Foam::string Foam::ensightFile::dirFmt_ = "%08d";
 
 const char* const Foam::ensightFile::coordinates = "coordinates";
 
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
-bool Foam::ensightFile::hasUndef(const UList<float>& field)
+Foam::string Foam::ensightFile::mask()
 {
-    for (const float val : field)
-    {
-        if (std::isnan(val))
-        {
-            return true;
-        }
-    }
-
-    return true;
+    return mask_;
 }
 
 
-bool Foam::ensightFile::hasUndef(const UList<double>& field)
+Foam::string Foam::ensightFile::subDir(const label n)
 {
-    for (const double val : field)
+    char buf[32];
+
+    sprintf(buf, dirFmt_.c_str(), n);
+    return buf;
+}
+
+
+void Foam::ensightFile::subDirWidth(const label n)
+{
+    // enforce max limit to avoid buffer overflow in subDir()
+    if (n < 1 || n > 31)
+    {
+        return;
+    }
+
+    // appropriate printf format
+    std::ostringstream oss;
+    oss << "%0" << n << "d";
+    dirFmt_ = oss.str();
+
+    // set mask accordingly
+    mask_.resize(n, '*');
+}
+
+
+Foam::label Foam::ensightFile::subDirWidth()
+{
+    return mask_.size();
+}
+
+
+bool Foam::ensightFile::isUndef(const UList<scalar>& field)
+{
+    for (const scalar& val : field)
     {
         if (std::isnan(val))
         {
@@ -73,13 +102,13 @@ bool Foam::ensightFile::hasUndef(const UList<double>& field)
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::ensightFile::init()
+void Foam::ensightFile::initialize()
 {
-    // The ASCII formatting specs for ensight files
+    // ascii formatting specs
     setf
     (
-        std::ios_base::scientific,
-        std::ios_base::floatfield
+        ios_base::scientific,
+        ios_base::floatfield
     );
     precision(5);
 }
@@ -90,12 +119,12 @@ void Foam::ensightFile::init()
 Foam::ensightFile::ensightFile
 (
     const fileName& pathname,
-    IOstreamOption::streamFormat fmt
+    IOstreamOption::streamFormat format
 )
 :
-    OFstream(IOstreamOption::ATOMIC, ensight::FileName(pathname), fmt)
+    OFstream(ensight::FileName(pathname), format)
 {
-    init();
+    initialize();
 }
 
 
@@ -103,49 +132,41 @@ Foam::ensightFile::ensightFile
 (
     const fileName& path,
     const fileName& name,
-    IOstreamOption::streamFormat fmt
+    IOstreamOption::streamFormat format
 )
 :
-    OFstream(IOstreamOption::ATOMIC, path/ensight::FileName(name), fmt)
+    OFstream(path/ensight::FileName(name), format)
 {
-    init();
+    initialize();
 }
 
 
-// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool Foam::ensightFile::allowUndef() noexcept
+bool Foam::ensightFile::allowUndef()
 {
     return allowUndef_;
 }
 
 
-// float Foam::ensightFile::undefValue() noexcept
-// {
-//     return undefValue_;
-// }
-
-
-bool Foam::ensightFile::allowUndef(bool on) noexcept
+bool Foam::ensightFile::allowUndef(bool enabled)
 {
     bool old = allowUndef_;
-    allowUndef_ = on;
+    allowUndef_ = enabled;
     return old;
 }
 
 
-float Foam::ensightFile::undefValue(float value) noexcept
+Foam::scalar Foam::ensightFile::undefValue(const scalar value)
 {
     // enable its use too
     allowUndef_ = true;
 
-    float old = undefValue_;
+    scalar old = undefValue_;
     undefValue_ = value;
     return old;
 }
 
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 Foam::Ostream& Foam::ensightFile::writeString(const char* str)
 {
@@ -163,7 +184,6 @@ Foam::Ostream& Foam::ensightFile::writeString(const char* str)
     {
         buf[79] = 0;  // max 79 in ASCII, ensure it is indeed nul-terminated
         stdStream() << buf;
-        syncState();
     }
 
     return *this;
@@ -201,7 +221,6 @@ Foam::Ostream& Foam::ensightFile::write
 )
 {
     stdStream().write(buf, count);
-    syncState();
     return *this;
 }
 
@@ -220,7 +239,6 @@ Foam::Ostream& Foam::ensightFile::write(const int32_t val)
     {
         stdStream().width(10);
         stdStream() << val;
-        syncState();
     }
 
     return *this;
@@ -235,28 +253,27 @@ Foam::Ostream& Foam::ensightFile::write(const int64_t val)
 }
 
 
-Foam::Ostream& Foam::ensightFile::write(const float val)
+Foam::Ostream& Foam::ensightFile::write(const floatScalar val)
 {
     if (format() == IOstreamOption::BINARY)
     {
         write
         (
             reinterpret_cast<const char *>(&val),
-            sizeof(float)
+            sizeof(floatScalar)
         );
     }
     else
     {
         stdStream().width(12);
         stdStream() << val;
-        syncState();
     }
 
     return *this;
 }
 
 
-Foam::Ostream& Foam::ensightFile::write(const double val)
+Foam::Ostream& Foam::ensightFile::write(const doubleScalar val)
 {
     float fvalue(narrowFloat(val));
 
@@ -278,7 +295,6 @@ Foam::Ostream& Foam::ensightFile::write
     {
         stdStream().width(fieldWidth);
         stdStream() << value;
-        syncState();
     }
 
     return *this;
@@ -290,7 +306,6 @@ void Foam::ensightFile::newline()
     if (format() == IOstreamOption::ASCII)
     {
         stdStream() << nl;
-        syncState();
     }
 }
 
@@ -368,32 +383,15 @@ void Foam::ensightFile::writeList(const UList<label>& field)
 {
     for (const label val : field)
     {
-        write(float(val));
+        write(scalar(val));
         newline();
     }
 }
 
 
-void Foam::ensightFile::writeList(const UList<float>& field)
+void Foam::ensightFile::writeList(const UList<scalar>& field)
 {
-    for (const float val : field)
-    {
-        if (std::isnan(val))
-        {
-            writeUndef();
-        }
-        else
-        {
-            write(val);
-        }
-        newline();
-    }
-}
-
-
-void Foam::ensightFile::writeList(const UList<double>& field)
-{
-    for (const double val : field)
+    for (const scalar val : field)
     {
         if (std::isnan(val))
         {

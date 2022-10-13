@@ -1315,23 +1315,19 @@ void Foam::polyDualMesh::calcDual
 
 
     // Add patches. First add zero sized (since mesh still 0 size)
-    polyPatchList dualPatches(patches.size());
+    List<polyPatch*> dualPatches(patches.size());
 
     forAll(patches, patchi)
     {
         const polyPatch& pp = patches[patchi];
 
-        dualPatches.set
+        dualPatches[patchi] = pp.clone
         (
+            boundaryMesh(),
             patchi,
-            pp.clone
-            (
-                boundaryMesh(),
-                patchi,
-                0, //patchSizes[patchi],
-                0  //patchStarts[patchi]
-            )
-        );
+            0, //patchSizes[patchi],
+            0  //patchStarts[patchi]
+        ).ptr();
     }
     addPatches(dualPatches);
 

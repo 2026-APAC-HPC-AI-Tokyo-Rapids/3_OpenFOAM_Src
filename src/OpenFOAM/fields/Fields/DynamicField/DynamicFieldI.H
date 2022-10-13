@@ -591,7 +591,7 @@ inline void Foam::DynamicField<T, SizeMin>::transfer
 
 
 template<class T, int SizeMin>
-inline void Foam::DynamicField<T, SizeMin>::push_back
+inline void Foam::DynamicField<T, SizeMin>::append
 (
     const T& val
 )
@@ -604,7 +604,7 @@ inline void Foam::DynamicField<T, SizeMin>::push_back
 
 
 template<class T, int SizeMin>
-inline void Foam::DynamicField<T, SizeMin>::push_back
+inline void Foam::DynamicField<T, SizeMin>::append
 (
     T&& val
 )
@@ -617,7 +617,7 @@ inline void Foam::DynamicField<T, SizeMin>::push_back
 
 
 template<class T, int SizeMin>
-inline void Foam::DynamicField<T, SizeMin>::push_back
+inline void Foam::DynamicField<T, SizeMin>::append
 (
     const UList<T>& list
 )
@@ -625,7 +625,7 @@ inline void Foam::DynamicField<T, SizeMin>::push_back
     if (this == &list)
     {
         FatalErrorInFunction
-            << "Attempted push_back to self"
+            << "Attempted appending to self"
             << abort(FatalError);
     }
 
@@ -635,20 +635,6 @@ inline void Foam::DynamicField<T, SizeMin>::push_back
     for (const T& val : list)
     {
         this->operator[](idx++) = val;  // copy element
-    }
-}
-
-
-template<class T, int SizeMin>
-inline void Foam::DynamicField<T, SizeMin>::pop_back(label n)
-{
-    if (n >= this->size())
-    {
-        this->clear();
-    }
-    else if (n > 0)
-    {
-        resize(this->size() - n);
     }
 }
 

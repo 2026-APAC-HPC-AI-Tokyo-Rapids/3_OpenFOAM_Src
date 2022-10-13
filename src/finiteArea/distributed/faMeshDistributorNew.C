@@ -305,7 +305,7 @@ Foam::faMeshDistributor::distribute
     // Processor-processor connections
     if (Pstream::parRun())
     {
-        const label startOfRequests = UPstream::nRequests();
+        const label startOfRequests = Pstream::nRequests();
 
         const faBoundaryMesh& oldBndMesh = oldMesh.boundary();
 
@@ -339,9 +339,8 @@ Foam::faMeshDistributor::distribute
             }
         }
 
-        // Wait for outstanding requests
-        // (commsType == UPstream::commsTypes::nonBlocking)
-        UPstream::waitRequests(startOfRequests);
+        // Wait for all to finish
+        Pstream::waitRequests(startOfRequests);
 
         // Receive values
         for (const faPatch& fap : oldBndMesh)

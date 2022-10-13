@@ -55,9 +55,9 @@ void Foam::ensightOutput::Detail::writeLabelListList
 template<template<typename> class FieldContainer, class Type>
 void Foam::ensightOutput::Detail::copyComponent
 (
+    List<scalar>& cmptBuffer,
     const FieldContainer<Type>& input,
-    const direction cmpt,
-    UList<float>& cmptBuffer
+    const direction cmpt
 )
 {
     if (cmptBuffer.size() < input.size())
@@ -70,184 +70,78 @@ void Foam::ensightOutput::Detail::copyComponent
 
     auto iter = cmptBuffer.begin();
 
-    if (std::is_same<float, typename pTraits<Type>::cmptType>::value)
+    for (const Type& val : input)
     {
-        // Direct copy
-        for (const Type& val : input)
-        {
-            *iter = component(val, cmpt);
-            ++iter;
-        }
-    }
-    else
-    {
-        // Copy with narrowing
-        for (const Type& val : input)
-        {
-            *iter = narrowFloat(component(val, cmpt));
-            ++iter;
-        }
+        *iter = component(val, cmpt);
+        ++iter;
     }
 }
 
 
 template<template<typename> class FieldContainer, class Type>
-void Foam::ensightOutput::Detail::writeFieldComponents
+void Foam::ensightOutput::Detail::writeFieldContent
 (
-    ensightOutput::floatBufferType& scratch,
     ensightFile& os,
-    const char* key,
     const FieldContainer<Type>& fld,
     bool parallel
 )
 {
+    // already checked prior to calling, but extra safety
     parallel = parallel && Pstream::parRun();
-
-    const label localSize = fld.size();
 
     // Gather sizes (offsets irrelevant)
     const globalIndex procAddr
     (
         parallel
-      ? globalIndex(globalIndex::gatherOnly{}, localSize)
-      : globalIndex(globalIndex::gatherNone{}, localSize)
+      ? globalIndex(fld.size(), globalIndex::gatherOnly{})
+      : globalIndex(fld.size(), globalIndex::gatherNone{})
     );
 
-    if (Pstream::master() && key)
-    {
-        os.writeKeyword(key);
-    }
 
     if (Pstream::master())
     {
-        // Scratch buffer:
-        // - allocate enough space to process an individual rank
-        // - potentially enough to process multiple ranks before writing
-        // - permit use of the full buffer capacity
-
-        // Buffer size needed for an individual rank
-        const label minSize(max(localSize, procAddr.maxSize()));
-
-        // Maximum off-processor transfer size
-        const label maxSize =
-        (
-            (ensightOutput::maxChunk_ > 0)
-          ? min
-            (
-                static_cast<label>(ensightOutput::maxChunk_),
-                (procAddr.totalSize() - localSize)
-            )
-          : scratch.capacity()
-        );
-
-        scratch.resize_nocopy
-        (
-            max(max(minSize, maxSize), scratch.capacity())
-        );
-
-        if (Pstream::master() && debug > 1)
-        {
-            Info<< "ensight";
-            if (key)
-            {
-                Info<< " (" << key << ')';
-            }
-
-            Info<< " total-size:" << procAddr.totalSize()
-                << " buf-size:" << scratch.size() << "/" << scratch.capacity()
-                << " any-proc:" << minSize
-                << " off-proc:" << (procAddr.totalSize() - localSize) << endl;
-
-            Info<< "proc-sends: (";
-
-            label nPending = localSize;
-
-            Info<< (localSize ? '0' : '_');
-
-            // Receive others, writing as needed
-            for (const label proci : procAddr.subProcs())
-            {
-                const label procSize = procAddr.localSize(proci);
-
-                if (procSize)
-                {
-                    if (nPending + procSize > scratch.size())
-                    {
-                        // Flush buffer
-                        nPending = 0;
-                        Info<< ") (";
-                    }
-                    else
-                    {
-                        Info<< ' ';
-                    }
-
-                    Info<< proci;
-                    nPending += procSize;
-                }
-            }
-
-            Info<< ')' << endl;
-        }
+        DynamicList<scalar> cmptBuffer(procAddr.maxSize());
 
         for (direction d=0; d < pTraits<Type>::nComponents; ++d)
         {
             const direction cmpt = ensightPTraits<Type>::componentOrder[d];
 
-            // Master
-            copyComponent(fld, cmpt, scratch);
-            label nPending = localSize;
+            // Write master data
+            cmptBuffer.resize_nocopy(procAddr.localSize(0));
+            copyComponent(cmptBuffer, fld, cmpt);
+            os.writeList(cmptBuffer);
 
-            // Receive others, writing as needed
+            // Receive and write
             for (const label proci : procAddr.subProcs())
             {
-                const label procSize = procAddr.localSize(proci);
-
-                if (procSize)
-                {
-                    if (nPending + procSize > scratch.size())
-                    {
-                        // Flush buffer
-                        os.writeList(SubList<float>(scratch, nPending));
-                        nPending = 0;
-                    }
-
-                    SubList<float> slot(scratch, procSize, nPending);
-                    nPending += procSize;
-
-                    UIPstream::read
-                    (
-                        UPstream::commsTypes::scheduled,
-                        proci,
-                        slot.data_bytes(),
-                        slot.size_bytes()
-                    );
-                }
-            }
-
-            if (nPending)
-            {
-                // Flush buffer
-                os.writeList(SubList<float>(scratch, nPending));
+                cmptBuffer.resize_nocopy(procAddr.localSize(proci));
+                UIPstream::read
+                (
+                    UPstream::commsTypes::scheduled,
+                    proci,
+                    cmptBuffer.data_bytes(),
+                    cmptBuffer.size_bytes()
+                );
+                os.writeList(cmptBuffer);
             }
         }
     }
-    else if (parallel && localSize)
+    else if (parallel)
     {
-        scratch.resize_nocopy(localSize);
+        // Send
+        List<scalar> cmptBuffer(fld.size());
 
         for (direction d=0; d < pTraits<Type>::nComponents; ++d)
         {
             const direction cmpt = ensightPTraits<Type>::componentOrder[d];
 
-            copyComponent(fld, cmpt, scratch);
-
+            copyComponent(cmptBuffer, fld, cmpt);
             UOPstream::write
             (
                 UPstream::commsTypes::scheduled,
                 UPstream::masterNo(),
-                scratch.cdata_bytes(),
-                scratch.size_bytes()
+                cmptBuffer.cdata_bytes(),
+                cmptBuffer.size_bytes()
             );
         }
     }
@@ -265,30 +159,51 @@ bool Foam::ensightOutput::Detail::writeCoordinates
     bool parallel
 )
 {
+    parallel = parallel && Pstream::parRun();
+
     if (Pstream::master())
     {
         os.beginPart(partId, partName);
         os.beginCoordinates(nPoints);
     }
 
-    bool ok = (Pstream::master() && (nPoints > 0));
-    if (parallel)
+    ensightOutput::Detail::writeFieldContent(os, fld, parallel);
+
+    return true;
+}
+
+
+template<template<typename> class FieldContainer, class Type>
+bool Foam::ensightOutput::Detail::writeFieldComponents
+(
+    ensightFile& os,
+    const char* key,
+    const FieldContainer<Type>& fld,
+    bool parallel
+)
+{
+    parallel = parallel && Pstream::parRun();
+
+    // Preliminary checks
     {
-        Pstream::broadcast(ok);
+        bool hasField = !fld.empty();
+
+        if (parallel)
+        {
+            reduce(hasField, orOp<bool>());
+        }
+
+        // No field
+        if (!hasField) return false;
     }
 
-    if (ok)
+
+    if (Pstream::master())
     {
-        ensightOutput::floatBufferType scratch;
-        ensightOutput::Detail::writeFieldComponents
-        (
-            scratch,
-            os,
-            nullptr,  // (no element type)
-            fld,
-            parallel
-        );
+        os.writeKeyword(key);
     }
+
+    ensightOutput::Detail::writeFieldContent(os, fld, parallel);
 
     return true;
 }
@@ -297,7 +212,6 @@ bool Foam::ensightOutput::Detail::writeCoordinates
 template<class Type>
 bool Foam::ensightOutput::Detail::writeFaceSubField
 (
-    ensightOutput::floatBufferType& scratch,
     ensightFile& os,
     const Field<Type>& fld,
     const ensightFaces& part,
@@ -306,17 +220,20 @@ bool Foam::ensightOutput::Detail::writeFaceSubField
 {
     parallel = parallel && Pstream::parRun();
 
-    // Need geometry and field. part.total() is already reduced
-    const bool good =
-    (
-        parallel
-      ? (part.total() && returnReduceOr(fld.size()))
-      : (part.size() && fld.size())
-    );
-
-    if (!good)
+    // Preliminary checks: total() contains pre-reduced information
     {
-        return false;
+        // No geometry
+        if (parallel ? !part.total() : !part.size()) return false;
+
+        bool hasField = !fld.empty();
+
+        if (parallel)
+        {
+            reduce(hasField, orOp<bool>());
+        }
+
+        // No field
+        if (!hasField) return false;
     }
 
 
@@ -329,18 +246,13 @@ bool Foam::ensightOutput::Detail::writeFaceSubField
     {
         const auto etype = ensightFaces::elemType(typei);
 
-        // Write elements of this type
-        if (parallel ? part.total(etype) : part.size(etype))
-        {
-            ensightOutput::Detail::writeFieldComponents
-            (
-                scratch,
-                os,
-                ensightFaces::key(etype),
-                SubField<Type>(fld, part.range(etype)),
-                parallel
-            );
-        }
+        ensightOutput::Detail::writeFieldComponents
+        (
+            os,
+            ensightFaces::key(etype),
+            SubField<Type>(fld, part.range(etype)),
+            parallel
+        );
     }
 
     return true;
@@ -350,7 +262,6 @@ bool Foam::ensightOutput::Detail::writeFaceSubField
 template<class Type>
 bool Foam::ensightOutput::Detail::writeFaceLocalField
 (
-    ensightOutput::floatBufferType& scratch,
     ensightFile& os,
     const Field<Type>& fld,
     const ensightFaces& part,
@@ -359,25 +270,27 @@ bool Foam::ensightOutput::Detail::writeFaceLocalField
 {
     parallel = parallel && Pstream::parRun();
 
-    // Need geometry and field. part.total() is already reduced
-    const bool good =
-    (
-        parallel
-      ? (part.total() && returnReduceOr(fld.size()))
-      : (part.size() && fld.size())
-    );
-
-    if (!good)
+    // Preliminary checks: total() contains pre-reduced information
     {
-        return false;
-    }
+        // No geometry
+        if (parallel ? !part.total() : !part.size()) return false;
 
+        bool hasField = !fld.empty();
+
+        if (parallel)
+        {
+            reduce(hasField, orOp<bool>());
+        }
+
+        // No field
+        if (!hasField) return false;
+    }
 
     bool validAddressing = (part.size() == part.faceOrder().size());
 
     if (parallel)
     {
-        Pstream::reduceOr(validAddressing);
+        reduce(validAddressing, orOp<bool>());
     }
 
     if (!validAddressing)
@@ -397,18 +310,13 @@ bool Foam::ensightOutput::Detail::writeFaceLocalField
     {
         const auto etype = ensightFaces::elemType(typei);
 
-        // Write elements of this type
-        if (parallel ? part.total(etype) : part.size(etype))
-        {
-            ensightOutput::Detail::writeFieldComponents
-            (
-                scratch,
-                os,
-                ensightFaces::key(etype),
-                UIndirectList<Type>(fld, part.faceOrder(etype)),
-                parallel
-            );
-        }
+        ensightOutput::Detail::writeFieldComponents
+        (
+            os,
+            ensightFaces::key(etype),
+            UIndirectList<Type>(fld, part.faceOrder(etype)),
+            parallel
+        );
     }
 
     return true;
@@ -420,7 +328,6 @@ bool Foam::ensightOutput::Detail::writeFaceLocalField
 template<class Type>
 bool Foam::ensightOutput::writeField
 (
-    ensightOutput::floatBufferType& scratch,
     ensightFile& os,
     const Field<Type>& fld,
     const ensightCells& part,
@@ -429,17 +336,20 @@ bool Foam::ensightOutput::writeField
 {
     parallel = parallel && Pstream::parRun();
 
-    // Need geometry and field. part.total() is already reduced
-    const bool good =
-    (
-        parallel
-      ? (part.total() && returnReduceOr(fld.size()))
-      : (part.size() && fld.size())
-    );
-
-    if (!good)
+    // Preliminary checks: total() contains pre-reduced information
     {
-        return false;
+        // No geometry
+        if (parallel ? !part.total() : !part.size()) return false;
+
+        bool hasField = !fld.empty();
+
+        if (parallel)
+        {
+            reduce(hasField, orOp<bool>());
+        }
+
+        // No field
+        if (!hasField) return false;
     }
 
 
@@ -452,18 +362,13 @@ bool Foam::ensightOutput::writeField
     {
         const auto etype = ensightCells::elemType(typei);
 
-        // Write elements of this type
-        if (parallel ? part.total(etype) : part.size(etype))
-        {
-            ensightOutput::Detail::writeFieldComponents
-            (
-                scratch,
-                os,
-                ensightCells::key(etype),
-                UIndirectList<Type>(fld, part.cellIds(etype)),
-                parallel
-            );
-        }
+        ensightOutput::Detail::writeFieldComponents
+        (
+            os,
+            ensightCells::key(etype),
+            UIndirectList<Type>(fld, part.cellIds(etype)),
+            parallel
+        );
     }
 
     return true;
@@ -473,7 +378,6 @@ bool Foam::ensightOutput::writeField
 template<class Type>
 bool Foam::ensightOutput::writeField
 (
-    ensightOutput::floatBufferType& scratch,
     ensightFile& os,
     const Field<Type>& fld,
     const ensightFaces& part,
@@ -482,17 +386,20 @@ bool Foam::ensightOutput::writeField
 {
     parallel = parallel && Pstream::parRun();
 
-    // Need geometry and field. part.total() is already reduced
-    const bool good =
-    (
-        parallel
-      ? (part.total() && returnReduceOr(fld.size()))
-      : (part.size() && fld.size())
-    );
-
-    if (!good)
+    // Preliminary checks: total() contains pre-reduced information
     {
-        return false;
+        // No geometry
+        if (parallel ? !part.total() : !part.size()) return false;
+
+        bool hasField = !fld.empty();
+
+        if (parallel)
+        {
+            reduce(hasField, orOp<bool>());
+        }
+
+        // No field
+        if (!hasField) return false;
     }
 
 
@@ -505,18 +412,13 @@ bool Foam::ensightOutput::writeField
     {
         const auto etype = ensightFaces::elemType(typei);
 
-        // Write elements of this type
-        if (parallel ? part.total(etype) : part.size(etype))
-        {
-            ensightOutput::Detail::writeFieldComponents
-            (
-                scratch,
-                os,
-                ensightFaces::key(etype),
-                UIndirectList<Type>(fld, part.faceIds(etype)),
-                parallel
-            );
-        }
+        ensightOutput::Detail::writeFieldComponents
+        (
+            os,
+            ensightFaces::key(etype),
+            UIndirectList<Type>(fld, part.faceIds(etype)),
+            parallel
+        );
     }
 
     return true;

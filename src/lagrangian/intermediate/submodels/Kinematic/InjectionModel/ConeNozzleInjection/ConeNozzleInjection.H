@@ -153,9 +153,6 @@ private:
         //- Cached direction vector
         vector direction_;
 
-        //- Swirl velocity (optional)
-        autoPtr<Function1<scalar>> omegaPtr_;
-
         //- Number of parcels to introduce per second []
         const label parcelsPerSecond_;
 

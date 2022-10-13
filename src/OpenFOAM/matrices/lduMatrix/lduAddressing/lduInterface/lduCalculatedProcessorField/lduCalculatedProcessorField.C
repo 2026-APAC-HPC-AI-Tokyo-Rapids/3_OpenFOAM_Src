@@ -32,11 +32,13 @@ License
 template<class Type>
 Foam::lduCalculatedProcessorField<Type>::lduCalculatedProcessorField
 (
-    const lduInterface& interface
+    const lduInterface& interface,
+    const Field<Type>& iF
 )
 :
     LduInterfaceField<Type>(interface),
     procInterface_(refCast<const lduPrimitiveProcessorInterface>(interface)),
+    field_(iF),
     sendBuf_(procInterface_.faceCells().size()),
     receiveBuf_(procInterface_.faceCells().size()),
     scalarSendBuf_(procInterface_.faceCells().size()),
@@ -54,6 +56,7 @@ Foam::lduCalculatedProcessorField<Type>::lduCalculatedProcessorField
 :
     LduInterfaceField<Type>(refCast<const lduInterface>(ptf)),
     procInterface_(ptf.procInterface_),
+    field_(ptf.field_),
     sendBuf_(procInterface_.faceCells().size()),
     receiveBuf_(procInterface_.faceCells().size()),
     scalarSendBuf_(procInterface_.faceCells().size()),
@@ -71,7 +74,7 @@ bool Foam::lduCalculatedProcessorField<Type>::ready() const
     if
     (
         this->outstandingSendRequest_ >= 0
-     && this->outstandingSendRequest_ < UPstream::nRequests()
+     && this->outstandingSendRequest_ < Pstream::nRequests()
     )
     {
         if (!UPstream::finishedRequest(this->outstandingSendRequest_))
@@ -84,7 +87,7 @@ bool Foam::lduCalculatedProcessorField<Type>::ready() const
     if
     (
         this->outstandingRecvRequest_ >= 0
-     && this->outstandingRecvRequest_ < UPstream::nRequests()
+     && this->outstandingRecvRequest_ < Pstream::nRequests()
     )
     {
         if (!UPstream::finishedRequest(this->outstandingRecvRequest_))
@@ -210,7 +213,7 @@ void Foam::lduCalculatedProcessorField<Type>::updateInterfaceMatrix
     if
     (
         outstandingRecvRequest_ >= 0
-     && outstandingRecvRequest_ < UPstream::nRequests()
+     && outstandingRecvRequest_ < Pstream::nRequests()
     )
     {
         UPstream::waitRequest(outstandingRecvRequest_);

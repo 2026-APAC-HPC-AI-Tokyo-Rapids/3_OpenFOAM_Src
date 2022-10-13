@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,15 +40,15 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_tetCell_H
-#define Foam_tetCell_H
+#ifndef tetCell_H
+#define tetCell_H
 
 #include "FixedList.H"
 #include "triFace.H"
 #include "faceList.H"
 #include "edgeList.H"
 #include "pointField.H"
-#include "tetrahedron.H"
+#include "tetPointRef.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -77,15 +77,6 @@ class tetCell
 
 public:
 
-    // Generated Methods
-
-        //- The front() accessor (from FixedList) has no purpose
-        void front() = delete;
-
-        //- The back() accessor (from FixedList) has no purpose
-        void back() = delete;
-
-
     // Constructors
 
         //- Default construct, with invalid point labels (-1)
@@ -94,10 +85,10 @@ public:
         //- Construct from four point labels
         inline tetCell
         (
-            const label p0,
-            const label p1,
-            const label p2,
-            const label p3
+            const label a,
+            const label b,
+            const label c,
+            const label d
         );
 
         //- Construct from an initializer list of four point labels

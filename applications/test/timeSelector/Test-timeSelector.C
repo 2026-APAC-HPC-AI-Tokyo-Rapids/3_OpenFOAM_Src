@@ -63,6 +63,7 @@ int main(int argc, char *argv[])
     argList::addNote("Test timeSelector and TimePaths");
 
     timeSelector::addOptions(true, true);
+    argList::noLibs();
     argList::noFunctionObjects();
 
     argList::addOption("relative", "PATH", "Test relativePath");

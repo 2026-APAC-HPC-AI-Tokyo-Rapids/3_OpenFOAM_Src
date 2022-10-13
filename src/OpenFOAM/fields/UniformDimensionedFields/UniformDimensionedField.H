@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,8 +38,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_UniformDimensionedField_H
-#define Foam_UniformDimensionedField_H
+#ifndef UniformDimensionedField_H
+#define UniformDimensionedField_H
 
 #include "regIOobject.H"
 #include "dimensionedType.H"
@@ -60,6 +59,7 @@ class UniformDimensionedField
     public regIOobject,
     public dimensioned<Type>
 {
+
 public:
 
     //- Runtime type information
@@ -70,37 +70,28 @@ public:
 
         //- Construct from components. Either reads or uses supplied value.
         //  The name of the dimensioned\<Type\> defines the name of the
-        //  field (if non-empty)
+        //  field.
         UniformDimensionedField
         (
             const IOobject& io,
             const dimensioned<Type>& dt
         );
 
-        //- Construct from components. Either reads or uses supplied value.
-        //  The name of the IOobject defines the name of the field.
-        UniformDimensionedField
-        (
-            const IOobject& io,
-            const dimensionSet& dims,
-            const Type& val
-        );
-
         //- Construct as copy
-        UniformDimensionedField(const UniformDimensionedField<Type>&);
+        UniformDimensionedField(const UniformDimensionedField<Type>& rdt);
 
         //- Construct from Istream
         UniformDimensionedField(const IOobject& io);
 
 
     //- Destructor
-    virtual ~UniformDimensionedField() = default;
+    virtual ~UniformDimensionedField();
 
 
     // Member Functions
 
         //- Name function provided to resolve the ambiguity between the
-        //- name functions in regIOobject and dimensioned<Type>
+        //  name functions in regIOobject and dimensioned<Type>
         virtual const word& name() const
         {
             return dimensioned<Type>::name();
@@ -134,10 +125,9 @@ public:
         //- Assign name, dimensions and value.
         void operator=(const dimensioned<Type>& rhs);
 
-        //- Return value
-        const Type& operator[](const label) const noexcept
+        Type operator[](const label) const
         {
-            return dimensioned<Type>::value();
+            return this->value();
         }
 };
 

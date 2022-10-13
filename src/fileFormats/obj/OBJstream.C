@@ -34,7 +34,7 @@ License
 
 namespace Foam
 {
-    defineTypeName(OBJstream);
+defineTypeNameAndDebug(OBJstream, 0);
 }
 
 
@@ -161,45 +161,35 @@ Foam::Ostream& Foam::OBJstream::writeQuoted
 }
 
 
-Foam::Ostream& Foam::OBJstream::write(const point& p)
+Foam::Ostream& Foam::OBJstream::write(const point& pt)
 {
-    write('v') << ' ' << p.x() << ' ' << p.y() << ' ' << p.z() << nl;
+    write("v ") << pt.x() << ' ' << pt.y() << ' ' << pt.z() << nl;
     return *this;
 }
 
 
-Foam::Ostream& Foam::OBJstream::write(const point& p, const vector& n)
+Foam::Ostream& Foam::OBJstream::write(const point& pt, const vector& n)
 {
-    write(p);
+    write(pt);
     OFstream::write("vn ") << n.x() << ' ' << n.y() << ' ' << n.z() << nl;
-    return *this;
-}
-
-
-Foam::Ostream& Foam::OBJstream::write(const UList<point>& points)
-{
-    for (const point& p : points)
-    {
-        write('v') << ' ' << p.x() << ' ' << p.y() << ' ' << p.z() << nl;
-    }
     return *this;
 }
 
 
 Foam::Ostream& Foam::OBJstream::write(const edge& e, const UList<point>& points)
 {
-    write(points[e.first()]);
-    write(points[e.second()]);
-    write('l') << ' ' << nVertices_-1 << ' ' << nVertices_ << nl;
+    write(points[e[0]]);
+    write(points[e[1]]);
+    write("l ") << nVertices_-1 << ' ' << nVertices_ << nl;
     return *this;
 }
 
 
 Foam::Ostream& Foam::OBJstream::write(const linePointRef& ln)
 {
-    write(ln.first());
-    write(ln.second());
-    write('l') << ' ' << nVertices_-1 << ' ' << nVertices_ << nl;
+    write(ln.start());
+    write(ln.end());
+    write("l ") << nVertices_-1 << ' ' << nVertices_ << nl;
     return *this;
 }
 
@@ -211,22 +201,9 @@ Foam::Ostream& Foam::OBJstream::write
     const vector& n1
 )
 {
-    write(ln.first(), n0);
-    write(ln.second(), n1);
-    write('l') << ' ' << nVertices_-1 << ' ' << nVertices_ << nl;
-    return *this;
-}
-
-
-Foam::Ostream& Foam::OBJstream::writeLine
-(
-    const point& p0,
-    const point& p1
-)
-{
-    write(p0);
-    write(p1);
-    write('l') << ' ' << nVertices_-1 << ' ' << nVertices_ << nl;
+    write(ln.start(), n0);
+    write(ln.end(), n1);
+    write("l ") << nVertices_-1 << ' ' << nVertices_ << nl;
     return *this;
 }
 
@@ -244,7 +221,7 @@ Foam::Ostream& Foam::OBJstream::write
     if (lines)
     {
         write('l');
-        for (int i = 0; i < 3; ++i)
+        for (int i = 0; i < 3; i++)
         {
             write(' ') << i+start;
         }
@@ -253,39 +230,7 @@ Foam::Ostream& Foam::OBJstream::write
     else
     {
         write('f');
-        for (int i = 0; i < 3; ++i)
-        {
-            write(' ') << i+start;
-        }
-        write('\n');
-    }
-    return *this;
-}
-
-
-Foam::Ostream& Foam::OBJstream::writeFace
-(
-    const UList<point>& points,
-    const bool lines
-)
-{
-    const label start = nVertices_+1;  // 1-offset for obj included here
-
-    write(points);
-
-    if (lines)
-    {
-        write('l');
-        forAll(points, i)
-        {
-            write(' ') << i+start;
-        }
-        write(' ') << start << '\n';
-    }
-    else
-    {
-        write('f');
-        forAll(points, i)
+        for (int i = 0; i < 3; i++)
         {
             write(' ') << i+start;
         }
@@ -303,10 +248,9 @@ Foam::Ostream& Foam::OBJstream::write
 )
 {
     const label start = nVertices_+1;  // 1-offset for obj included here
-
-    for (const label fp : f)
+    forAll(f, i)
     {
-        write(points[fp]);
+        write(points[f[i]]);
     }
     if (lines)
     {
@@ -339,27 +283,35 @@ Foam::Ostream& Foam::OBJstream::write
 {
     primitivePatch pp(SubList<face>(faces), points);
 
+    const pointField& localPoints = pp.localPoints();
+    const faceList& localFaces = pp.localFaces();
+
     const label start = nVertices_+1;  // 1-offset for obj included here
 
-    write(pp.localPoints());
+    forAll(localPoints, i)
+    {
+        write(localPoints[i]);
+    }
 
     if (lines)
     {
-        for (const edge& e : pp.edges())
+        const edgeList& edges = pp.edges();
+        forAll(edges, edgeI)
         {
-            write('l') << ' '
-                << e.first()+start << ' '
-                << e.second()+start << nl;
+            const edge& e = edges[edgeI];
+
+            write("l ") << e[0]+start << ' ' << e[1]+start << nl;
         }
     }
     else
     {
-        for (const face& f : pp.localFaces())
+        forAll(localFaces, facei)
         {
+            const face& f = localFaces[facei];
             write('f');
-            for (const label fp : f)
+            forAll(f, i)
             {
-                write(' ') << fp+start;
+                write(' ') << f[i]+start;
             }
             write('\n');
         }
@@ -383,39 +335,46 @@ Foam::Ostream& Foam::OBJstream::write
         label objPointId = nVertices_+1;  // 1-offset for obj included here
 
         Map<label> markedPoints(2*edges.size());
-
-        for (const edge& e : edges)
+        forAll(edges, edgei)
         {
-            if (markedPoints.insert(e.first(), objPointId))
+            const edge& e = edges[edgei];
+
+            if (markedPoints.insert(e[0], objPointId))
             {
-                write(points[e.first()]);
+                write(points[e[0]]);
                 ++objPointId;
             }
-            if (markedPoints.insert(e.second(), objPointId))
+            if (markedPoints.insert(e[1], objPointId))
             {
-                write(points[e.second()]);
+                write(points[e[1]]);
                 ++objPointId;
             }
         }
 
-        for (const edge& e : edges)
+        forAll(edges, edgei)
         {
-            write('l') << ' '
-                << markedPoints[e.first()] << ' '
-                << markedPoints[e.second()] << nl;
+            const edge& e = edges[edgei];
+
+            write("l ")
+                << markedPoints[e[0]] << ' '
+                << markedPoints[e[1]] << nl;
         }
     }
     else
     {
         const label start = nVertices_+1;  // 1-offset for obj included here
 
-        write(points);
-
-        for (const edge& e : edges)
+        forAll(points, i)
         {
-            write('l') << ' '
-                << e.first()+start << ' '
-                << e.second()+start << nl;
+            write(points[i]);
+        }
+
+        forAll(edges, edgei)
+        {
+            const edge& e = edges[edgei];
+
+            write("l ")
+                << e[0]+start << ' ' << e[1]+start << nl;
         }
     }
 
@@ -431,25 +390,31 @@ Foam::Ostream& Foam::OBJstream::write
 {
     const label start = nVertices_+1;  // 1-offset for obj included here
 
-    write(bb.points());
+    pointField points(bb.points());
+    forAll(points, i)
+    {
+        write(points[i]);
+    }
 
     if (lines)
     {
-        for (const edge& e : treeBoundBox::edges)
+        forAll(treeBoundBox::edges, edgei)
         {
-            write('l') << ' '
-                << e.first()+start << ' '
-                << e.second()+start << nl;
+            const edge& e = treeBoundBox::edges[edgei];
+
+            write("l ") << e[0]+start << ' ' << e[1]+start << nl;
         }
     }
     else
     {
-        for (const face& f : treeBoundBox::faces)
+        forAll(treeBoundBox::faces, facei)
         {
+            const face& f = treeBoundBox::faces[facei];
+
             write('f');
-            for (const label fp : f)
+            forAll(f, i)
             {
-                write(' ') << fp+start;
+                write(' ') << f[i]+start;
             }
             write('\n');
         }

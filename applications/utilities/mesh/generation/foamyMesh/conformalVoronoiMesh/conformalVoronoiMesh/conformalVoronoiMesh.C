@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -87,17 +87,23 @@ void Foam::conformalVoronoiMesh::cellSizeMeshOverlapsBackground() const
 
     boundBox cellSizeMeshBb = cellSizeMesh.bounds();
 
-    bool fullyContained = cellSizeMeshBb.contains(bb);
+    bool fullyContained = true;
 
-    if (!fullyContained)
+    if (!cellSizeMeshBb.contains(bb))
     {
-        Pout<< "Triangulation not fully contained in cell size mesh." << endl
-            << "Cell Size Mesh Bounds = " << cellSizeMeshBb << endl
-            << "foamyHexMesh Bounds         = " << bb << endl;
+        Pout<< "Triangulation not fully contained in cell size mesh."
+            << endl;
+
+        Pout<< "Cell Size Mesh Bounds = " << cellSizeMesh.bounds() << endl;
+        Pout<< "foamyHexMesh Bounds         = " << bb << endl;
+
+        fullyContained = false;
     }
 
+    reduce(fullyContained, andOp<unsigned int>());
+
     Info<< "Triangulation is "
-        << (returnReduceAnd(fullyContained) ? "fully" : "not fully")
+        << (fullyContained ? "fully" : "not fully")
         << " contained in the cell size mesh"
         << endl;
 }
@@ -109,7 +115,12 @@ void Foam::conformalVoronoiMesh::insertInternalPoints
     bool distribute
 )
 {
-    const label nPoints = returnReduce(points.size(), sumOp<label>());
+    label nPoints = points.size();
+
+    if (Pstream::parRun())
+    {
+        reduce(nPoints, sumOp<label>());
+    }
 
     Info<< "    " << nPoints << " points to insert..." << endl;
 
@@ -134,15 +145,16 @@ void Foam::conformalVoronoiMesh::insertInternalPoints
         map().distribute(points);
     }
 
-    label preReinsertionSize(number_of_vertices());
+    label nVert = number_of_vertices();
 
     insert(points.begin(), points.end());
 
-    const label nInserted = returnReduce
-    (
-        label(number_of_vertices()) - preReinsertionSize,
-        sumOp<label>()
-    );
+    label nInserted(number_of_vertices() - nVert);
+
+    if (Pstream::parRun())
+    {
+        reduce(nInserted, sumOp<label>());
+    }
 
     Info<< "    " << nInserted << " points inserted"
         << ", failed to insert " << nPoints - nInserted
@@ -231,7 +243,7 @@ void Foam::conformalVoronoiMesh::insertSurfacePointPairs
 
         const vector& normal = norm[0];
 
-        const Foam::point& surfacePt = surfaceHit.hitPoint();
+        const Foam::point& surfacePt(surfaceHit.hitPoint());
 
         extendedFeatureEdgeMesh::sideVolumeType meshableSide =
             geometryToConformTo_.meshableSide(featureIndex, surfaceHit);
@@ -1675,7 +1687,7 @@ void Foam::conformalVoronoiMesh::move()
                     )
                 )
                 {
-                    multipleIntersections.writeLine(ptA, ptB);
+                    multipleIntersections.write(linePointRef(ptA, ptB));
                 }
             }
         }

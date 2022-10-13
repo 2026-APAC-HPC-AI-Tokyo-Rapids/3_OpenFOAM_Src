@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -135,7 +135,7 @@ bool Foam::functionObjects::Curle::read(const dictionary& dict)
                 rawFilePtrs_.set
                 (
                     filei,
-                    newFileAtStartTime("observer" + Foam::name(filei))
+                    createFile("observer" + Foam::name(filei))
                 );
 
                 if (rawFilePtrs_.set(filei))
@@ -161,12 +161,11 @@ bool Foam::functionObjects::Curle::read(const dictionary& dict)
                     << abort(FatalIOError);
             }
 
-            const word writerType = dict.get<word>("surfaceType");
-
+            const word surfaceType(dict.get<word>("surfaceType"));
             surfaceWriterPtr_ = surfaceWriter::New
             (
-                writerType,
-                surfaceWriter::formatOptions(dict, writerType)
+                surfaceType,
+                dict.subOrEmptyDict("formatOptions").subOrEmptyDict(surfaceType)
             );
 
             // Use outputDir/TIME/surface-name
@@ -224,7 +223,7 @@ bool Foam::functionObjects::Curle::execute()
 
     pDash /= 4*mathematical::pi;
 
-    Pstream::listCombineReduce(pDash, plusEqOp<scalar>());
+    Pstream::listCombineAllGather(pDash, plusEqOp<scalar>());
 
     if (surfaceWriterPtr_)
     {

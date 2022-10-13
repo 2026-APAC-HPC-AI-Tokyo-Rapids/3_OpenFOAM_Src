@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,36 +30,29 @@ Class
 Description
     Standard boundBox with extra functionality for use in octree.
 
-    Numbering of corner points is according to octant numbering as shown below.
-    For vertex numbering in the sequence 0 to 7:
-    - faces 0 and 1 are x-min and x-max, respectively;
-    - faces 2 and 3 are y-min and y-max, respectively;
-    - faces 4 and 5 are z-min and z-max, respectively.
-    .
+    Numbering of corner points is according to octant numbering.
+
+    On the back plane (z=0):
 
     \verbatim
-    Octant vertex ordering               | Hex cell ordering
-    (treeBoundBox)                       | (boundBox, blockMesh, hexCell)
-                                         |
-                    6 ---- 7             |         7 ---- 6
-              f5    |\     :\    f3      |   f5    |\     :\    f3
-               |    | 4 ---- 5    \      |    |    | 4 ---- 5    \
-               |    2.|....3 |     \     |    |    3.|....2 |     \
-               |     \|     \|     f2    |    |     \|     \|     f2
-              f4      0 ---- 1           |   f4      0 ---- 1
-      Y  Z                               |
-       \ |          f0 ------ f1         |         f0 ------ f1
-        \|                               |
-         o--- X                          |
-     \endverbatim
+        Y
+        ^
+        |
+        +--------+
+        |2      3|
+        |        |
+        |        |
+        |        |
+        |0      1|
+        +--------+->X
+    \endverbatim
+
+    For the front plane add 4 to the point labels.
 
 Note
     When a bounding box is created without any points, it creates an inverted
     bounding box. Points can be added later and the bounding box will grow to
     include them.
-
-SeeAlso
-    Foam::boundBox
 
 SourceFiles
     treeBoundBoxI.H
@@ -68,10 +61,13 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_treeBoundBox_H
-#define Foam_treeBoundBox_H
+#ifndef treeBoundBox_H
+#define treeBoundBox_H
 
 #include "boundBox.H"
+#include "direction.H"
+#include "pointField.H"
+#include "faceList.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -79,14 +75,10 @@ namespace Foam
 {
 
 // Forward Declarations
+class Random;
 class treeBoundBox;
-
 Istream& operator>>(Istream& is, treeBoundBox& bb);
 Ostream& operator<<(Ostream& os, const treeBoundBox& bb);
-
-// List types
-typedef List<treeBoundBox> treeBoundBoxList;   //!< A List of treeBoundBox
-
 
 /*---------------------------------------------------------------------------*\
                         Class treeBoundBox Declaration
@@ -100,42 +92,37 @@ public:
 
     // Enumerations
 
-        //- Bits used for octant/point directional encoding.
+        //- Bits used for octant/point encoding.
         //  Every octant/corner point is the combination of three directions.
-        //  Defined as (1 << vector::components).
         enum octantBit : direction
         {
-            RIGHTHALF = 1,  //!< 1: positive x-direction
-            TOPHALF   = 2,  //!< 2: positive y-direction
-            FRONTHALF = 4   //!< 4: positive z-direction
+            RIGHTHALF = 0x1,  //!< 1: positive x-direction
+            TOPHALF   = 0x2,  //!< 2: positive y-direction
+            FRONTHALF = 0x4   //!< 4: positive z-direction
         };
 
         //- Face codes. Identical order and meaning as per hex cellmodel
         //- and boundBox, but have a different point ordering.
-        //  Defined as (2 * vector::components + positive).
-        enum faceId : direction
+        enum faceId
         {
-            LEFT   = 0,  //!< 0: x-min face
-            RIGHT  = 1,  //!< 1: x-max face
-            BOTTOM = 2,  //!< 2: y-min face
-            TOP    = 3,  //!< 3: y-max face
-            BACK   = 4,  //!< 4: z-min face
-            FRONT  = 5   //!< 5: z-max face
+            LEFT   = 0,  //!< 0: x-min, left
+            RIGHT  = 1,  //!< 1: x-max, right
+            BOTTOM = 2,  //!< 2: y-min, bottom
+            TOP    = 3,  //!< 3: y-max, top
+            BACK   = 4,  //!< 4: z-min, back
+            FRONT  = 5   //!< 5: z-max, front
         };
 
-        //- Bits used for face encoding.
-        //  Defined as (1 << (2 * vector::components + positive)).
-        //  For example, the positive Z-face:
-        //  (1 << (2 * vector::Z + 1))
+        //- Bits used for face encoding
         enum faceBit : direction
         {
-            NOFACE    = 0,              //!<  0: none
-            LEFTBIT   = (1 << LEFT),    //!<  1: x-min face
-            RIGHTBIT  = (1 << RIGHT),   //!<  2: x-max face
-            BOTTOMBIT = (1 << BOTTOM),  //!<  4: y-min face
-            TOPBIT    = (1 << TOP),     //!<  8: y-max face
-            BACKBIT   = (1 << BACK),    //!< 16: z-min face
-            FRONTBIT  = (1 << FRONT)    //!< 32: z-max face
+            NOFACE    = 0,
+            LEFTBIT   = 0x1 << LEFT,    //!<  1: x-min, left
+            RIGHTBIT  = 0x1 << RIGHT,   //!<  2: x-max, right
+            BOTTOMBIT = 0x1 << BOTTOM,  //!<  4: y-min, bottom
+            TOPBIT    = 0x1 << TOP,     //!<  8: y-max, top
+            BACKBIT   = 0x1 << BACK,    //!< 16: z-min, back
+            FRONTBIT  = 0x1 << FRONT    //!< 32: z-max, front
         };
 
         //- Edges codes.
@@ -161,57 +148,26 @@ public:
 
     // Static Data Members
 
-        //- Face to point addressing, using octant corner points.
+        //- Face to point addressing
         static const faceList faces;
 
-        //- Edge to point addressing, using octant corner points.
+        //- Edge to point addressing
         static const edgeList edges;
-
-
-    // Static Methods
-
-        //- The null treeBoundBox is the same as an inverted box
-        static const treeBoundBox& null() noexcept
-        {
-            return
-                reinterpret_cast<const treeBoundBox&>(boundBox::invertedBox);
-        }
-
-
-    // Standard (Generated) Methods
-
-        //- Default construct: an inverted bounding box
-        treeBoundBox() = default;
-
-        //- Copy construct
-        treeBoundBox(const treeBoundBox&) = default;
-
-        //- Copy assignment
-        treeBoundBox& operator=(const treeBoundBox&) = default;
-
-        //- Copy construct from a boundBox
-        explicit treeBoundBox(const boundBox& bb) : boundBox(bb) {}
-
-        //- Copy assignment from a boundBox
-        void operator=(const boundBox& bb)
-        {
-            static_cast<boundBox&>(*this) = bb;
-        }
 
 
     // Constructors
 
+        //- Construct without any points - an inverted bounding box
+        inline treeBoundBox();
+
+        //- Construct from a boundBox
+        inline explicit treeBoundBox(const boundBox& bb);
+
         //- Construct a bounding box containing a single initial point
-        inline explicit treeBoundBox(const point& p);
+        inline explicit treeBoundBox(const point& pt);
 
-        //- Construct from bound box min/max points
+        //- Construct from components
         inline treeBoundBox(const point& min, const point& max);
-
-        ///TBD: Construct from bound box min/max points
-        ///inline explicit treeBoundBox(const MinMax<point>& bb);
-
-        //- Construct from bound box min/max points
-        inline explicit treeBoundBox(const Pair<point>& bb);
 
         //- Construct as the bounding box of the given pointField.
         //  Local processor domain only (no reduce as in boundBox)
@@ -231,19 +187,23 @@ public:
             const FixedList<label, N>& indices
         );
 
+
         //- Construct from Istream
-        inline explicit treeBoundBox(Istream& is);
+        inline treeBoundBox(Istream& is);
 
 
-    // Member Functions
+    // Member functions
 
         // Access
+
+            //- Typical dimension length,height,width
+            inline scalar typDim() const;
 
             //- Vertex coordinates. In octant coding.
             tmp<pointField> points() const;
 
 
-        // Octant handling
+        // Check
 
             //- Corner point of given octant
             inline point corner(const direction octant) const;
@@ -253,17 +213,6 @@ public:
 
             //- Sub-box given by octant number. Midpoint provided.
             treeBoundBox subBbox(const point& mid, const direction) const;
-
-            //- Sub-box half for given face
-            treeBoundBox subHalf(const direction whichFace) const;
-
-            //- Sub-box half for given face with prescribed mid point value.
-            //- Eg, subHalf(scalar, LEFT)
-            treeBoundBox subHalf
-            (
-                const scalar mid,
-                const direction whichFace
-            ) const;
 
             //- Returns octant number given point and the calculated midpoint.
             inline direction subOctant
@@ -317,32 +266,8 @@ public:
                  FixedList<direction, 8>& octantOrder
             ) const;
 
-            //- Return optimal search order to look for nearest to point.
-            inline FixedList<direction, 8> searchOrder(const point& pt) const;
-
-
-        // Check
-
-            //- Overlaps with other bounding box, sphere etc?
+            //- Overlaps other bounding box?
             using boundBox::overlaps;
-
-            //- Does sub-octant overlap/touch boundingBox?
-            bool subOverlaps
-            (
-                const direction octant,
-                const boundBox& bb
-            ) const;
-
-            //- Does sub-octant overlap boundingSphere (centre + sqr(radius))?
-            inline bool subOverlaps
-            (
-                const direction octant,
-                const point& centre,
-                const scalar radiusSqr
-            ) const;
-
-            //- intersects other bounding box, sphere etc?
-            using boundBox::intersects;
 
             //- Intersects segment; set point to intersection position and face,
             //  return true if intersection found.
@@ -369,9 +294,6 @@ public:
                 const point& end,
                 point& pt
             ) const;
-
-            //- Like above but does not return faces point is on
-            inline bool intersects(const linePointRef& ln, point& pt) const;
 
             //- Contains point or other bounding box?
             using boundBox::contains;
@@ -412,26 +334,11 @@ public:
             //  and guarantees in any direction s*mag(span) minimum width
             inline treeBoundBox extend(Random& rndGen, const scalar s) const;
 
-            //- As per two parameter version but with additional
-            //- grow() by given amount in each dimension
-            inline treeBoundBox extend
-            (
-                Random& rndGen,
-                const scalar s,
-                const scalar delta
-            ) const;
 
-
-    // IOstream Operators
+    // IOstream operator
 
         friend Istream& operator>>(Istream& is, treeBoundBox& bb);
         friend Ostream& operator<<(Ostream& os, const treeBoundBox& bb);
-
-
-    // Housekeeping
-
-        //- Typical dimension length,height,width. Identical to avgDim()
-        scalar typDim() const { return avgDim(); }
 };
 
 

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -317,7 +317,7 @@ Foam::functionEntries::codeStream::getFunction
     bool haveLib = lib;
     if (!doingMasterOnlyReading(topDict))
     {
-        Pstream::reduceAnd(haveLib);
+        reduce(haveLib, andOp<bool>());
     }
 
     if (!haveLib)

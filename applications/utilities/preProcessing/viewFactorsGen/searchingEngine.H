@@ -4,7 +4,10 @@ Random rndGen(653213);
 List<treeBoundBox> meshBb
 (
     1,
-    treeBoundBox(coarseMesh.points()).extend(rndGen, 1e-3)
+    treeBoundBox
+    (
+        boundBox(coarseMesh.points(), false)
+    ).extend(rndGen, 1e-3)
 );
 
 // Dummy bounds dictionary

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -131,7 +131,7 @@ bool Foam::functionObjects::vtkCloud::writeCloud
     }
 
     applyFilter_ = calculateFilter(obrTmp, log);
-    Pstream::reduceOr(applyFilter_);
+    reduce(applyFilter_, orOp<bool>());
 
 
     // Number of parcels (locally)
@@ -156,7 +156,7 @@ bool Foam::functionObjects::vtkCloud::writeCloud
     std::ofstream os;
     autoPtr<vtk::formatter> format;
 
-    if (!file.has_ext("vtp"))
+    if (!file.hasExt("vtp"))
     {
         FatalErrorInFunction
             << type() << " File missing .vtp extension!" << nl << endl

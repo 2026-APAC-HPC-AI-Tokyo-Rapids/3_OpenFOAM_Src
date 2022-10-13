@@ -6,10 +6,6 @@
 # include <ctime>
 # include <cstring>
 
-#if defined(__APPLE__) && defined(__clang__)
-#pragma clang fp exceptions(ignore)
-#endif
-
 using namespace std;
 
 # include "geompack.H"

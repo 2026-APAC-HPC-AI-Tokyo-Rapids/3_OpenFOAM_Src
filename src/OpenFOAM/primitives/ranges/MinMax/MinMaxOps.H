@@ -32,8 +32,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_MinMaxOps_H
-#define Foam_MinMaxOps_H
+#ifndef MinMaxOps_H
+#define MinMaxOps_H
 
 #include "MinMax.H"
 #include "VectorSpace.H"

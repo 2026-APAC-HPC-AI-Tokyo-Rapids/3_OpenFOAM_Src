@@ -693,27 +693,15 @@ inline bool Foam::PackedList<Width>::unset(const label i)
 
 
 template<unsigned Width>
-inline void Foam::PackedList<Width>::push_back(const unsigned int val)
+inline Foam::PackedList<Width>&
+Foam::PackedList<Width>::append(const unsigned int val)
 {
     const label idx = size();
     reserve(idx + 1);
     ++size_;
 
     reference(this, idx).set(val);
-}
-
-
-template<unsigned Width>
-inline void Foam::PackedList<Width>::pop_back(label n)
-{
-    if (n >= size())
-    {
-        clear();
-    }
-    else if (n > 0)
-    {
-        resize(size() - n);
-    }
+    return *this;
 }
 
 

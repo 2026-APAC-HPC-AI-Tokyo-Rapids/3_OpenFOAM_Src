@@ -6,8 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
-    Copyright (C) 2022 Upstream CFD GmbH
-    Copyright (C) 2019, 2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,16 +31,14 @@ Group
     grpDESTurbulence
 
 Description
-    k-omega-SST DDES turbulence model for incompressible and compressible flows.
+    k-omega-SST DDES turbulence model for incompressible and compressible flows
 
     Reference:
     \verbatim
-        Gritskevich, M. S., Garbaruk, A. V.,
-        Schütze, J., & Menter, F. R. (2012).
-        Development of DDES and IDDES formulations for
-        the k-ω shear stress transport model.
-        Flow, turbulence and combustion, 88(3), 431-449.
-        DOI:10.1007/s10494-011-9378-4
+        Gritskevich, M.S., Garbaruk, A.V., Schuetze, J., Menter, F.R. (2011)
+        Development of DDES and IDDES Formulations for the k-omega
+        Shear Stress Transport Model, Flow, Turbulence and Combustion,
+        pp. 1-19
     \endverbatim
 
 SourceFiles
@@ -49,8 +46,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_kOmegaSSTDDES_H
-#define Foam_kOmegaSSTDDES_H
+#ifndef kOmegaSSTDDES_H
+#define kOmegaSSTDDES_H
 
 #include "kOmegaSSTDES.H"
 
@@ -72,8 +69,9 @@ class kOmegaSSTDDES
 {
     // Private Member Functions
 
-        //- Return the shielding function field
         tmp<volScalarField> fd(const volScalarField& magGradU) const;
+
+        tmp<volScalarField> rd(const volScalarField& magGradU) const;
 
         //- No copy construct
         kOmegaSSTDDES(const kOmegaSSTDDES&) = delete;
@@ -84,7 +82,7 @@ class kOmegaSSTDDES
 
 protected:
 
-    // Protected Data
+    // Protected data
 
         // Model coefficients
 
@@ -94,12 +92,6 @@ protected:
 
     // Protected Member Functions
 
-        //- Return square of strain rate
-        virtual tmp<volScalarField> S2
-        (
-            const volTensorField& gradU
-        ) const;
-
         //- Length scale
         virtual tmp<volScalarField> dTilda
         (
@@ -107,20 +99,6 @@ protected:
             const volScalarField& CDES
         ) const;
 
-        //- Return (G/nu)_0
-        virtual tmp<volScalarField::Internal> GbyNu0
-        (
-            const volTensorField& gradU,
-            const volScalarField& S2
-        ) const;
-
-        //- Return G/nu
-        virtual tmp<volScalarField::Internal> GbyNu
-        (
-            const volScalarField::Internal& GbyNu0,
-            const volScalarField::Internal& F2,
-            const volScalarField::Internal& S2
-        ) const;
 
 public:
 
@@ -157,9 +135,6 @@ public:
 
         //- Re-read model coefficients if they have changed
         virtual bool read();
-
-        //- Return the shielding function
-        virtual tmp<volScalarField> fd() const;
 };
 
 

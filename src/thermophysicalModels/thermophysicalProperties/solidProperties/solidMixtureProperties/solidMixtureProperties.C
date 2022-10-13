@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,16 +39,12 @@ Foam::solidMixtureProperties::solidMixtureProperties(const dictionary& dict)
 
     forAll(components_, i)
     {
-        // Handle sub-dictionary or primitive entry
-
-        const dictionary* subDictPtr = dict.findDict(components_[i]);
-
-        if (subDictPtr)
+        if (dict.isDict(components_[i]))
         {
             properties_.set
             (
                 i,
-                solidProperties::New(*subDictPtr)
+                solidProperties::New(dict.subDict(components_[i]))
             );
         }
         else
@@ -70,8 +65,13 @@ Foam::solidMixtureProperties::solidMixtureProperties
 )
 :
     components_(s.components_),
-    properties_(s.properties_.clone())
-{}
+    properties_(s.properties_.size())
+{
+    forAll(properties_, i)
+    {
+        properties_.set(i, s.properties_(i)->clone());
+    }
+}
 
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //

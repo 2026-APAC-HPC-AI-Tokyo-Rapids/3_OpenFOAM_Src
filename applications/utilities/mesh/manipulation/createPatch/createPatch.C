@@ -606,7 +606,7 @@ void syncPoints
                 pointField nbrPatchInfo(procPatch.nPoints());
                 {
                     // We do not know the number of points on the other side
-                    // so cannot use UIPstream::read
+                    // so cannot use Pstream::read.
                     IPstream fromNbr
                     (
                         Pstream::commsTypes::blocking,
@@ -686,7 +686,7 @@ void syncPoints
 
     //- Note: hasTransformation is only used for warning messages so
     //  reduction not strictly necessary.
-    //Pstream::reduceOr(hasTransformation);
+    //reduce(hasTransformation, orOp<bool>());
 
     // Synchronize multiple shared points.
     const globalMeshData& pd = mesh.globalData();
@@ -714,7 +714,7 @@ void syncPoints
         }
 
         // Combine - globally consistent
-        Pstream::listCombineReduce(sharedPts, cop);
+        Pstream::listCombineAllGather(sharedPts, cop);
 
         // Now we will all have the same information. Merge it back with
         // my local information.

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2014 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,8 +38,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_prefixOSstream_H
-#define Foam_prefixOSstream_H
+#ifndef prefixOSstream_H
+#define prefixOSstream_H
 
 #include "OSstream.H"
 
@@ -79,6 +79,19 @@ public:
             const string& streamName,
             IOstreamOption streamOpt = IOstreamOption()
         );
+
+        //- Construct and set stream status
+        prefixOSstream
+        (
+            std::ostream& os,
+            const string& streamName,
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion,
+            IOstreamOption::compressionType cmp = IOstreamOption::UNCOMPRESSED
+        )
+        :
+            prefixOSstream(os, streamName, IOstreamOption(fmt, ver, cmp))
+        {}
 
 
     // Member Functions
@@ -130,11 +143,11 @@ public:
             //- Write int64_t
             virtual Ostream& write(const int64_t val);
 
-            //- Write float
-            virtual Ostream& write(const float val);
+            //- Write floatScalar
+            virtual Ostream& write(const floatScalar val);
 
-            //- Write double
-            virtual Ostream& write(const double val);
+            //- Write doubleScalar
+            virtual Ostream& write(const doubleScalar val);
 
             //- Write binary block
             virtual Ostream& write(const char* buf, std::streamsize count);

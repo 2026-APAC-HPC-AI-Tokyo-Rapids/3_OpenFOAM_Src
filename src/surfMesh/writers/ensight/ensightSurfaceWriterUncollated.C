@@ -69,6 +69,7 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeUncollated()
             mkDir(outputDir);
         }
 
+        OFstream osCase(outputFile);
         ensightGeoFile osGeom
         (
             outputDir,
@@ -76,16 +77,6 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeUncollated()
             writeFormat_
         );
 
-        ensightOutputSurface part
-        (
-            surf.points(),
-            surf.faces(),
-            osGeom.name().name()
-        );
-        part.write(osGeom); // serial
-
-        // Update case file
-        OFstream osCase(outputFile);
         osCase
             << "FORMAT" << nl
             << "type: ensight gold" << nl
@@ -96,6 +87,14 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeUncollated()
             << "TIME" << nl;
 
         ensightCase::printTimeset(osCase, 1, scalar(0));
+
+        ensightOutputSurface part
+        (
+            surf.points(),
+            surf.faces(),
+            osGeom.name().name()
+        );
+        part.write(osGeom); // serial
     }
 
     wroteGeom_ = true;
@@ -171,6 +170,13 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeUncollated
             mkDir(outputFile.path());
         }
 
+        OFstream osCase(outputFile, IOstream::ASCII);
+
+        // Format options
+        osCase.setf(ios_base::left);
+        osCase.setf(ios_base::scientific, ios_base::floatfield);
+        osCase.precision(5);
+
         // Two-argument form for path-name to avoid validating base-dir
         ensightGeoFile osGeom
         (
@@ -185,6 +191,32 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeUncollated
             writeFormat_
         );
 
+        osCase
+            << "FORMAT" << nl
+            << "type: ensight gold" << nl
+            << nl
+            << "GEOMETRY" << nl
+            << "model:  1   " << osGeom.name().name() << nl
+            << nl
+            << "VARIABLE" << nl
+            << ensightPTraits<Type>::typeName
+            <<
+            (
+                this->isPointData()
+              ? " per node:    1  "  // time-set 1
+              : " per element: 1  "  // time-set 1
+            )
+            << setw(15) << varName << ' '
+            << baseName.c_str() << ".********." << varName << nl;
+
+        osCase
+            << nl
+            << "TIME" << nl;
+
+        ensightCase::printTimeset(osCase, 1, timeValue);
+        osCase << "# end" << nl;
+
+
         // Ensight Geometry
         ensightOutputSurface part
         (
@@ -195,46 +227,8 @@ Foam::fileName Foam::surfaceWriters::ensightWriter::writeUncollated
         part.write(osGeom); // serial
 
         // Write field (serial)
-        osField.write(ensightPTraits<Type>::typeName);
-        osField.newline();
+        osField.writeKeyword(ensightPTraits<Type>::typeName);
         part.writeData(osField, tfield(), this->isPointData());
-
-
-        // Update case file
-        {
-            OFstream osCase(outputFile, IOstreamOption::ASCII);
-
-            // Format options
-            osCase.setf(ios_base::left);
-            osCase.setf(ios_base::scientific, ios_base::floatfield);
-            osCase.precision(5);
-
-            osCase
-                << "FORMAT" << nl
-                << "type: ensight gold" << nl
-                << nl
-                << "GEOMETRY" << nl
-                << "model:  1   " << osGeom.name().name() << nl
-                << nl
-                << "VARIABLE" << nl
-                << ensightPTraits<Type>::typeName
-                <<
-                (
-                    this->isPointData()
-                  ? " per node:    1  "  // time-set 1
-                  : " per element: 1  "  // time-set 1
-                )
-                << setw(15) << varName << ' '
-                << baseName.c_str() << ".********."
-                << ensight::FileName(varName).c_str() << nl;
-
-            osCase
-                << nl
-                << "TIME" << nl;
-
-                ensightCase::printTimeset(osCase, 1, timeValue);
-                osCase << "# end" << nl;
-        }
     }
 
     wroteGeom_ = true;

@@ -51,8 +51,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_searchableBox_H
-#define Foam_searchableBox_H
+#ifndef searchableBox_H
+#define searchableBox_H
 
 #include "searchableSurface.H"
 #include "treeBoundBox.H"

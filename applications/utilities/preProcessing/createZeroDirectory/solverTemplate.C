@@ -223,7 +223,7 @@ void Foam::solverTemplate::setRegionProperties
         fieldDimensions_[regionI].set
         (
             i,
-            new dimensionSet("dimensions", dict)
+            new dimensionSet(dict, "dimensions")
         );
     }
 }

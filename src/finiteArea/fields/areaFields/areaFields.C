@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,18 +33,17 @@ License
 
 namespace Foam
 {
+    defineTemplate2TypeNameAndDebug(areaScalarField::Internal, 0);
+    defineTemplate2TypeNameAndDebug(areaVectorField::Internal, 0);
+    defineTemplate2TypeNameAndDebug(areaSphericalTensorField::Internal, 0);
+    defineTemplate2TypeNameAndDebug(areaSymmTensorField::Internal, 0);
+    defineTemplate2TypeNameAndDebug(areaTensorField::Internal, 0);
 
-defineTemplateTypeNameAndDebug(areaScalarField::Internal, 0);
-defineTemplateTypeNameAndDebug(areaVectorField::Internal, 0);
-defineTemplateTypeNameAndDebug(areaSphericalTensorField::Internal, 0);
-defineTemplateTypeNameAndDebug(areaSymmTensorField::Internal, 0);
-defineTemplateTypeNameAndDebug(areaTensorField::Internal, 0);
-
-defineTemplateTypeNameAndDebug(areaScalarField, 0);
-defineTemplateTypeNameAndDebug(areaVectorField, 0);
-defineTemplateTypeNameAndDebug(areaSphericalTensorField, 0);
-defineTemplateTypeNameAndDebug(areaSymmTensorField, 0);
-defineTemplateTypeNameAndDebug(areaTensorField, 0);
+    defineTemplateTypeNameAndDebug(areaScalarField, 0);
+    defineTemplateTypeNameAndDebug(areaVectorField, 0);
+    defineTemplateTypeNameAndDebug(areaSphericalTensorField, 0);
+    defineTemplateTypeNameAndDebug(areaSymmTensorField, 0);
+    defineTemplateTypeNameAndDebug(areaTensorField, 0);
 
 } // End namespace Foam
 
@@ -90,15 +89,6 @@ const Foam::wordList Foam::fieldTypes::area
     "areaSphericalTensorField",
     "areaSymmTensorField",
     "areaTensorField"
-});
-
-const Foam::wordList Foam::fieldTypes::area_internal
-({
-    "areaScalarField::Internal",
-    "areaVectorField::Internal",
-    "areaSphericalTensorField::Internal",
-    "areaSymmTensorField::Internal",
-    "areaTensorField::Internal"
 });
 
 

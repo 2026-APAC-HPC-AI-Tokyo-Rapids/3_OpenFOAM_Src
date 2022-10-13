@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -64,7 +64,7 @@ void Foam::simpleObjectRegistry::setValues
                 IStringStream is(os.str());
 
                 // Or alternatively?
-                // ITstream is(dEntry.dict().tokens());
+                // ITstream is(name, dEntry.dict().tokens());
 
                 for (simpleRegIOobject* obj : objects)
                 {
@@ -107,30 +107,21 @@ void Foam::simpleObjectRegistry::setNamedValue
 
     if (eq != std::string::npos)
     {
-        string strval(name.substr(eq+1));
+        std::string strval(name.substr(eq+1));
         name.erase(eq);  // Truncate the name
 
-        // Treat 'name=' like 'name' (ie, default value)
-        if (strval.length())
-        {
-            float fvalue(0);
+        float fvalue(val);
 
-            if (Foam::readInt(strval, val))
-            {
-                // Parses as int
-                tok = static_cast<label>(val);
-            }
-            else if (Foam::readFloat(strval, fvalue))
-            {
-                // Parses as float
-                tok = fvalue;
-            }
-            else
-            {
-                // Accept 'name=string' for named enums,
-                tok = std::move(strval);
-            }
+        if (Foam::readInt(strval, val))
+        {
+            tok = static_cast<label>(val);
         }
+        else if (Foam::readFloat(strval, fvalue))
+        {
+            tok = fvalue;
+        }
+        // Treat 'name=' like 'name' (ie, no value parameter)
+        // silently ignore 'name=junk', but could warn
     }
 
 
@@ -138,10 +129,10 @@ void Foam::simpleObjectRegistry::setNamedValue
 
     if (objPtr)
     {
-        Log << name.c_str() << '=' << tok << nl;
-
         // The generic interface requires an Istream.
-        ITstream is(tokenList(Foam::one{}, std::move(tok)));
+        ITstream is("", tokenList(Foam::one{}, tok));
+
+        Log << name.c_str() << '=' << tok << nl;
 
         const List<simpleRegIOobject*>& objects = *objPtr;
 

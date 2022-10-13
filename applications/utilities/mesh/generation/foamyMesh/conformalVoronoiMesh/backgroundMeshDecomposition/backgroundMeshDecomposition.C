@@ -167,7 +167,14 @@ void Foam::backgroundMeshDecomposition::initialRefinement()
             {
                 if (volumeStatus[celli] == volumeType::UNKNOWN)
                 {
-                    treeBoundBox cellBb(mesh_.cellBb(celli));
+                    treeBoundBox cellBb
+                    (
+                        mesh_.cells()[celli].points
+                        (
+                            mesh_.faces(),
+                            mesh_.points()
+                        )
+                    );
 
                     if (geometry.overlaps(cellBb))
                     {
@@ -217,7 +224,7 @@ void Foam::backgroundMeshDecomposition::initialRefinement()
                     );
                 }
 
-                if (returnReduceAnd(newCellsToRefine.empty()))
+                if (returnReduce(newCellsToRefine.size(), sumOp<label>()) == 0)
                 {
                     break;
                 }
@@ -279,7 +286,14 @@ void Foam::backgroundMeshDecomposition::initialRefinement()
             {
                 if (volumeStatus[celli] == volumeType::UNKNOWN)
                 {
-                    treeBoundBox cellBb(mesh_.cellBb(celli));
+                    treeBoundBox cellBb
+                    (
+                        mesh_.cells()[celli].points
+                        (
+                            mesh_.faces(),
+                            mesh_.points()
+                        )
+                    );
 
                     if (geometry.overlaps(cellBb))
                     {
@@ -498,7 +512,14 @@ bool Foam::backgroundMeshDecomposition::refineCell
 
 //    const conformationSurfaces& geometry = geometryToConformTo_;
 
-    treeBoundBox cellBb(mesh_.cellBb(celli));
+    treeBoundBox cellBb
+    (
+        mesh_.cells()[celli].points
+        (
+            mesh_.faces(),
+            mesh_.points()
+        )
+    );
 
     weightEstimate = 1.0;
 
@@ -577,7 +598,7 @@ bool Foam::backgroundMeshDecomposition::refineCell
 //            // weightEstimate += sampleVol/pow3(s);
 //        }
 //
-//        if (sqr(spanScale_)*sqr(minCellSize) < cellBb.magSqr())
+//        if (sqr(spanScale_)*sqr(minCellSize) < magSqr(cellBb.span()))
 //        {
 //            return true;
 //        }
@@ -695,7 +716,7 @@ void Foam::backgroundMeshDecomposition::buildPatchAndTree()
     Pstream::allGatherList(allBackgroundMeshBounds_);
 
     // find global bounding box
-    globalBackgroundBounds_.reset();
+    globalBackgroundBounds_ = treeBoundBox(boundBox::invertedBox);
     forAll(allBackgroundMeshBounds_, proci)
     {
         globalBackgroundBounds_.add(allBackgroundMeshBounds_[proci]);
@@ -878,7 +899,7 @@ Foam::backgroundMeshDecomposition::distribute
             }
         }
 
-        if (returnReduceAnd(cellsToRefine.empty()))
+        if (returnReduce(cellsToRefine.size(), sumOp<label>()) == 0)
         {
             break;
         }
@@ -1119,7 +1140,10 @@ Foam::labelList Foam::backgroundMeshDecomposition::processorNearestPosition
 
         if (info.hit())
         {
-            distanceSqrToCandidate[tPI] = info.point().distSqr(testPoints[tPI]);
+            distanceSqrToCandidate[tPI] = magSqr
+            (
+                testPoints[tPI] - info.hitPoint()
+            );
         }
     }
 

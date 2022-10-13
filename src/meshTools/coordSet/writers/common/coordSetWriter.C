@@ -27,7 +27,6 @@ License
 
 #include "coordSet.H"
 #include "coordSetWriter.H"
-#include "fileFormats.H"
 #include "Time.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -76,29 +75,6 @@ Foam::word Foam::coordSetWriter::suffix
     }
 
     return result.ext(fileExt);
-}
-
-
-Foam::dictionary Foam::coordSetWriter::formatOptions
-(
-    const dictionary& dict,
-    const word& formatName,
-    const word& entryName
-)
-{
-    return fileFormats::getFormatOptions(dict, formatName, entryName);
-}
-
-
-Foam::dictionary Foam::coordSetWriter::formatOptions
-(
-    const dictionary& dict,
-    const dictionary& setDict,
-    const word& formatName,
-    const word& entryName
-)
-{
-    return fileFormats::getFormatOptions(dict, setDict, formatName, entryName);
 }
 
 

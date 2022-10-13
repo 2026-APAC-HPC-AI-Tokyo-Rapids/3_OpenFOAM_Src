@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,12 +60,14 @@ Foam::edgeMesh::edgeMesh(const fileName& name)
 
 bool Foam::edgeMesh::read(const fileName& name)
 {
-    if (name.has_ext("gz"))
+    word ext(name.ext());
+    if (ext == "gz")
     {
-        return read(name.lessExt(), name.stem().ext());
+        fileName unzipName = name.lessExt();
+        return read(unzipName, unzipName.ext());
     }
 
-    return read(name, name.ext());
+    return read(name, ext);
 }
 
 

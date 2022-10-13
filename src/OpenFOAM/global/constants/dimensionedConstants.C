@@ -24,14 +24,11 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
-Note
-    Included by global/globals.C
-
 \*---------------------------------------------------------------------------*/
 
 #include "dimensionedConstants.H"
 
-// * * * * * * * * * * * * * * * File Static Data  * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {

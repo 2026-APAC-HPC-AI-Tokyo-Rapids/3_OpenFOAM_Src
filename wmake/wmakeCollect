@@ -63,9 +63,6 @@ unset cleanup
 while [ "$#" -gt 0 ]
 do
     case "$1" in
-    ('') ;;
-    (- | --) shift; break ;;  # Stop option parsing
-
     -h | -help*)
         usage
         ;;

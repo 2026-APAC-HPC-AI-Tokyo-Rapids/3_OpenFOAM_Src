@@ -39,12 +39,9 @@ License
 #include "waveMethod.H"
 
 #include "regionSplit.H"
-#include "oversetFvPatchFields.H"
-#include "topoDistanceData.H"
-#include "FaceCellWave.H"
-
-#include "OBJstream.H"
-#include "uindirectPrimitivePatch.H"
+#include "dynamicOversetFvMesh.H"
+//#include "minData.H"
+//#include "FaceCellWave.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -195,7 +192,8 @@ void Foam::cellCellStencils::inverseDistance::markBoundaries
 
                 // Mark in voxel mesh
                 boundBox faceBb(pp.points(), pp[i], false);
-                faceBb.grow(smallVec);
+                faceBb.min() -= smallVec;
+                faceBb.max() += smallVec;
 
                 if (bb.overlaps(faceBb))
                 {
@@ -222,7 +220,8 @@ void Foam::cellCellStencils::inverseDistance::markBoundaries
 
                 // Mark in voxel mesh
                 boundBox faceBb(pp.points(), pp[i], false);
-                faceBb.grow(smallVec);
+                faceBb.min() -= smallVec;
+                faceBb.max() += smallVec;
 
                 if (bb.overlaps(faceBb))
                 {
@@ -231,6 +230,40 @@ void Foam::cellCellStencils::inverseDistance::markBoundaries
             }
         }
     }
+}
+
+
+Foam::treeBoundBox Foam::cellCellStencils::inverseDistance::cellBb
+(
+    const primitiveMesh& mesh,
+    const label celli
+)
+{
+    const cellList& cells = mesh.cells();
+    const faceList& faces = mesh.faces();
+    const pointField& points = mesh.points();
+
+    treeBoundBox bb
+    (
+        vector(GREAT, GREAT, GREAT),
+        vector(-GREAT, -GREAT, -GREAT)
+    );
+
+    const cell& cFaces = cells[celli];
+
+    forAll(cFaces, cFacei)
+    {
+        const face& f = faces[cFaces[cFacei]];
+
+        forAll(f, fp)
+        {
+            const point& p = points[f[fp]];
+
+            bb.min() = min(bb.min(), p);
+            bb.max() = max(bb.max(), p);
+        }
+    }
+    return bb;
 }
 
 
@@ -310,8 +343,9 @@ void Foam::cellCellStencils::inverseDistance::markPatchesAsHoles
             forAll(tgtCellMap, tgtCelli)
             {
                 label celli = tgtCellMap[tgtCelli];
-                treeBoundBox cBb(mesh_.cellBb(celli));
-                cBb.grow(smallVec_);
+                treeBoundBox cBb(cellBb(mesh_, celli));
+                cBb.min() -= smallVec_;
+                cBb.max() += smallVec_;
 
                 if
                 (
@@ -379,9 +413,9 @@ void Foam::cellCellStencils::inverseDistance::markPatchesAsHoles
                 forAll(tgtCellMap, tgtCelli)
                 {
                     label celli = tgtCellMap[tgtCelli];
-                    treeBoundBox cBb(mesh_.cellBb(celli));
-                    cBb.grow(smallVec_);
-
+                    treeBoundBox cBb(cellBb(mesh_, celli));
+                    cBb.min() -= smallVec_;
+                    cBb.max() += smallVec_;
                     if
                     (
                         overlaps
@@ -475,12 +509,8 @@ void Foam::cellCellStencils::inverseDistance::markDonors
         waveMethod::calculate(tgtMesh, srcMesh, tgtToSrcAddr);
         forAll(tgtCellMap, tgtCelli)
         {
-            const label srcCelli = tgtToSrcAddr[tgtCelli];
-            if
-            (
-                srcCelli != -1
-             && allCellTypes[tgtCellMap[tgtCelli]] != HOLE
-            )
+            label srcCelli = tgtToSrcAddr[tgtCelli];
+            if (srcCelli != -1 && allCellTypes[srcCellMap[srcCelli]] != HOLE)
             {
                 label celli = tgtCellMap[tgtCelli];
 
@@ -523,6 +553,7 @@ void Foam::cellCellStencils::inverseDistance::markDonors
     }
 
 
+
     // Indices of tgtcells to send over to each processor
     List<DynamicList<label>> tgtSendCells(Pstream::nProcs());
     forAll(srcOverlapProcs, i)
@@ -537,12 +568,13 @@ void Foam::cellCellStencils::inverseDistance::markDonors
         label celli = tgtCellMap[tgtCelli];
         if (srcOverlapProcs.size())
         {
-            treeBoundBox subBb(mesh_.cellBb(celli));
-            subBb.grow(smallVec_);
+            treeBoundBox subBb(cellBb(mesh_, celli));
+            subBb.min() -= smallVec_;
+            subBb.max() += smallVec_;
 
             forAll(srcOverlapProcs, i)
             {
-                const label procI = srcOverlapProcs[i];
+                label procI = srcOverlapProcs[i];
                 if (subBb.overlaps(srcBbs[procI]))
                 {
                     tgtSendCells[procI].append(tgtCelli);
@@ -578,7 +610,7 @@ void Foam::cellCellStencils::inverseDistance::markDonors
         {
             const point& sample = samples[sampleI];
             label srcCelli = srcMesh.findCell(sample, polyMesh::CELL_TETS);
-            if (srcCelli != -1)
+            if (srcCelli != -1 && allCellTypes[srcCellMap[srcCelli]] != HOLE)
             {
                 donors[sampleI] = globalCells.toGlobal(srcCellMap[srcCelli]);
             }
@@ -611,20 +643,18 @@ void Foam::cellCellStencils::inverseDistance::markDonors
             if (globalDonor != -1)
             {
                 label celli = tgtCellMap[cellIDs[donorI]];
+
+                // TBD: check for multiple donors. Maybe better one? For
+                //      now check 'nearer' mesh
+                if (betterDonor(tgtI, allDonor[celli], srcI))
                 {
-                    // TBD: check for multiple donors. Maybe better one? For
-                    //      now check 'nearer' mesh
-                    if (betterDonor(tgtI, allDonor[celli], srcI))
-                    {
-                        allStencil[celli].setSize(1);
-                        allStencil[celli][0] = globalDonor;
-                        allDonor[celli] = srcI;
-                    }
+                    allStencil[celli].setSize(1);
+                    allStencil[celli][0] = globalDonor;
+                    allDonor[celli] = srcI;
                 }
             }
         }
     }
-
 }
 
 
@@ -1108,7 +1138,7 @@ void Foam::cellCellStencils::inverseDistance::findHoles
     {
         // Synchronise region status on processors
         // (could instead swap status through processor patches)
-        Pstream::listCombineReduce(regionType, maxEqOp<label>());
+        Pstream::listCombineAllGather(regionType, maxEqOp<label>());
 
         DebugInfo<< FUNCTION_NAME << " : Gathered region type" << endl;
 
@@ -1167,15 +1197,222 @@ void Foam::cellCellStencils::inverseDistance::findHoles
 
 
     // See which regions have not been visited (regionType == 1)
-    label count = 0;
     forAll(cellRegion, cellI)
     {
         label type = regionType[cellRegion[cellI]];
         if (type == 1 && cellTypes[cellI] != HOLE)
         {
             cellTypes[cellI] = HOLE;
-            count++;
         }
+    }
+    DebugInfo<< FUNCTION_NAME << " : Finished hole flood filling" << endl;
+}
+
+
+void Foam::cellCellStencils::inverseDistance::seedCell
+(
+    const label cellI,
+    const scalar wantedFraction,
+    bitSet& isFront,
+    scalarField& fraction
+) const
+{
+    const cell& cFaces = mesh_.cells()[cellI];
+    forAll(cFaces, i)
+    {
+        label nbrFacei = cFaces[i];
+        if (fraction[nbrFacei] < wantedFraction)
+        {
+            fraction[nbrFacei] = wantedFraction;
+            isFront.set(nbrFacei);
+        }
+    }
+}
+
+
+void Foam::cellCellStencils::inverseDistance::walkFront
+(
+    const scalar layerRelax,
+    const labelListList& allStencil,
+    labelList& allCellTypes,
+    scalarField& allWeight
+) const
+{
+    // Current front
+    bitSet isFront(mesh_.nFaces());
+
+    const fvBoundaryMesh& fvm = mesh_.boundary();
+
+
+    // 'overset' patches
+
+    forAll(fvm, patchI)
+    {
+        if (isA<oversetFvPatch>(fvm[patchI]))
+        {
+            const labelList& fc = fvm[patchI].faceCells();
+            forAll(fc, i)
+            {
+                label cellI = fc[i];
+                if (allCellTypes[cellI] == INTERPOLATED)
+                {
+                    // Note that acceptors might have been marked hole if
+                    // there are no donors in which case we do not want to
+                    // walk this out. This is an extreme situation.
+                    isFront.set(fvm[patchI].start()+i);
+                }
+            }
+        }
+    }
+
+
+    // Outside of 'hole' region
+    {
+        const labelList& own = mesh_.faceOwner();
+        const labelList& nei = mesh_.faceNeighbour();
+
+        for (label faceI = 0; faceI < mesh_.nInternalFaces(); faceI++)
+        {
+            label ownType = allCellTypes[own[faceI]];
+            label neiType = allCellTypes[nei[faceI]];
+            if
+            (
+                 (ownType == HOLE && neiType != HOLE)
+              || (ownType != HOLE && neiType == HOLE)
+            )
+            {
+                //Pout<< "Front at face:" << faceI
+                //    << " at:" << mesh_.faceCentres()[faceI] << endl;
+                isFront.set(faceI);
+            }
+        }
+
+        labelList nbrCellTypes;
+        syncTools::swapBoundaryCellList(mesh_, allCellTypes, nbrCellTypes);
+
+        for
+        (
+            label faceI = mesh_.nInternalFaces();
+            faceI < mesh_.nFaces();
+            faceI++
+        )
+        {
+            label ownType = allCellTypes[own[faceI]];
+            label neiType = nbrCellTypes[faceI-mesh_.nInternalFaces()];
+
+            if
+            (
+                 (ownType == HOLE && neiType != HOLE)
+              || (ownType != HOLE && neiType == HOLE)
+            )
+            {
+                //Pout<< "Front at coupled face:" << faceI
+                //    << " at:" << mesh_.faceCentres()[faceI] << endl;
+                isFront.set(faceI);
+            }
+        }
+    }
+
+
+    // Current interpolation fraction
+    scalarField fraction(mesh_.nFaces(), Zero);
+
+    forAll(isFront, faceI)
+    {
+        if (isFront.test(faceI))
+        {
+            fraction[faceI] = 1.0;
+        }
+    }
+
+
+    while (returnReduce(isFront.any(), orOp<bool>()))
+    {
+        // Interpolate cells on front
+        bitSet newIsFront(mesh_.nFaces());
+        scalarField newFraction(fraction);
+        forAll(isFront, faceI)
+        {
+            if (isFront.test(faceI))
+            {
+                label own = mesh_.faceOwner()[faceI];
+                if (allCellTypes[own] != HOLE)
+                {
+                    if (allWeight[own] < fraction[faceI])
+                    {
+                        // Cell wants to become interpolated (if sufficient
+                        // stencil, otherwise becomes hole)
+                        if (allStencil[own].size())
+                        {
+                            allWeight[own] = fraction[faceI];
+                            allCellTypes[own] = INTERPOLATED;
+                            // Add faces of cell (with lower weight) as new
+                            // front
+                            seedCell
+                            (
+                                own,
+                                fraction[faceI]-layerRelax,
+                                newIsFront,
+                                newFraction
+                            );
+                        }
+                        else
+                        {
+                            allWeight[own] = 0.0;
+                            allCellTypes[own] = HOLE;
+                            // Add faces of cell as new front
+                            seedCell
+                            (
+                                own,
+                                1.0,
+                                newIsFront,
+                                newFraction
+                            );
+                        }
+                    }
+                }
+                if (mesh_.isInternalFace(faceI))
+                {
+                    label nei = mesh_.faceNeighbour()[faceI];
+                    if (allCellTypes[nei] != HOLE)
+                    {
+                        if (allWeight[nei] < fraction[faceI])
+                        {
+                            if (allStencil[nei].size())
+                            {
+                                allWeight[nei] = fraction[faceI];
+                                allCellTypes[nei] = INTERPOLATED;
+                                seedCell
+                                (
+                                    nei,
+                                    fraction[faceI]-layerRelax,
+                                    newIsFront,
+                                    newFraction
+                                );
+                            }
+                            else
+                            {
+                                allWeight[nei] = 0.0;
+                                allCellTypes[nei] = HOLE;
+                                seedCell
+                                (
+                                    nei,
+                                    1.0,
+                                    newIsFront,
+                                    newFraction
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        syncTools::syncFaceList(mesh_, newIsFront, orEqOp<unsigned int>());
+        syncTools::syncFaceList(mesh_, newFraction, maxEqOp<scalar>());
+
+        isFront.transfer(newIsFront);
+        fraction.transfer(newFraction);
     }
 }
 
@@ -1190,21 +1427,21 @@ void Foam::cellCellStencils::inverseDistance::stencilWeights
     // Inverse-distance weighting
 
     weights.setSize(donorCcs.size());
-    scalar sum = 0;
+    scalar sum = 0.0;
     forAll(donorCcs, i)
     {
-        const scalar d = mag(sample-donorCcs[i]);
+        scalar d = mag(sample-donorCcs[i]);
 
         if (d > ROOTVSMALL)
         {
-            weights[i] = scalar(1)/d;
+            weights[i] = 1.0/d;
             sum += weights[i];
         }
         else
         {
             // Short circuit
-            weights = scalar(0);
-            weights[i] = scalar(1);
+            weights = 0.0;
+            weights[i] = 1.0;
             return;
         }
     }
@@ -1215,302 +1452,9 @@ void Foam::cellCellStencils::inverseDistance::stencilWeights
 }
 
 
-void Foam::cellCellStencils::inverseDistance::holeExtrapolationStencil
-(
-    const globalIndex& globalCells
-)
-{
-    // Detects holes that are used for interpolation. If so
-    // - make type interpolated
-    // - add interpolation to nearest non-hole cell(s)
-
-    const labelList& owner = mesh_.faceOwner();
-    const labelList& neighbour = mesh_.faceNeighbour();
-
-
-    // Get hole-cells that are used in an interpolation stencil
-    boolList isDonor(cellInterpolationMap().constructSize(), false);
-    label nHoleDonors = 0;
-    {
-        for (const label celli : interpolationCells_)
-        {
-            const labelList& slots = cellStencil_[celli];
-            UIndirectList<bool>(isDonor, slots) = true;
-        }
-
-        mapDistributeBase::distribute<bool, orEqOp<bool>, flipOp>
-        (
-            Pstream::commsTypes::nonBlocking,
-            List<labelPair>(),
-            mesh_.nCells(),
-            cellInterpolationMap().constructMap(),
-            false,
-            cellInterpolationMap().subMap(),
-            false,
-            isDonor,
-            false,
-            orEqOp<bool>(),
-            flipOp()                               // negateOp
-        );
-
-
-        nHoleDonors = 0;
-        forAll(cellTypes_, celli)
-        {
-            if (cellTypes_[celli] == cellCellStencil::HOLE && isDonor[celli])
-            {
-                nHoleDonors++;
-            }
-        }
-        reduce(nHoleDonors, sumOp<label>());
-        if (debug)
-        {
-            Pout<< "Detected " << nHoleDonors
-                << " hole cells that are used as donors" << endl;
-        }
-    }
-
-
-    if (nHoleDonors)
-    {
-        // Convert map and stencil back to global indices by 'interpolating'
-        // global cells. Note: since we're only adding interpolations
-        // (HOLE->SPECIAL) this could probably be done more efficiently.
-
-        labelList globalCellIDs(identity(mesh_.nCells()));
-        globalCells.inplaceToGlobal(Pstream::myProcNo(), globalCellIDs);
-        cellInterpolationMap().distribute(globalCellIDs);
-
-        forAll(interpolationCells_, i)
-        {
-            label cellI = interpolationCells_[i];
-            const labelList& slots = cellStencil_[cellI];
-            cellStencil_[cellI] = UIndirectList<label>(globalCellIDs, slots)();
-        }
-
-
-        labelList nbrTypes;
-        syncTools::swapBoundaryCellList(mesh_, cellTypes_, nbrTypes);
-
-        label nSpecialNear = 0;
-        label nSpecialFar = 0;
-
-
-        // 1. Find hole cells next to live cells
-        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        {
-            List<pointList> donorCcs(mesh_.nCells());
-            labelListList donorCells(mesh_.nCells());
-
-            for (label facei = 0; facei < mesh_.nInternalFaces(); ++facei)
-            {
-                const label own = owner[facei];
-                const bool ownHole = (cellTypes_[own] == cellCellStencil::HOLE);
-                const label nbr = neighbour[facei];
-                const bool nbrHole = (cellTypes_[nbr] == cellCellStencil::HOLE);
-
-                if (isDonor[own] && ownHole && !nbrHole)
-                {
-                    donorCells[own].append(globalCells.toGlobal(nbr));
-                    donorCcs[own].append(mesh_.cellCentres()[nbr]);
-                }
-                else if (isDonor[nbr] && nbrHole && !ownHole)
-                {
-                    donorCells[nbr].append(globalCells.toGlobal(own));
-                    donorCcs[nbr].append(mesh_.cellCentres()[own]);
-                }
-            }
-            labelList globalCellIDs(identity(mesh_.nCells()));
-            globalCells.inplaceToGlobal(Pstream::myProcNo(), globalCellIDs);
-            labelList nbrCells;
-            syncTools::swapBoundaryCellList(mesh_, globalCellIDs, nbrCells);
-            pointField nbrCc;
-            syncTools::swapBoundaryCellList(mesh_, mesh_.cellCentres(), nbrCc);
-            forAll(nbrTypes, bFacei)
-            {
-                const label facei = bFacei+mesh_.nInternalFaces();
-                const label own = owner[facei];
-                const bool ownHole = (cellTypes_[own] == cellCellStencil::HOLE);
-                const bool nbrHole = (nbrTypes[bFacei] == cellCellStencil::HOLE);
-
-                if (isDonor[own] && ownHole && !nbrHole)
-                {
-                    donorCells[own].append(nbrCells[bFacei]);
-                    donorCcs[own].append(nbrCc[bFacei]);
-                }
-            }
-
-            forAll(donorCcs, celli)
-            {
-                if (donorCcs[celli].size())
-                {
-                    cellStencil_[celli] = std::move(donorCells[celli]);
-                    stencilWeights
-                    (
-                        mesh_.cellCentres()[celli],
-                        donorCcs[celli],
-                        cellInterpolationWeights_[celli]
-                    );
-                    cellTypes_[celli] = SPECIAL;
-                    interpolationCells_.append(celli);
-                    cellInterpolationWeight_[celli] = scalar(1);
-                    nSpecialNear++;
-                }
-            }
-        }
-
-
-
-
-        // 2. Walk to find (topologically) nearest 'live' cell
-        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        // This will do the remainder but will only find a single donor
-
-        // Field on cells and faces.
-        List<topoDistanceData<int>> cellData(mesh_.nCells());
-        List<topoDistanceData<int>> faceData(mesh_.nFaces());
-
-        int dummyTrackData(0);
-
-        {
-            // Mark all non-hole cells to disable any wave across them
-            forAll(cellTypes_, celli)
-            {
-                label cType = cellTypes_[celli];
-                if
-                (
-                    cType == cellCellStencil::CALCULATED
-                 || cType == cellCellStencil::INTERPOLATED
-                )
-                {
-                    cellData[celli] = topoDistanceData<int>(labelMin, 0);
-                }
-            }
-
-            DynamicList<label> seedFaces(nHoleDonors);
-            DynamicList<topoDistanceData<int>> seedData(nHoleDonors);
-
-            for (label facei = 0; facei < mesh_.nInternalFaces(); ++facei)
-            {
-                const label own = owner[facei];
-                const bool ownLive =
-                (
-                    cellTypes_[own] == cellCellStencil::CALCULATED
-                 || cellTypes_[own] == cellCellStencil::INTERPOLATED
-                );
-
-                const label nbr = neighbour[facei];
-                const bool nbrLive =
-                (
-                    cellTypes_[nbr] == cellCellStencil::CALCULATED
-                 || cellTypes_[nbr] == cellCellStencil::INTERPOLATED
-                );
-
-                if (ownLive && !nbrLive)
-                {
-                    seedFaces.append(facei);
-                    const label globalOwn = globalCells.toGlobal(own);
-                    seedData.append(topoDistanceData<int>(globalOwn, 0));
-                }
-                else if (!ownLive && nbrLive)
-                {
-                    seedFaces.append(facei);
-                    const label globalNbr = globalCells.toGlobal(nbr);
-                    seedData.append(topoDistanceData<int>(globalNbr, 0));
-                }
-            }
-
-            forAll(nbrTypes, bFacei)
-            {
-                const label facei = bFacei+mesh_.nInternalFaces();
-                const label own = owner[facei];
-                const bool ownLive =
-                (
-                    cellTypes_[own] == cellCellStencil::CALCULATED
-                 || cellTypes_[own] == cellCellStencil::INTERPOLATED
-                );
-                const bool nbrLive =
-                (
-                    nbrTypes[bFacei] == cellCellStencil::CALCULATED
-                 || nbrTypes[bFacei] == cellCellStencil::INTERPOLATED
-                );
-
-                if (ownLive && !nbrLive)
-                {
-                    seedFaces.append(facei);
-                    const label globalOwn = globalCells.toGlobal(own);
-                    seedData.append(topoDistanceData<int>(globalOwn, 0));
-                }
-            }
-
-            // Propagate information inwards
-            FaceCellWave<topoDistanceData<int>> distanceCalc
-            (
-                mesh_,
-                seedFaces,
-                seedData,
-                faceData,
-                cellData,
-                mesh_.globalData().nTotalCells()+1,
-                dummyTrackData
-            );
-        }
-
-
-        // Add the new donor ones
-        forAll(cellData, celli)
-        {
-            if
-            (
-                cellTypes_[celli] == cellCellStencil::HOLE
-             && isDonor[celli]
-             && cellData[celli].valid(dummyTrackData)
-            )
-            {
-                cellStencil_[celli].setSize(1);
-                cellStencil_[celli] = cellData[celli].data();   // global cellID
-                cellInterpolationWeights_[celli].setSize(1);
-                cellInterpolationWeights_[celli] = 1.0;
-                cellTypes_[celli] = SPECIAL;        // handled later on
-                interpolationCells_.append(celli);
-                cellInterpolationWeight_[celli] = 1.0;
-                nSpecialFar++;
-            }
-        }
-
-        if (debug&2)
-        {
-            reduce(nSpecialNear, sumOp<label>());
-            reduce(nSpecialFar, sumOp<label>());
-
-            Pout<< "Detected " << nHoleDonors
-                << " hole cells that are used as donors of which" << nl
-                << "    next to live cells : " << nSpecialNear << nl
-                << "    other              : " << nSpecialFar << nl
-                << endl;
-        }
-
-
-        // Re-do the mapDistribute
-        List<Map<label>> compactMap;
-        cellInterpolationMap_.reset
-        (
-            new mapDistribute
-            (
-                globalCells,
-                cellStencil_,
-                compactMap
-            )
-        );
-    }
-}
-
-
 void Foam::cellCellStencils::inverseDistance::createStencil
 (
-    const globalIndex& globalCells,
-    const bool allowHoleDonors
+    const globalIndex& globalCells
 )
 {
     // Send cell centre back to donor
@@ -1531,16 +1475,14 @@ void Foam::cellCellStencils::inverseDistance::createStencil
     const vector greatPoint(GREAT, GREAT, GREAT);
 
     boolList isValidDonor(mesh_.nCells(), true);
-    if (!allowHoleDonors)
+    forAll(cellTypes_, celli)
     {
-        forAll(cellTypes_, celli)
+        if (cellTypes_[celli] == HOLE)
         {
-            if (cellTypes_[celli] == HOLE)
-            {
-                isValidDonor[celli] = false;
-            }
+            isValidDonor[celli] = false;
         }
     }
+
 
     // Has acceptor been handled already?
     bitSet doneAcceptor(interpolationCells_.size());
@@ -1560,31 +1502,27 @@ void Foam::cellCellStencils::inverseDistance::createStencil
                 const point& cc = mesh_.cellCentres()[cellI];
                 const labelList& slots = cellStencil_[cellI];
 
-                //- Note: empty slots can happen for interpolated cells with
-                //        bad/insufficient donors. These are handled later on.
-                if (slots.size() > 1)
+                if (slots.size() != 1)
                 {
                     FatalErrorInFunction<< "Problem:" << slots
                         << abort(FatalError);
                 }
-                else if (slots.size())
+
+                forAll(slots, slotI)
                 {
-                    forAll(slots, sloti)
-                    {
-                        const label elemi = slots[sloti];
-                        //Pout<< "    acceptor:" << cellI
-                        //    << " at:" << mesh_.cellCentres()[cellI]
-                        //    << " global:" << globalCells.toGlobal(cellI)
-                        //    << " found in donor:" << elemi << endl;
-                        minMagSqrEqOp<point>()(samples[elemi], cc);
-                    }
-                    nSamples++;
+                    label elemI = slots[slotI];
+                    //Pout<< "    acceptor:" << cellI
+                    //    << " at:" << mesh_.cellCentres()[cellI]
+                    //    << " global:" << globalCells.toGlobal(cellI)
+                    //    << " found in donor:" << elemI << endl;
+                    minMagSqrEqOp<point>()(samples[elemI], cc);
                 }
+                nSamples++;
             }
         }
 
 
-        if (!returnReduceOr(nSamples))
+        if (returnReduce(nSamples, sumOp<label>()) == 0)
         {
             break;
         }
@@ -1662,27 +1600,25 @@ void Foam::cellCellStencils::inverseDistance::createStencil
                 label cellI = interpolationCells_[i];
                 const labelList& slots = cellStencil_[cellI];
 
-                if (slots.size() > 1)
+                if (slots.size() != 1)
                 {
                     FatalErrorInFunction << "Problem:" << slots
                         << abort(FatalError);
                 }
-                else if (slots.size() == 1)
-                {
-                    const label sloti = slots[0];
 
-                    // Important: check if the stencil is actually for this cell
-                    if (samples[sloti] == mesh_.cellCentres()[cellI])
-                    {
-                        cellStencil_[cellI].transfer(donorCellCells[sloti]);
-                        cellInterpolationWeights_[cellI].transfer
-                        (
-                            donorWeights[sloti]
-                        );
-                        // Mark cell as being done so it does not get sent over
-                        // again.
-                        doneAcceptor.set(i);
-                    }
+                label slotI = slots[0];
+
+                // Important: check if the stencil is actually for this cell
+                if (samples[slotI] == mesh_.cellCentres()[cellI])
+                {
+                    cellStencil_[cellI].transfer(donorCellCells[slotI]);
+                    cellInterpolationWeights_[cellI].transfer
+                    (
+                        donorWeights[slotI]
+                    );
+                    // Mark cell as being done so it does not get sent over
+                    // again.
+                    doneAcceptor.set(i);
                 }
             }
         }
@@ -1713,11 +1649,6 @@ Foam::cellCellStencils::inverseDistance::inverseDistance
 :
     cellCellStencil(mesh),
     dict_(dict),
-    allowHoleDonors_(dict.getOrDefault("allowHoleDonors", false)),
-    allowInterpolatedDonors_
-    (
-        dict.getOrDefault("allowInterpolatedDonors", true)
-    ),
     smallVec_(Zero),
     cellTypes_(labelList(mesh.nCells(), CALCULATED)),
     interpolationCells_(0),
@@ -1798,7 +1729,7 @@ Foam::cellCellStencils::inverseDistance::~inverseDistance()
 
 bool Foam::cellCellStencils::inverseDistance::update()
 {
-    label layerRelax(dict_.getOrDefault("layerRelax", 1));
+    scalar layerRelax(dict_.getOrDefault("layerRelax", 1.0));
 
     scalar tol = dict_.getOrDefault("tolerance", 1e-10);
     smallVec_ = mesh_.bounds().span()*tol;
@@ -1811,9 +1742,9 @@ bool Foam::cellCellStencils::inverseDistance::update()
     {
         nCellsPerZone[zoneID[cellI]]++;
     }
-    Pstream::listCombineReduce(nCellsPerZone, plusEqOp<label>());
+    Pstream::listCombineAllGather(nCellsPerZone, plusEqOp<label>());
 
-    const boundBox& allBb = mesh_.bounds();
+    const boundBox& allBb(mesh_.bounds());
 
     PtrList<fvMeshSubset> meshParts(nZones);
     List<treeBoundBoxList> meshBb(nZones);
@@ -2052,19 +1983,13 @@ bool Foam::cellCellStencils::inverseDistance::update()
         }
     }
 
-    if ((debug&2)&& (mesh_.time().outputTime()))
+    if (debug)
     {
         tmp<volScalarField> tfld
         (
             createField(mesh_, "allCellTypes", allCellTypes)
         );
         tfld().write();
-
-        tmp<volScalarField> tallDonorID
-        (
-            createField(mesh_, "allDonorID", allDonorID)
-        );
-        tallDonorID().write();
     }
 
     // Use the patch types and weights to decide what to do
@@ -2077,12 +2002,23 @@ bool Foam::cellCellStencils::inverseDistance::update()
                 case OVERSET:
                 {
                     // Require interpolation. See if possible.
+
                     if (allStencil[cellI].size())
                     {
                         allCellTypes[cellI] = INTERPOLATED;
                     }
                     else
                     {
+                        // If there are no donors we can either set the
+                        // acceptor cell to 'hole' i.e. nothing gets calculated
+                        // if the acceptor cells go outside the donor meshes or
+                        // we can set it to 'calculated' to have something
+                        // like an acmi type behaviour where only covered
+                        // acceptor cell use the interpolation and non-covered
+                        // become calculated. Uncomment below line. Note: this
+                        // should be switchable?
+                        //allCellTypes[cellI] = CALCULATED;
+
                         allCellTypes[cellI] = HOLE;
                     }
                 }
@@ -2090,141 +2026,15 @@ bool Foam::cellCellStencils::inverseDistance::update()
         }
     }
 
-    if ((debug&2) && (mesh_.time().outputTime()))
+    if (debug)
     {
         tmp<volScalarField> tfld
         (
             createField(mesh_, "allCellTypes_patch", allCellTypes)
         );
         tfld().write();
-
-        tmp<volScalarField> tfldOld
-        (
-            createField(mesh_, "allCellTypes_old", cellTypes_)
-        );
-        tfldOld().write();
     }
 
-     // Mark unreachable bits
-    findHoles(globalCells, mesh_, zoneID, allStencil, allCellTypes);
-
-
-    if ((debug&2) && (mesh_.time().outputTime()))
-    {
-        tmp<volScalarField> tfld
-        (
-            createField(mesh_, "allCellTypes_hole", allCellTypes)
-        );
-        tfld().write();
-    }
-    if ((debug&2) && (mesh_.time().outputTime()))
-    {
-        labelList stencilSize(mesh_.nCells());
-        forAll(allStencil, celli)
-        {
-            stencilSize[celli] = allStencil[celli].size();
-        }
-        tmp<volScalarField> tfld
-        (
-            createField(mesh_, "allStencil_hole", stencilSize)
-        );
-        tfld().write();
-    }
-
-    // Update allStencil with new fill HOLES
-    forAll(allCellTypes, celli)
-    {
-        if (allCellTypes[celli] == HOLE && allStencil[celli].size())
-        {
-            allStencil[celli].clear();
-        }
-    }
-
-//     // Check previous iteration cellTypes_ for any hole->calculated changes
-//     // If so set the cell either to interpolated (if there are donors) or
-//     // holes (if there are no donors). Note that any interpolated cell might
-//     // still be overwritten by the flood filling
-//     {
-//         label nCalculated = 0;
-//
-//         forAll(cellTypes_, celli)
-//         {
-//             if (allCellTypes[celli] == CALCULATED && cellTypes_[celli] == HOLE)
-//             {
-//                 if (allStencil[celli].size() == 0)
-//                 {
-//                     // Reset to hole
-//                     allCellTypes[celli] = HOLE;
-//                     allStencil[celli].clear();
-//                 }
-//                 else
-//                 {
-//                     allCellTypes[celli] = INTERPOLATED;
-//                     nCalculated++;
-//                 }
-//             }
-//         }
-//
-//         if (debug)
-//         {
-//             Pout<< "Detected " << nCalculated << " cells changing from hole"
-//                 << " to calculated. Changed to interpolated"
-//                 << endl;
-//         }
-//     }
-
-    if ((debug&2) && (mesh_.time().outputTime()))
-    {
-        tmp<volScalarField> tfld
-        (
-            createField(mesh_, "allCellTypes_pre_front", allCellTypes)
-        );
-        tfld().write();
-    }
-    // Add buffer interpolation layer(s) around holes
-    scalarField allWeight(mesh_.nCells(), Zero);
-
-    labelListList compactStencil(allStencil);
-    List<Map<label>> compactStencilMap;
-    mapDistribute map(globalCells, compactStencil, compactStencilMap);
-
-    scalarList compactCellVol(mesh_.V());
-    map.distribute(compactCellVol);
-
-
-    label useLayer = dict_.getOrDefault("useLayer", -1);
-    const dictionary& fvSchemes = mesh_.schemesDict();
-    if (fvSchemes.found("oversetInterpolation"))
-    {
-        const dictionary& intDict = fvSchemes.subDict
-        (
-            "oversetInterpolation"
-        );
-        useLayer = intDict.getOrDefault("useLayer", -1);
-    }
-
-    walkFront
-    (
-        globalCells,
-        layerRelax,
-        allStencil,
-        allCellTypes,
-        allWeight,
-        compactCellVol,
-        compactStencil,
-        zoneID,
-        dict_.getOrDefault("holeLayers", 1),
-        useLayer
-    );
-
-    if ((debug&2) && (mesh_.time().outputTime()))
-    {
-        tmp<volScalarField> tfld
-        (
-            createField(mesh_, "allCellTypes_front", allCellTypes)
-        );
-        tfld().write();
-    }
 
     // Check previous iteration cellTypes_ for any hole->calculated changes
     // If so set the cell either to interpolated (if there are donors) or
@@ -2260,34 +2070,60 @@ bool Foam::cellCellStencils::inverseDistance::update()
     }
 
 
+    // Mark unreachable bits
+    findHoles(globalCells, mesh_, zoneID, allStencil, allCellTypes);
+
+    if (debug)
+    {
+        tmp<volScalarField> tfld
+        (
+            createField(mesh_, "allCellTypes_hole", allCellTypes)
+        );
+        tfld().write();
+    }
+    if (debug)
+    {
+        labelList stencilSize(mesh_.nCells());
+        forAll(allStencil, celli)
+        {
+            stencilSize[celli] = allStencil[celli].size();
+        }
+        tmp<volScalarField> tfld
+        (
+            createField(mesh_, "allStencil_hole", stencilSize)
+        );
+        tfld().write();
+    }
+
+
+    // Add buffer interpolation layer(s) around holes
+    scalarField allWeight(mesh_.nCells(), Zero);
+    walkFront(layerRelax, allStencil, allCellTypes, allWeight);
+
+    if (debug)
+    {
+        tmp<volScalarField> tfld
+        (
+            createField(mesh_, "allCellTypes_front", allCellTypes)
+        );
+        tfld().write();
+    }
 
 
     // Convert cell-cell addressing to stencil in compact notation
-    // Clean any potential INTERPOLATED with HOLE donors.
-    // This is not eliminated in the front walk as the HOLE cells might
-    // leak when inset region is overlapping backgroung mesh
+
     cellTypes_.transfer(allCellTypes);
     cellStencil_.setSize(mesh_.nCells());
     cellInterpolationWeights_.setSize(mesh_.nCells());
     DynamicList<label> interpolationCells;
-
-/*
     forAll(cellTypes_, cellI)
     {
         if (cellTypes_[cellI] == INTERPOLATED)
         {
-            if (cellTypes_[allStencil[cellI][0]] != HOLE)
-            {
-                cellStencil_[cellI].transfer(allStencil[cellI]);
-                cellInterpolationWeights_[cellI].setSize(1);
-                cellInterpolationWeights_[cellI][0] = 1.0;                 interpolationCells.append(cellI);
-            }
-            else
-            {
-                cellTypes_[cellI] = POROUS;//CALCULATED;
-                cellStencil_[cellI].clear();
-                cellInterpolationWeights_[cellI].clear();
-            }
+            cellStencil_[cellI].transfer(allStencil[cellI]);
+            cellInterpolationWeights_[cellI].setSize(1);
+            cellInterpolationWeights_[cellI][0] = 1.0;
+            interpolationCells.append(cellI);
         }
         else
         {
@@ -2295,78 +2131,22 @@ bool Foam::cellCellStencils::inverseDistance::update()
             cellInterpolationWeights_[cellI].clear();
         }
     }
-*/
+    interpolationCells_.transfer(interpolationCells);
 
-    //labelListList compactStencil(allStencil);
-    //List<Map<label>> compactStencilMap;
-    //mapDistribute map(globalCells, compactStencil, compactStencilMap);
-
-    labelList compactCellTypes(cellTypes_);
-    map.distribute(compactCellTypes);
-
-    label nInterpolatedDonors = 0;
-    forAll(cellTypes_, celli)
-    {
-        if (cellTypes_[celli] == INTERPOLATED)
-        {
-            const labelList& slots = compactStencil[celli];
-            if (slots.size())
-            {
-                if
-                (
-                    compactCellTypes[slots[0]] == HOLE
-                 ||
-                    (
-                       !allowInterpolatedDonors_
-                     && compactCellTypes[slots[0]] == INTERPOLATED
-                    )
-                )
-                {
-                    cellTypes_[celli] = POROUS;
-                    cellStencil_[celli].clear();
-                    cellInterpolationWeights_[celli].clear();
-                    nInterpolatedDonors++;
-                }
-                else
-                {
-                    cellStencil_[celli].transfer(allStencil[celli]);
-                    cellInterpolationWeights_[celli].setSize(1);
-                    cellInterpolationWeights_[celli][0] = 1.0;
-                    interpolationCells.append(celli);
-                }
-            }
-        }
-        else
-        {
-            cellStencil_[celli].clear();
-            cellInterpolationWeights_[celli].clear();
-        }
-    }
-
-    reduce(nInterpolatedDonors, sumOp<label>());
-
-    DebugInfo<< FUNCTION_NAME
-             << "interpolate Donors : "
-             << nInterpolatedDonors << endl;
-
-    // Reset map with new cellStencil
     List<Map<label>> compactMap;
     cellInterpolationMap_.reset
     (
         new mapDistribute(globalCells, cellStencil_, compactMap)
     );
-
-    interpolationCells_.transfer(interpolationCells);
-
     cellInterpolationWeight_.transfer(allWeight);
-    oversetFvMeshBase::correctBoundaryConditions
+    dynamicOversetFvMesh::correctBoundaryConditions
     <
         volScalarField,
         oversetFvPatchField<scalar>
     >(cellInterpolationWeight_.boundaryFieldRef(), false);
 
 
-    if ((debug&2) && (mesh_.time().outputTime()))
+    if (debug&2)
     {
         // Dump mesh
         mesh_.time().write();
@@ -2388,7 +2168,7 @@ bool Foam::cellCellStencils::inverseDistance::update()
                 forAll(slots, i)
                 {
                     const point& donorCc = cc[slots[i]];
-                    str.writeLine(accCc, 0.1*accCc+0.9*donorCc);
+                    str.write(linePointRef(accCc, 0.1*accCc+0.9*donorCc));
                 }
             }
         }
@@ -2396,18 +2176,11 @@ bool Foam::cellCellStencils::inverseDistance::update()
 
 
     // Extend stencil to get inverse distance weighted neighbours
-    createStencil(globalCells, allowHoleDonors_);
+    createStencil(globalCells);
 
-    // Optional: convert hole cells next to non-hole cells into
-    // interpolate-from-neighbours (of cell type SPECIAL)
-    if (allowHoleDonors_)
+
+    if (debug&2)
     {
-        holeExtrapolationStencil(globalCells);
-    }
-
-    if ((debug&2) && (mesh_.time().outputTime()))
-    {
-
         // Dump weight
         cellInterpolationWeight_.instance() = mesh_.time().timeName();
         cellInterpolationWeight_.write();
@@ -2444,7 +2217,7 @@ bool Foam::cellCellStencils::inverseDistance::update()
             (
                 createField(mesh_, "maxMagWeight", maxMagWeight)
             );
-            oversetFvMeshBase::correctBoundaryConditions
+            dynamicOversetFvMesh::correctBoundaryConditions
             <
                 volScalarField,
                 oversetFvPatchField<scalar>
@@ -2459,7 +2232,7 @@ bool Foam::cellCellStencils::inverseDistance::update()
                 createField(mesh_, "cellTypes", cellTypes_)
             );
             //tfld.ref().correctBoundaryConditions();
-            oversetFvMeshBase::correctBoundaryConditions
+            dynamicOversetFvMesh::correctBoundaryConditions
             <
                 volScalarField,
                 oversetFvPatchField<scalar>
@@ -2491,7 +2264,7 @@ bool Foam::cellCellStencils::inverseDistance::update()
                 forAll(slots, i)
                 {
                     const point& donorCc = cc[slots[i]];
-                    str.writeLine(accCc, 0.1*accCc+0.9*donorCc);
+                    str.write(linePointRef(accCc, 0.1*accCc+0.9*donorCc));
                 }
             }
         }
@@ -2540,15 +2313,18 @@ bool Foam::cellCellStencils::inverseDistance::update()
                 nLocal++;
             }
         }
+        reduce(nLocal, sumOp<label>());
+        reduce(nMixed, sumOp<label>());
+        reduce(nRemote, sumOp<label>());
 
         Info<< "Overset analysis : nCells : "
             << returnReduce(cellTypes_.size(), sumOp<label>()) << nl
             << incrIndent
             << indent << "calculated   : " << nCells[CALCULATED] << nl
             << indent << "interpolated : " << nCells[INTERPOLATED]
-            << " (from local:" << returnReduce(nLocal, sumOp<label>())
-            << "  mixed local/remote:" << returnReduce(nMixed, sumOp<label>())
-            << "  remote:" << returnReduce(nRemote, sumOp<label>()) << ")" << nl
+            << " (interpolated from local:" << nLocal
+            << "  mixed local/remote:" << nMixed
+            << "  remote:" << nRemote << ")" << nl
             << indent << "hole         : " << nCells[HOLE] << nl
             << decrIndent << endl;
     }

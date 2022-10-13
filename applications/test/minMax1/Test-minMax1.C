@@ -44,7 +44,7 @@ using namespace Foam;
 template<class T>
 Ostream& printInfo(const MinMax<T>& range)
 {
-    Info<< range << " good=" << range.good() << " span=" << range.span();
+    Info<< range << " valid=" << range.valid() << " span=" << range.span();
 
     return Info;
 }
@@ -234,7 +234,11 @@ int main(int argc, char *argv[])
 
         Pout<< "hashed: " << hashed << nl;
 
-        Pstream::mapCombineReduce(hashed, plusEqOp<scalarMinMax>());
+        Pstream::mapCombineGather
+        (
+            hashed,
+            plusEqOp<scalarMinMax>()
+        );
 
         Info<< "reduced: " << hashed << nl;
 

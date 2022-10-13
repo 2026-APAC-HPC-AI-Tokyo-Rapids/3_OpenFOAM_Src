@@ -89,7 +89,7 @@ void Foam::snappyLayerDriver::dumpDisplacement
     forAll(patchDisp, patchPointi)
     {
         const point& pt = pp.localPoints()[patchPointi];
-        dispStr.writeLine(pt, pt + patchDisp[patchPointi]);
+        dispStr.write(linePointRef(pt, pt + patchDisp[patchPointi]));
     }
 
 
@@ -101,7 +101,7 @@ void Foam::snappyLayerDriver::dumpDisplacement
         if (extrudeStatus[patchPointi] != EXTRUDE)
         {
             const point& pt = pp.localPoints()[patchPointi];
-            illStr.writeLine(pt, pt + patchDisp[patchPointi]);
+            illStr.write(linePointRef(pt, pt + patchDisp[patchPointi]));
         }
     }
 }
@@ -797,7 +797,9 @@ void Foam::snappyLayerDriver::handleFeatureAngle
 
                     if (str)
                     {
-                        str().write(e, pp.localPoints());
+                        const point& p0 = pp.localPoints()[e[0]];
+                        const point& p1 = pp.localPoints()[e[1]];
+                        str().write(linePointRef(p0, p1));
                     }
                 }
             }
@@ -1779,7 +1781,7 @@ void Foam::snappyLayerDriver::syncPatchDisplacement
     const fvMesh& mesh = meshRefiner_.mesh();
     const labelList& meshPoints = pp.meshPoints();
 
-    //label nChangedTotal = 0;
+    label nChangedTotal = 0;
 
     while (true)
     {
@@ -1879,9 +1881,9 @@ void Foam::snappyLayerDriver::syncPatchDisplacement
                 }
             }
         }
-        //nChangedTotal += nChanged;
+        nChangedTotal += nChanged;
 
-        if (!returnReduceOr(nChanged))
+        if (!returnReduce(nChanged, sumOp<label>()))
         {
             break;
         }
@@ -3570,7 +3572,7 @@ void Foam::snappyLayerDriver::dupFaceZonePoints
 
                 if (newMasteri != pointi)
                 {
-                    str.writeLine(p[pointi], p[newMasteri]);
+                    str.write(linePointRef(p[pointi], p[newMasteri]));
                 }
             }
         }
@@ -3624,7 +3626,7 @@ void Foam::snappyLayerDriver::mergeFaceZonePoints
                 {
                     const point& pt = mesh.points()[pointi];
                     const point& otherPt = mesh.points()[otherPointi];
-                    str.writeLine(pt, otherPt);
+                    str.write(linePointRef(pt, otherPt));
                 }
             }
         }
@@ -4423,7 +4425,7 @@ void Foam::snappyLayerDriver::mapFaceZonePoints
     // Use geometric detection of points-to-be-merged
     //  - detect any boundary face created from a duplicated face (=baffle)
     //  - on these mark any point created from a duplicated point
-    if (returnReduceOr(pointToMaster.size()))
+    if (returnReduce(pointToMaster.size(), sumOp<label>()))
     {
         // Estimate number of points-to-be-merged
         DynamicList<label> candidates(baffles.size()*4);
@@ -5435,7 +5437,7 @@ void Foam::snappyLayerDriver::doLayers
 
     patchIDs.shrink();
 
-    if (!returnReduceOr(nFacesWithLayers))
+    if (returnReduce(nFacesWithLayers, sumOp<label>()) == 0)
     {
         Info<< nl << "No layers to generate ..." << endl;
     }
@@ -5506,7 +5508,7 @@ void Foam::snappyLayerDriver::doLayers
                 }
             }
 
-            Pstream::reduceOr(faceZoneOnCoupledFace);
+            reduce(faceZoneOnCoupledFace, orOp<bool>());
         }
 
 

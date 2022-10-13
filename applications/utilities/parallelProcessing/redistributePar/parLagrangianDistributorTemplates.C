@@ -51,9 +51,14 @@ Foam::wordList Foam::parLagrangianDistributor::filterObjects
       : objects.names<Container>(selectedFields)
     );
 
-    // Parallel synchronise - combine names from all processors
-    Pstream::combineReduce(fieldNames, ListOps::uniqueEqOp<word>());
-    Foam::sort(fieldNames);  // Consistent order
+    // Parallel synchronise
+    // - Combine names from all processors
+
+    Pstream::combineGather(fieldNames, ListOps::uniqueEqOp<word>());
+    Pstream::broadcast(fieldNames);
+
+    // Sort for consistent order on all processors
+    Foam::sort(fieldNames);
 
     return fieldNames;
 }
@@ -88,8 +93,11 @@ Foam::label Foam::parLagrangianDistributor::distributeFields
         if (!nFields)
         {
             // Performing an all-to-one (reconstruct)?
-            reconstruct =
-                returnReduceAnd(!map.constructSize() || Pstream::master());
+            reconstruct = returnReduce
+            (
+                (!map.constructSize() || Pstream::master()),
+                andOp<bool>()
+            );
         }
 
         if (verbose_)
@@ -192,8 +200,11 @@ Foam::label Foam::parLagrangianDistributor::distributeFieldFields
         if (!nFields)
         {
             // Performing an all-to-one (reconstruct)?
-            reconstruct =
-                returnReduceAnd(!map.constructSize() || Pstream::master());
+            reconstruct = returnReduce
+            (
+                (!map.constructSize() || Pstream::master()),
+                andOp<bool>()
+            );
         }
 
         if (verbose_)
@@ -338,8 +349,11 @@ Foam::label Foam::parLagrangianDistributor::distributeStoredFields
         if (!nFields)
         {
             // Performing an all-to-one (reconstruct)?
-            reconstruct =
-                returnReduceAnd(!map.constructSize() || Pstream::master());
+            reconstruct = returnReduce
+            (
+                (!map.constructSize() || Pstream::master()),
+                andOp<bool>()
+            );
         }
 
         if (verbose_)

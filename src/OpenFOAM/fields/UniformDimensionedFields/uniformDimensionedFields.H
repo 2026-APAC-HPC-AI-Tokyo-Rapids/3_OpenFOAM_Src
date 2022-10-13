@@ -27,18 +27,65 @@ InClass
     Foam::UniformDimensionedField
 
 Description
-    Various UniformDimensionedField types
 
 SourceFiles
     uniformDimensionedFields.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_uniformDimensionedFields_H
-#define Foam_uniformDimensionedFields_H
+#ifndef UniformDimensionedFields_H
+#define UniformDimensionedFields_H
 
 #include "UniformDimensionedField.H"
-#include "uniformDimensionedFieldsFwd.H"
+#include "fieldTypes.H"
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+namespace Foam
+{
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+typedef UniformDimensionedField<scalar> uniformDimensionedScalarField;
+typedef UniformDimensionedField<vector> uniformDimensionedVectorField;
+typedef UniformDimensionedField<sphericalTensor>
+    uniformDimensionedSphericalTensorField;
+typedef UniformDimensionedField<symmTensor> uniformDimensionedSymmTensorField;
+typedef UniformDimensionedField<tensor> uniformDimensionedTensorField;
+
+//- Template function for obtaining global status
+template<>
+inline bool typeGlobal<uniformDimensionedScalarField>()
+{
+    return true;
+}
+template<>
+inline bool typeGlobal<uniformDimensionedVectorField>()
+{
+    return true;
+}
+template<>
+inline bool typeGlobal<uniformDimensionedSphericalTensorField>()
+{
+    return true;
+}
+template<>
+inline bool typeGlobal<uniformDimensionedSymmTensorField>()
+{
+    return true;
+}
+template<>
+inline bool typeGlobal<uniformDimensionedTensorField>()
+{
+    return true;
+}
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+} // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #endif
 

@@ -70,7 +70,7 @@ void Foam::profilingPstream::enable()
 }
 
 
-void Foam::profilingPstream::disable() noexcept
+void Foam::profilingPstream::disable()
 {
     timer_.reset(nullptr);
     suspend_ = false;

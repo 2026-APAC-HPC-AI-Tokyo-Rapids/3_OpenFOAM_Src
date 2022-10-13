@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -115,13 +115,6 @@ void Foam::leastSquaresFaVectors::makeLeastSquaresVectors() const
         label nei = neighbour[facei];
 
         vector d = C[nei] - C[own];
-
-        // Do not allow any mag(val) < SMALL
-        if (mag(d) < SMALL)
-        {
-            d = vector::uniform(SMALL);
-        }
-
         symmTensor wdd = (1.0/magSqr(d))*sqr(d);
 
         dd[own] += wdd;
@@ -176,13 +169,6 @@ void Foam::leastSquaresFaVectors::makeLeastSquaresVectors() const
         label nei = neighbour[facei];
 
         vector d = C[nei] - C[own];
-
-        // Do not allow any mag(val) < SMALL
-        if (mag(d) < SMALL)
-        {
-            d = vector::uniform(SMALL);
-        }
-
         scalar magSfByMagSqrd = 1.0/magSqr(d);
 
         lsP[facei] = magSfByMagSqrd*(invDd[own] & d);

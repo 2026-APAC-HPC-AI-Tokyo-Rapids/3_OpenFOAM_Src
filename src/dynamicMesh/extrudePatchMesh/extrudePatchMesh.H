@@ -70,11 +70,12 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_extrudePatchMesh_H
-#define Foam_extrudePatchMesh_H
+#ifndef extrudePatchMesh_H
+#define extrudePatchMesh_H
 
 #include "extrudeModel.H"
 #include "autoPtr.H"
+
 #include "fvMesh.H"
 #include "Time.H"
 
@@ -96,12 +97,12 @@ class extrudePatchMesh
 {
     // Private Data
 
-        //- Enumeration of patch IDs. Must be 0,1,2,...
+        //- Enumeration of patch IDs
         enum patchID
         {
-            bottomPatchID = 0,
-            topPatchID = 1,
-            sidePatchID = 2
+            bottomPatchID,
+            topPatchID,
+            sidePatchID
         };
 
         //- Const reference to the patch from which this mesh is extruded
@@ -114,7 +115,7 @@ class extrudePatchMesh
     // Private Member Functions
 
         //- Extrude mesh using polyPatches
-        void extrudeMesh(polyPatchList& regionPatches);
+        void extrudeMesh(const List<polyPatch*>& regionPatches);
 
         //- Construct from mesh, patch and dictionary without patches.
         //  Only used internally
@@ -144,25 +145,14 @@ public:
         );
 
         //- Construct from mesh, patch, dictionary and new mesh
-        //- polyPatch information
+        //  polyPatch information
         extrudePatchMesh
         (
             const fvMesh& mesh,
             const fvPatch& p,
             const dictionary& dict,
             const word& regionName,
-            polyPatchList& regionPatches
-        );
-
-        //- Construct from mesh, patch, dictionary and new mesh
-        //- polyPatch information
-        extrudePatchMesh
-        (
-            const fvMesh& mesh,
-            const fvPatch& p,
-            const dictionary& dict,
-            const word& regionName,
-            const List<polyPatch*>& regionPatches
+            const List<polyPatch*>& polyPatches
         );
 
 

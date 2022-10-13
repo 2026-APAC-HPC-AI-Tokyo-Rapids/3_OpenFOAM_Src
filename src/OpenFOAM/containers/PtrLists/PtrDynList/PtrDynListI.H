@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -93,6 +93,13 @@ inline Foam::PtrDynList<T, SizeMin>::PtrDynList(UList<T*>& list)
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+template<class T, int SizeMin>
+inline Foam::label Foam::PtrDynList<T, SizeMin>::capacity() const noexcept
+{
+    return capacity_;
+}
+
 
 template<class T, int SizeMin>
 inline void Foam::PtrDynList<T, SizeMin>::reserve(const label len)
@@ -218,14 +225,14 @@ inline void Foam::PtrDynList<T, SizeMin>::swap
 
 template<class T, int SizeMin>
 template<class... Args>
-inline void Foam::PtrDynList<T, SizeMin>::emplace_back(Args&&... args)
+inline void Foam::PtrDynList<T, SizeMin>::emplace_append(Args&&... args)
 {
-    this->push_back(new T(std::forward<Args>(args)...));
+    this->append(new T(std::forward<Args>(args)...));
 }
 
 
 template<class T, int SizeMin>
-inline void Foam::PtrDynList<T, SizeMin>::push_back(T* ptr)
+inline void Foam::PtrDynList<T, SizeMin>::append(T* ptr)
 {
     const label idx = this->size();
     resize(idx + 1);
@@ -234,35 +241,42 @@ inline void Foam::PtrDynList<T, SizeMin>::push_back(T* ptr)
 
 
 template<class T, int SizeMin>
-inline void Foam::PtrDynList<T, SizeMin>::push_back(std::unique_ptr<T>&& ptr)
+inline void Foam::PtrDynList<T, SizeMin>::append(autoPtr<T>& ptr)
 {
-    this->push_back(ptr.release());
+    this->append(ptr.release());
 }
 
 
 template<class T, int SizeMin>
-inline void Foam::PtrDynList<T, SizeMin>::push_back(autoPtr<T>&& ptr)
+inline void Foam::PtrDynList<T, SizeMin>::append(autoPtr<T>&& ptr)
 {
-    this->push_back(ptr.release());
+    this->append(ptr.release());
 }
 
 
 template<class T, int SizeMin>
-inline void Foam::PtrDynList<T, SizeMin>::push_back(const refPtr<T>& ptr)
+inline void Foam::PtrDynList<T, SizeMin>::append(std::unique_ptr<T>&& ptr)
 {
-    this->push_back(ptr.ptr());  // release or clone
+    this->append(ptr.release());
 }
 
 
 template<class T, int SizeMin>
-inline void Foam::PtrDynList<T, SizeMin>::push_back(const tmp<T>& ptr)
+inline void Foam::PtrDynList<T, SizeMin>::append(const refPtr<T>& ptr)
 {
-    this->push_back(ptr.ptr());  // release or clone
+    this->append(ptr.ptr());
 }
 
 
 template<class T, int SizeMin>
-inline void Foam::PtrDynList<T, SizeMin>::push_back(PtrList<T>&& other)
+inline void Foam::PtrDynList<T, SizeMin>::append(const tmp<T>& ptr)
+{
+    this->append(ptr.ptr());
+}
+
+
+template<class T, int SizeMin>
+inline void Foam::PtrDynList<T, SizeMin>::append(PtrList<T>&& other)
 {
     const label idx = this->size();
     const label len = other.size();
@@ -280,7 +294,7 @@ inline void Foam::PtrDynList<T, SizeMin>::push_back(PtrList<T>&& other)
 
 template<class T, int SizeMin>
 template<int AnySizeMin>
-inline void Foam::PtrDynList<T, SizeMin>::push_back
+inline void Foam::PtrDynList<T, SizeMin>::append
 (
     PtrDynList<T, AnySizeMin>&& other
 )
@@ -292,7 +306,7 @@ inline void Foam::PtrDynList<T, SizeMin>::push_back
     )
     {
         FatalErrorInFunction
-            << "Attempted push_back to self"
+            << "Attempted append to self"
             << abort(FatalError);
     }
 
@@ -307,20 +321,6 @@ inline void Foam::PtrDynList<T, SizeMin>::push_back
     }
 
     other.clearStorage();  // Ensure capacity=0
-}
-
-
-template<class T, int SizeMin>
-inline void Foam::PtrDynList<T, SizeMin>::pop_back(label n)
-{
-    if (n >= this->size())
-    {
-        this->clear();
-    }
-    else if (n > 0)
-    {
-        this->resize(this->size() - n);
-    }
 }
 
 
@@ -375,7 +375,7 @@ template<class T, int SizeMin>
 inline Foam::autoPtr<T> Foam::PtrDynList<T, SizeMin>::set
 (
     const label i,
-    std::unique_ptr<T>&& ptr
+    autoPtr<T>& ptr
 )
 {
     return this->set(i, ptr.release());
@@ -397,11 +397,21 @@ template<class T, int SizeMin>
 inline Foam::autoPtr<T> Foam::PtrDynList<T, SizeMin>::set
 (
     const label i,
+    std::unique_ptr<T>&& ptr
+)
+{
+    return this->set(i, ptr.release());
+}
+
+
+template<class T, int SizeMin>
+inline Foam::autoPtr<T> Foam::PtrDynList<T, SizeMin>::set
+(
+    const label i,
     const refPtr<T>& ptr
 )
 {
-    return this->set(i, ptr.ptr());  // release or clone
-
+    return this->set(i, ptr.ptr());
 }
 
 
@@ -412,7 +422,7 @@ inline Foam::autoPtr<T> Foam::PtrDynList<T, SizeMin>::set
     const tmp<T>& ptr
 )
 {
-    return this->set(i, ptr.ptr());  // release or clone
+    return this->set(i, ptr.ptr());
 }
 
 

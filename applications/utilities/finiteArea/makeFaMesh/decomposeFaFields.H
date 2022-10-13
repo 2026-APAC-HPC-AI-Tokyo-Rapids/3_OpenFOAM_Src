@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -15,78 +15,47 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-// Embed do-while to support early termination
 if (doDecompose && Pstream::parRun())
-do
 {
-    faMeshReconstructor reconstructor(aMesh, IOobjectOption::READ_IF_PRESENT);
+    faMeshReconstructor reconstructor(aMesh);
+    reconstructor.writeAddressing();
 
-    if (!reconstructor.good())
-    {
-        Info<< "Missing volume proc-addressing, "
-               "cannot generate area proc-addressing." << nl
-            << "Also skip decomposing area fields...."
-            << endl;
-        break;
-    }
-
-    reconstructor.writeMesh();          // Writes on master only
-    reconstructor.writeAddressing();    // Writes per-proc
-
-    Info<< "Wrote proc-addressing and serial mesh" << nl << endl;
+    Info<< "Wrote proc-addressing" << nl << endl;
 
     // Handle area fields
     // ------------------
 
     faFieldDecomposer::fieldsCache areaFieldsCache;
 
-    const faMesh& serialMesh = reconstructor.mesh();
+    const faMesh& fullMesh = reconstructor.mesh();
 
-    if (doDecompFields)
     {
-        // The serial finite-area mesh exists and is identical on all
-        // processors, but its fields can only reliably be read on the
-        // master (eg, running with distributed roots).
-        //
-        // - mark mesh fields as readable on master only (haveMeshOnProc)
-        // - 'subset' entire serial mesh so that a full copy will be
-        //   broadcast to other ranks (subsetterPtr)
-        // - scan available IOobjects on the master only
+        // Use uncollated (or master uncollated) file handler here.
+        // - each processor is reading in the identical serial fields.
+        // - nothing should be parallel-coordinated.
 
-        bitSet haveMeshOnProc;
-        std::unique_ptr<faMeshSubset> subsetter;
-        IOobjectList objects(0);
+        // Similarly, if we write the serial finite-area mesh, this is only
+        // done from one processor!
 
-        const bool oldDistributed = fileHandler().distributed();
-        auto oldHandler = fileHandler(fileOperation::NewUncollated());
-        fileHandler().distributed(true);
+        reconstructor.writeMesh();
 
-        if (Pstream::master())
+        if (doDecompFields)
         {
-            haveMeshOnProc.set(Pstream::myProcNo());
-            subsetter.reset(new faMeshSubset(serialMesh));
+            const bool oldDistributed = fileHandler().distributed();
+            auto oldHandler = fileHandler(fileOperation::NewUncollated());
+            fileHandler().distributed(true);
 
-            const bool oldParRun = Pstream::parRun(false);
+            IOobjectList objects(fullMesh.time(), runTime.timeName());
 
-            objects = IOobjectList(serialMesh.time(), runTime.timeName());
+            areaFieldsCache.readAllFields(fullMesh, objects);
 
-            Pstream::parRun(oldParRun);
+            // Restore old settings
+            if (oldHandler)
+            {
+                fileHandler(std::move(oldHandler));
+            }
+            fileHandler().distributed(oldDistributed);
         }
-
-        // Restore old settings
-        if (oldHandler)
-        {
-            fileHandler(std::move(oldHandler));
-        }
-        fileHandler().distributed(oldDistributed);
-
-        areaFieldsCache.readAllFields
-        (
-            haveMeshOnProc,
-            subsetter.get(),
-            serialMesh,
-            objects
-        );
     }
 
     const label nAreaFields = areaFieldsCache.size();
@@ -97,7 +66,7 @@ do
 
         faFieldDecomposer fieldDecomposer
         (
-            serialMesh,
+            fullMesh,
             aMesh,
             reconstructor.edgeProcAddressing(),
             reconstructor.faceProcAddressing(),
@@ -108,7 +77,7 @@ do
         areaFieldsCache.decomposeAllFields(fieldDecomposer, true);
         Info<< endl;
     }
-} while (false);
+}
 
 
 // ************************************************************************* //

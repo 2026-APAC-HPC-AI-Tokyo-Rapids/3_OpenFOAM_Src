@@ -27,7 +27,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "cellModel.H"
-#include "pyramid.H"
+#include "pyramidPointFaceRef.H"
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 

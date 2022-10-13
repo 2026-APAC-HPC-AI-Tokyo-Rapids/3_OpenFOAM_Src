@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,24 +28,22 @@ Class
     Foam::IOstreamOption
 
 Description
-    A simple container for options an IOstream can normally have.
+    The IOstreamOption is a simple container for options an IOstream
+    can normally have.
 
     The format (ASCII | BINARY) is typically controlled by enumerated
     names (ascii, binary).
 
-    The compression (UNCOMPRESSED | COMPRESSED) is typically controlled
+    The compression  (UNCOMPRESSED | COMPRESSED) is typically controlled
     by switch values (true/false, on/off, ...).
-
-    Additionally, some enumerations are defined (APPEND, NON_APPEND, ...)
-    that are useful, verbose alternatives to bool values.
 
 SourceFiles
     IOstreamOption.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_IOstreamOption_H
-#define Foam_IOstreamOption_H
+#ifndef IOstreamOption_H
+#define IOstreamOption_H
 
 #include "word.H"
 
@@ -81,20 +79,6 @@ public:
         {
             UNCOMPRESSED = 0,   //!< compression = false
             COMPRESSED          //!< compression = true
-        };
-
-        //- File appending (NON_APPEND | APPEND)
-        enum appendType : char
-        {
-            NON_APPEND = 0,     //!< append = false
-            APPEND              //!< append = true
-        };
-
-        //- Atomic operations (output)
-        enum atomicType : char
-        {
-            NON_ATOMIC = 0,     //!< atomic = false
-            ATOMIC              //!< atomic = true
         };
 
 
@@ -300,7 +284,10 @@ public:
     // Member Functions
 
         //- Get the current stream format
-        streamFormat format() const noexcept { return format_; }
+        streamFormat format() const noexcept
+        {
+            return format_;
+        }
 
         //- Set the stream format
         //  \return the previous value
@@ -323,7 +310,10 @@ public:
         }
 
         //- Get the stream compression
-        compressionType compression() const noexcept { return compression_; }
+        compressionType compression() const noexcept
+        {
+            return compression_;
+        }
 
         //- Set the stream compression
         //  \return the previous value
@@ -346,7 +336,10 @@ public:
         }
 
         //- Get the stream version
-        versionNumber version() const noexcept { return version_; }
+        versionNumber version() const noexcept
+        {
+            return version_;
+        }
 
         //- Set the stream version
         //  \return the previous value

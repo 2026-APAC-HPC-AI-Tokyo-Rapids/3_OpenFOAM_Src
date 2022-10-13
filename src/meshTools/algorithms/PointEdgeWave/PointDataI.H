@@ -32,6 +32,13 @@ License
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class DataType>
+inline Foam::PointData<DataType>::PointData()
+:
+    pointEdgePoint()
+{}
+
+
+template<class DataType>
 inline Foam::PointData<DataType>::PointData
 (
     const point& origin,

@@ -1,15 +1,6 @@
 // All rays expressed as start face (local) index end end face (global)
 // Pre-size by assuming a certain percentage is visible.
 
-
-if (Pstream::master())
-{
-    Info<< "\nShooting rays using distributedTriSurfaceMesh (no CGAL support)"
-        << endl;
-}
-
-
-
 // Maximum length for dynamicList
 const label maxDynListLength
 (
@@ -85,7 +76,7 @@ for (const int proci : Pstream::allProcs())
             }
         }
 
-    } while (returnReduceOr(i < myFc.size()));
+    } while (returnReduce(i < myFc.size(), orOp<bool>()));
 
     List<pointIndexHit> hitInfo(startIndex.size());
     surfacesMesh.findLine(start, end, hitInfo);
@@ -146,7 +137,7 @@ for (const int proci : Pstream::allProcs())
                 if (aggHitIndex[hitIndex] == startAgg[rayID])
                 {
                     const vector& endP = end[rayID];
-                    const vector& startP = hitInfo[hitIndex].point();
+                    const vector& startP = hitInfo[hitIndex].hitPoint();
                     const vector& d = endP - startP;
 
                     startHitItself.append(startP + 0.01*d);
@@ -176,7 +167,7 @@ for (const int proci : Pstream::allProcs())
         firstLoop = false;
         iter ++;
 
-    } while (returnReduceOr(hitInfo.size()) && iter < 10);
+    } while (returnReduce(hitInfo.size(), orOp<bool>()) > 0 && iter < 10);
 
     startIndex.clear();
     end.clear();

@@ -41,7 +41,14 @@ lumpedMassWallTemperatureFvPatchScalarField
 )
 :
     mixedFvPatchScalarField(p, iF),
-    temperatureCoupledBase(patch()),  // default method (fluidThermo)
+    temperatureCoupledBase
+    (
+        patch(),
+        "undefined",
+        "undefined",
+        "undefined-K",
+        "undefined-alpha"
+    ),
     Cp_(0.0),
     mass_(0.0),
     curTimeIndex_(-1)

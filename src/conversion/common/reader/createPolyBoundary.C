@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -377,7 +377,7 @@ void Foam::meshReader::createPolyBoundary()
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-Foam::polyPatchList
+Foam::List<Foam::polyPatch*>
 Foam::meshReader::polyBoundaryPatches(const polyMesh& mesh)
 {
     label nUsed = 0, nEmpty = 0;
@@ -416,7 +416,7 @@ Foam::meshReader::polyBoundaryPatches(const polyMesh& mesh)
     patchSizes_.setSize(nPatches);
 
 
-    polyPatchList newPatches(nPatches);
+    List<polyPatch*> p(nPatches);
 
     // All patch dictionaries
     PtrList<dictionary> patchDicts(patchNames_.size());
@@ -469,20 +469,16 @@ Foam::meshReader::polyBoundaryPatches(const polyMesh& mesh)
 
     forAll(patchStarts_, patchi)
     {
-        newPatches.set
+        p[patchi] = polyPatch::New
         (
+            patchNames_[patchi],
+            patchDicts[patchi],
             patchi,
-            polyPatch::New
-            (
-                patchNames_[patchi],
-                patchDicts[patchi],
-                patchi,
-                mesh.boundaryMesh()
-            )
-        );
+            mesh.boundaryMesh()
+        ).ptr();
     }
 
-    return newPatches;
+    return p;
 }
 
 

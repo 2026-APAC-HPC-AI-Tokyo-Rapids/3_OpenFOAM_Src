@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,15 +27,13 @@ License
 
 #include "FLMAsurfaceFormat.H"
 
-// * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-namespace
+//! \cond fileScope
+//- Output newline in ascii mode, no-op in binary mode
+inline static void newline(Foam::OSstream& os)
 {
-
-// Output newline in ascii mode, no-op in binary mode
-inline void newline(Foam::OSstream& os)
-{
-    if (os.format() == Foam::IOstreamOption::ASCII)
+    if (os.format() == Foam::IOstream::ASCII)
     {
         os  << '\n';
     }
@@ -43,16 +41,14 @@ inline void newline(Foam::OSstream& os)
 
 
 template<class Face>
-inline int countFaces(const Face& f)
+inline static int countFaces(const Face& f)
 {
     int n = (f.size() - 2); // number triangles can be determined directly
     return n == 2 ? 1 : n;  // quads don't need triangulation
 }
 
-} // End anonymous namespace
+//! \endcond
 
-
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 template<class Face>
 inline void Foam::fileFormats::FLMAsurfaceFormat<Face>::writeShell
@@ -61,7 +57,7 @@ inline void Foam::fileFormats::FLMAsurfaceFormat<Face>::writeShell
     const Face& f
 )
 {
-    if (os.format() == IOstreamOption::BINARY)
+    if (os.format() == IOstream::BINARY)
     {
         if (f.size() == 3 || f.size() == 4)
         {
@@ -119,7 +115,7 @@ inline void Foam::fileFormats::FLMAsurfaceFormat<Face>::writeType
     const Face& f
 )
 {
-    if (os.format() == IOstreamOption::BINARY)
+    if (os.format() == IOstream::BINARY)
     {
         if (f.size() == 4)
         {
@@ -310,14 +306,14 @@ void Foam::fileFormats::FLMAsurfaceFormat<Face>::write
     // ASCII only, allow output compression
     autoPtr<OFstream> osPtr
     (
-        new OFstream(filename, IOstreamOption(IOstreamOption::ASCII, comp))
+        new OFstream(filename, IOstreamOption(IOstream::ASCII, comp))
     );
 
     if (osPtr->good())
     {
         FLMAsurfaceFormat<Face>::write(*osPtr, surf);
 
-        if (comp == IOstreamOption::COMPRESSED)
+        if (comp == IOstream::COMPRESSED)
         {
             // Close the file
             osPtr.clear();
@@ -347,12 +343,7 @@ void Foam::fileFormats::FLMAsurfaceFormat<Face>::write
     const dictionary&
 )
 {
-    FLMAsurfaceFormat<Face>::write
-    (
-        IOstreamOption::UNCOMPRESSED,
-        filename,
-        surf
-    );
+    FLMAsurfaceFormat<Face>::write(IOstream::UNCOMPRESSED, filename, surf);
 }
 
 
@@ -365,12 +356,7 @@ void Foam::fileFormats::FLMAZsurfaceFormat<Face>::write
     const dictionary&
 )
 {
-    FLMAsurfaceFormat<Face>::write
-    (
-        IOstreamOption::COMPRESSED,
-        filename,
-        surf
-    );
+    FLMAsurfaceFormat<Face>::write(IOstream::COMPRESSED, filename, surf);
 }
 
 

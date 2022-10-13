@@ -49,7 +49,14 @@ turbulentTemperatureCoupledBaffleMixedFvPatchScalarField
 )
 :
     mixedFvPatchScalarField(p, iF),
-    temperatureCoupledBase(patch()),  // default method (fluidThermo)
+    temperatureCoupledBase
+    (
+        patch(),
+        "undefined",
+        "undefined",
+        "undefined-K",
+        "undefined-alpha"
+    ),
     mappedPatchFieldBase<scalar>
     (
         mappedPatchFieldBase<scalar>::mapper(p, iF),

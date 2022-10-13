@@ -44,21 +44,15 @@ Description
     \verbatim
     formatOptions
     {
-        default
+        someFormat // Eg, ensight, vtk, etc
         {
-            verbose     true;
-            commsType   scheduled;
-
+            verbose         true;
             fieldLevel
             {
                 "p.*"   1e5;    // Absolute -> gauge [Pa]
                 T       273.15; // [K] -> [C]
                 U       #eval{ 10/sqrt(3) };  // Uniform magU=10
             }
-        }
-
-        someFormat // Eg, ensight, vtk, etc
-        {
             fieldScale
             {
                 "p.*"   0.01;   // [Pa] -> [mbar]
@@ -68,20 +62,19 @@ Description
             transform
             {
                 origin  (0 0 0);
-                rotationCentre  (0 0 0);
                 rotation axisAngle;
                 axis    (1 0 0);
                 angle   45;
             }
+
         }
     }
     \endverbatim
 
-    Format options:
+  Format options:
     \table
         Property    | Description                           | Reqd | Default
         verbose     | Additional output verbosity           | no  | no
-        commsType   | Communication type                    | no  | scheduled
         scale       | Output geometry scaling               | no  | 1
         transform   | Output coordinate transform           | no  |
         fieldLevel  | Subtract field level before scaling   | no  | empty dict
@@ -89,10 +82,6 @@ Description
     \endtable
 
 Note
-    The \c transform sub-dictionary also supports a \c rotationCentre
-    keyword which applies \em untranslate by that amount prior to the rotation,
-    and subsequently followed by a \em translate.
-
     For surface formats that require geometry in a separate file,
     it is the responsibility of the implementation (not the caller)
     to ensure that this occurs.
@@ -115,7 +104,6 @@ SourceFiles
 #include "instant.H"
 #include "mergedSurf.H"
 #include "meshedSurfRef.H"
-#include "UPstream.H"
 #include "InfoProxy.H"
 #include "runTimeSelectionTables.H"
 
@@ -159,9 +147,6 @@ protected:
         //- Output geometry scaling after rotate/translate
         scalar geometryScale_;
 
-        //- The centre of rotation (untranslate, translate)
-        point geometryCentre_;
-
         //- Local coordinate system transformation
         coordSystem::cartesian geometryTransform_;
 
@@ -187,9 +172,6 @@ protected:
 
         //- Additional output verbosity
         bool verbose_;
-
-        //- Communication type (for field merging)
-        UPstream::commsTypes commType_;
 
         //- The number of fields
         label nFields_;
@@ -272,6 +254,7 @@ protected:
             return fileName::null;
         }
 
+
 public:
 
     // Public Data
@@ -303,26 +286,6 @@ public:
                 const dictionary& writeOpts
             ),
             (writeOpts)
-        );
-
-
-    // Helpers
-
-        //- Same as fileFormats::getFormatOptions
-        static dictionary formatOptions
-        (
-            const dictionary& dict,
-            const word& formatName,
-            const word& entryName = "formatOptions"
-        );
-
-        //- Same as fileFormats::getFormatOptions
-        static dictionary formatOptions
-        (
-            const dictionary& dict,
-            const dictionary& surfDict,
-            const word& formatName,
-            const word& entryName = "formatOptions"
         );
 
 

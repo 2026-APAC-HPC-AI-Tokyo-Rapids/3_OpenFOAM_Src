@@ -52,7 +52,7 @@ bool Foam::UOPstream::bufferIPCsend()
 
 bool Foam::UOPstream::write
 (
-    const UPstream::commsTypes commsType,
+    const commsTypes commsType,
     const int toProcNo,
     const char* buf,
     const std::streamsize bufSize,
@@ -65,7 +65,7 @@ bool Foam::UOPstream::write
         Pout<< "UOPstream::write : starting write to:" << toProcNo
             << " tag:" << tag
             << " comm:" << communicator << " size:" << label(bufSize)
-            << " commType:" << UPstream::commsTypeNames[commsType]
+            << " commsType:" << UPstream::commsTypeNames[commsType]
             << Foam::endl;
     }
     if (UPstream::warnComm != -1 && communicator != UPstream::warnComm)
@@ -73,7 +73,7 @@ bool Foam::UOPstream::write
         Pout<< "UOPstream::write : starting write to:" << toProcNo
             << " tag:" << tag
             << " comm:" << communicator << " size:" << label(bufSize)
-            << " commType:" << UPstream::commsTypeNames[commsType]
+            << " commsType:" << UPstream::commsTypeNames[commsType]
             << " warnComm:" << UPstream::warnComm
             << Foam::endl;
         error::printStack(Pout);
@@ -154,12 +154,12 @@ bool Foam::UOPstream::write
         {
             Pout<< "UOPstream::write : started write to:" << toProcNo
                 << " tag:" << tag << " size:" << label(bufSize)
-                << " commType:" << UPstream::commsTypeNames[commsType]
+                << " commsType:" << UPstream::commsTypeNames[commsType]
                 << " request:" << PstreamGlobals::outstandingRequests_.size()
                 << Foam::endl;
         }
 
-        PstreamGlobals::outstandingRequests_.push_back(request);
+        PstreamGlobals::outstandingRequests_.append(request);
     }
     else
     {

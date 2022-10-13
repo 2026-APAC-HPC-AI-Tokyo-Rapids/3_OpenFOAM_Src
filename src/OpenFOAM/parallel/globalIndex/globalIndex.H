@@ -99,25 +99,17 @@ public:
         //- Disambiguation tag (list construction dispatch)
         enum accessType : char { OFFSETS, SIZES };
 
-        //- Dispatch tag.
-        //- Construct with a single (local size) entry, no communication.
-        struct gatherNone{};
-
-        //- Dispatch tag.
-        //- Construct 'one-sided' from local sizes,
-        //- using gather but no broadcast.
+        //- Dispatch tag
         struct gatherOnly{};
 
-        //- Dispatch tag.
-        //- Construct 'one-sided' from the non-master local sizes
-        //- using gather but no broadcast.
-        struct gatherNonLocal{};
+        //- Dispatch tag
+        struct gatherNone{};
 
 
     // Constructors
 
-        //- Default construct (empty)
-        globalIndex() noexcept = default;
+        //- Default construct
+        globalIndex() = default;
 
         //- Copy construct from a list of offsets.
         //- No communication required
@@ -144,37 +136,24 @@ public:
             const bool parallel = UPstream::parRun()  //!< use parallel comms
         );
 
-        //- Construct with a single (local size) entry, no communication
-        inline globalIndex
-        (
-            const globalIndex::gatherNone,
-            const label localSize,
-            const label comm = -1   //!< no communicator needed
-        );
-
-        //- Construct 'one-sided' from local sizes.
-        //- Uses UPstream::listGatherValues, but no broadcast.
-        //- Will be empty on non-master processes.
+        //- Construct by gathering local sizes without rescattering.
+        //- This 'one-sided' globalIndex will be empty on non-master processes.
         //
         //  \note can be used when Pstream::parRun() is false.
         inline globalIndex
         (
+            const label localSize,
             const globalIndex::gatherOnly,
-            const label localSize,
             const label comm = UPstream::worldComm  //!< communicator
         );
 
-        //- Construct 'one-sided' from the non-master local sizes
-        //- (ie, master size is treated as 0).
-        //- Uses UPstream::listGatherValues, but no broadcast.
-        //- Will be empty on non-master processes.
-        //
-        //  \note can be used when Pstream::parRun() is false.
+        //- Construct with a single size entry.
+        //- No communication required
         inline globalIndex
         (
-            const globalIndex::gatherNonLocal,
             const label localSize,
-            const label comm = UPstream::worldComm  //!< communicator
+            const globalIndex::gatherNone,
+            const label comm = -1   //!< no communicator needed
         );
 
         //- Construct from Istream.
@@ -205,14 +184,8 @@ public:
         //- Global max of localSizes
         inline label maxSize() const;
 
-
-    // Access
-
         //- Const-access to the offsets
         inline const labelList& offsets() const noexcept;
-
-        //- Write-access to the offsets, for changing after construction
-        inline labelList& offsets() noexcept;
 
 
     // Dimensions
@@ -229,8 +202,8 @@ public:
 
     // Edit
 
-        //- Reset to be empty (no offsets)
-        inline void clear();
+        //- Write-access to the offsets, for changing after construction
+        inline labelList& offsets() noexcept;
 
         //- Reset from local size, using gather/broadcast
         //- with default/specified communicator if parallel.
@@ -241,6 +214,17 @@ public:
             const bool parallel = UPstream::parRun()  //!< use parallel comms
         );
 
+        //- Reset by gathering local sizes without rescattering.
+        //- This 'one-sided' globalIndex will be empty on non-master processes.
+        //
+        //  \note can be used when Pstream::parRun() is false.
+        void reset
+        (
+            const label localSize,
+            const globalIndex::gatherOnly,
+            const label comm = UPstream::worldComm  //!< communicator
+        );
+
         //- Reset from list of local sizes,
         //- with optional check for label overflow.
         //- No communication required
@@ -248,39 +232,6 @@ public:
         (
             const labelUList& localLens,
             const bool checkOverflow = false
-        );
-
-        //- Reset to a single (local size) entry, no communication
-        inline void reset
-        (
-            const globalIndex::gatherNone,
-            const label localSize,
-            const label comm = -1   //!< no communicator needed
-        );
-
-        //- Reset as 'one-sided' from local sizes.
-        //- Uses UPstream::listGatherValues, but no broadcast.
-        //- Will be empty on non-master processes.
-        //
-        //  \note can be used when Pstream::parRun() is false.
-        inline void reset
-        (
-            const globalIndex::gatherOnly,
-            const label localSize,
-            const label comm = UPstream::worldComm  //!< communicator
-        );
-
-        //- Reset as 'one-sided' from the non-master local sizes
-        //- (ie, master size is treated as 0).
-        //- Uses UPstream::listGatherValues, but no broadcast.
-        //- Will be empty on non-master processes.
-        //
-        //  \note can be used when Pstream::parRun() is false.
-        inline void reset
-        (
-            const globalIndex::gatherNonLocal,
-            const label localSize,
-            const label comm = UPstream::worldComm  //!< communicator
         );
 
         //- Alter local size for given processor
@@ -896,28 +847,6 @@ public:
 
     // Housekeeping
 
-        //- Construct with a single (local size) entry, no communication
-        globalIndex
-        (
-            const label localSize,
-            const globalIndex::gatherNone,
-            const label comm = -1   //!< no communicator needed
-        )
-        :
-            globalIndex(gatherNone{}, localSize, comm)
-        {}
-
-        //- Construct 'one-sided' from local sizes.
-        globalIndex
-        (
-            const label localSize,
-            const globalIndex::gatherOnly,
-            const label comm = UPstream::worldComm
-        )
-        :
-            globalIndex(gatherOnly{}, localSize, comm)
-        {}
-
         //- Construct from local size, using gather/broadcast
         //- with default/specified communicator if parallel.
         FOAM_DEPRECATED_FOR(2022-03, "construct without message tag")
@@ -949,20 +878,6 @@ public:
         //- Prefer localStart() to avoid confusing with offsets()
         FOAM_DEPRECATED_FOR(2022-02, "use localStart()")
         label offset(const label proci) const { return localStart(proci); }
-
-        //- Reset as 'one-sided' from local sizes [gather, but no broadcast]
-        //- Will be empty on non-master processes.
-        //
-        //  \note can be used when Pstream::parRun() is false.
-        void reset
-        (
-            const label localSize,
-            const globalIndex::gatherOnly,
-            const label comm = UPstream::worldComm  //!< communicator
-        )
-        {
-            reset(globalIndex::gatherOnly{}, localSize, comm);
-        }
 };
 
 

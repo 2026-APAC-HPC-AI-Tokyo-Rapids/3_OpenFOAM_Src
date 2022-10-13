@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,7 +60,7 @@ inline bool Foam::functionObjects::fieldValues::surfaceFieldValue::canWeight
 ) const
 {
     // Non-empty on some processor
-    return returnReduceOr(!fld.empty());
+    return returnReduce(!fld.empty(), orOp<bool>());
 }
 
 
@@ -598,10 +598,10 @@ Foam::functionObjects::fieldValues::surfaceFieldValue::filterField
     if (debug)
     {
         Pout<< "field " << field.name() << " oriented: "
-            << field.is_oriented() << endl;
+            << field.oriented()() << endl;
     }
 
-    if (field.is_oriented())
+    if (field.oriented()())
     {
         forAll(values, i)
         {

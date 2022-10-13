@@ -106,8 +106,13 @@ bool Foam::faBoundaryMesh::readContents(const bool allowReadIfPresent)
 {
     if
     (
-        isReadRequired()
-     || (allowReadIfPresent && isReadOptional() && headerOk())
+        readOpt() == IOobject::MUST_READ
+     || readOpt() == IOobject::MUST_READ_IF_MODIFIED
+     ||
+        (
+            allowReadIfPresent
+         && (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+        )
     )
     {
         // Warn for MUST_READ_IF_MODIFIED
@@ -416,12 +421,6 @@ Foam::List<Foam::labelRange> Foam::faBoundaryMesh::patchRanges() const
 }
 
 
-Foam::wordList Foam::faBoundaryMesh::groupNames() const
-{
-    return this->groupPatchIDs().sortedToc();
-}
-
-
 Foam::label Foam::faBoundaryMesh::start() const
 {
     return mesh_.nInternalEdges();
@@ -604,30 +603,32 @@ Foam::label Foam::faBoundaryMesh::findPatchID
 
 Foam::label Foam::faBoundaryMesh::whichPatch(const label edgeIndex) const
 {
+    // Find out which patch the current face belongs to by comparing label
+    // with patch start labels.
+    // If the face is internal, return -1;
+    // if it is off the end of the list, abort
     if (edgeIndex < mesh().nInternalEdges())
     {
-        // Internal edge
         return -1;
     }
     else if (edgeIndex >= mesh().nEdges())
     {
-        // Bounds error: abort
         FatalErrorInFunction
             << "Edge " << edgeIndex
             << " out of bounds. Number of geometric edges " << mesh().nEdges()
             << abort(FatalError);
-
-        return -1;
     }
-
-    // Find patch that the edgeIndex belongs to.
 
     forAll(*this, patchi)
     {
         label start = mesh_.patchStarts()[patchi];
         label size = operator[](patchi).faPatch::size();
 
-        if (edgeIndex >= start && edgeIndex < start + size)
+        if
+        (
+            edgeIndex >= start
+         && edgeIndex < start + size
+        )
         {
             return patchi;
         }
@@ -635,7 +636,7 @@ Foam::label Foam::faBoundaryMesh::whichPatch(const label edgeIndex) const
 
     // If not in any of above, it's trouble!
     FatalErrorInFunction
-        << "Error in patch search algorithm"
+        << "error in patch search algorithm"
         << abort(FatalError);
 
     return -1;
@@ -689,9 +690,13 @@ bool Foam::faBoundaryMesh::checkParallelSync(const bool report) const
     localTypes.resize(nonProci);
 
     // Check and report error(s) on master
-    // - don't need indexing on master itself
 
-    const globalIndex procAddr(globalIndex::gatherNonLocal{}, nonProci);
+    const globalIndex procAddr
+    (
+        // Don't need to collect master itself
+        (Pstream::master() ? 0 : nonProci),
+        globalIndex::gatherOnly{}
+    );
 
     const wordList allNames(procAddr.gather(localNames));
     const wordList allTypes(procAddr.gather(localTypes));
@@ -720,7 +725,9 @@ bool Foam::faBoundaryMesh::checkParallelSync(const bool report) const
     }
 
     // Reduce (not broadcast) to respect local out-of-order errors (first loop)
-    return returnReduceOr(hasError);
+    reduce(hasError, orOp<bool>());
+
+    return hasError;
 }
 
 

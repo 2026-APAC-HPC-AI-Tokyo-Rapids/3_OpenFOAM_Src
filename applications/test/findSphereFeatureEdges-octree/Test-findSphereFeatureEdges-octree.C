@@ -64,13 +64,25 @@ int main(int argc, char *argv[])
 
     // Slightly extended bb. Slightly off-centred just so on symmetric
     // geometry there are less face/edge aligned items.
-    treeBoundBox bb(efem.points());
-    bb.grow(ROOTVSMALL);
+    treeBoundBox bb
+    (
+        efem.points()
+    );
+
+    bb.min() -= point::uniform(ROOTVSMALL);
+    bb.max() += point::uniform(ROOTVSMALL);
+
+    labelList allEdges(identity(efem.edges().size()));
 
     indexedOctree<treeDataEdge> edgeTree
     (
-        treeDataEdge(efem.edges(), efem.points()),   // All edges
-
+        treeDataEdge
+        (
+            false,          // cachebb
+            efem.edges(),        // edges
+            efem.points(),       // points
+            allEdges        // selected edges
+        ),
         bb,     // bb
         8,      // maxLevel
         10,     // leafsize

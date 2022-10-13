@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -59,17 +59,13 @@ namespace Foam
 // Read min/max or min/span
 static void readBoxDim(const dictionary& dict, treeBoundBox& bb)
 {
-    IOobjectOption::readOption readOpt = IOobjectOption::MUST_READ;
+    dict.readEntry<point>("min", bb.min());
 
-    dict.readEntry("min", bb.min(), keyType::LITERAL, readOpt);
-
-    if (dict.readIfPresent("span", bb.max(), keyType::LITERAL))
+    const bool hasSpan = dict.found("span");
+    if (!dict.readEntry<point>("max", bb.max(), keyType::REGEX, !hasSpan))
     {
-        bb.max() += bb.min();
-        readOpt = IOobjectOption::READ_IF_PRESENT;
+        bb.max() = bb.min() + dict.get<vector>("span");
     }
-
-    dict.readEntry("max", bb.max(), keyType::LITERAL, readOpt);
 }
 
 } // End namespace Foam
@@ -85,7 +81,7 @@ void Foam::searchableBox::projectOntoCoordPlane
 ) const
 {
     // Set point
-    info.point()[dir] = planePt[dir];
+    info.rawPoint()[dir] = planePt[dir];
 
     // Set face
     if (planePt[dir] == min()[dir])
@@ -135,17 +131,17 @@ Foam::pointIndexHit Foam::searchableBox::findNearest
 
     for (direction dir = 0; dir < vector::nComponents; ++dir)
     {
-        if (info.point()[dir] < min()[dir])
+        if (info.rawPoint()[dir] < min()[dir])
         {
             projectOntoCoordPlane(dir, min(), info);
             outside = true;
         }
-        else if (info.point()[dir] > max()[dir])
+        else if (info.rawPoint()[dir] > max()[dir])
         {
             projectOntoCoordPlane(dir, max(), info);
             outside = true;
         }
-        else if (info.point()[dir] > bbMid[dir])
+        else if (info.rawPoint()[dir] > bbMid[dir])
         {
             near[dir] = max()[dir];
         }
@@ -185,7 +181,7 @@ Foam::pointIndexHit Foam::searchableBox::findNearest
 
     // Check if outside. Optimisation: could do some checks on distance already
     // on components above
-    if (info.point().distSqr(sample) > nearestDistSqr)
+    if (magSqr(info.rawPoint() - sample) > nearestDistSqr)
     {
         info.setMiss();
         info.setIndex(-1);
@@ -293,7 +289,11 @@ void Foam::searchableBox::boundingSpheres
         {
             const point& pt = pts[pointi];
 
-            radiusSqr[i] = Foam::max(radiusSqr[i], centres[i].distSqr(pt));
+            radiusSqr[i] = Foam::max
+            (
+                radiusSqr[i],
+                Foam::magSqr(pt-centres[i])
+            );
         }
     }
 
@@ -335,17 +335,17 @@ Foam::pointIndexHit Foam::searchableBox::findNearestOnEdge
 
     for (direction dir = 0; dir < vector::nComponents; ++dir)
     {
-        if (info.point()[dir] < min()[dir])
+        if (info.rawPoint()[dir] < min()[dir])
         {
             projectOntoCoordPlane(dir, min(), info);
             outside = true;
         }
-        else if (info.point()[dir] > max()[dir])
+        else if (info.rawPoint()[dir] > max()[dir])
         {
             projectOntoCoordPlane(dir, max(), info);
             outside = true;
         }
-        else if (info.point()[dir] > bbMid[dir])
+        else if (info.rawPoint()[dir] > bbMid[dir])
         {
             near[dir] = max()[dir];
         }
@@ -361,7 +361,7 @@ Foam::pointIndexHit Foam::searchableBox::findNearestOnEdge
     if (!outside)
     {
         // Get the per-component distance to nearest wall
-        vector dist(cmptMag(info.point() - near));
+        vector dist(cmptMag(info.rawPoint() - near));
 
         SortableList<scalar> sortedDist(3);
         sortedDist[0] = dist[0];
@@ -378,7 +378,7 @@ Foam::pointIndexHit Foam::searchableBox::findNearestOnEdge
 
     // Check if outside. Optimisation: could do some checks on distance already
     // on components above
-    if (info.point().distSqr(sample) > nearestDistSqr)
+    if (magSqr(info.rawPoint() - sample) > nearestDistSqr)
     {
         info.setMiss();
         info.setIndex(-1);
@@ -420,13 +420,13 @@ Foam::pointIndexHit Foam::searchableBox::findLine
         else
         {
             // end is outside. Clip to bounding box.
-            foundInter = intersects(end, start, info.point());
+            foundInter = intersects(end, start, info.rawPoint());
         }
     }
     else
     {
         // start is outside. Clip to bounding box.
-        foundInter = intersects(start, end, info.point());
+        foundInter = intersects(start, end, info.rawPoint());
     }
 
 
@@ -437,12 +437,12 @@ Foam::pointIndexHit Foam::searchableBox::findLine
 
         for (direction dir = 0; dir < vector::nComponents; ++dir)
         {
-            if (info.point()[dir] == min()[dir])
+            if (info.rawPoint()[dir] == min()[dir])
             {
                 info.setIndex(2*dir);
                 break;
             }
-            else if (info.point()[dir] == max()[dir])
+            else if (info.rawPoint()[dir] == max()[dir])
             {
                 info.setIndex(2*dir+1);
                 break;
@@ -452,7 +452,7 @@ Foam::pointIndexHit Foam::searchableBox::findLine
         if (info.index() == -1)
         {
             FatalErrorInFunction
-                << "point " << info.point()
+                << "point " << info.rawPoint()
                 << " on segment " << start << end
                 << " should be on face of " << *this
                 << " but it isn't." << abort(FatalError);
@@ -542,7 +542,7 @@ void Foam::searchableBox::findLineAll
     //   we need something bigger since we're doing calculations)
     // - if the start-end vector is zero we still progress
     const vectorField dirVec(end-start);
-    const scalarField magSqrDirVec(Foam::magSqr(dirVec));
+    const scalarField magSqrDirVec(magSqr(dirVec));
     const vectorField smallVec
     (
         ROOTSMALL*dirVec + vector::uniform(ROOTVSMALL)
@@ -630,16 +630,24 @@ void Foam::searchableBox::getVolumeType
     List<volumeType>& volType
 ) const
 {
-    volType.resize_nocopy(points.size());
+    volType.setSize(points.size());
 
     forAll(points, pointi)
     {
-        volType[pointi] =
-        (
-            treeBoundBox::contains(points[pointi])
-          ? volumeType::INSIDE
-          : volumeType::OUTSIDE
-        );
+        const point& pt = points[pointi];
+
+        volumeType vt = volumeType::INSIDE;
+
+        for (direction dir=0; dir < vector::nComponents; ++dir)
+        {
+            if (pt[dir] < min()[dir] || pt[dir] > max()[dir])
+            {
+                vt = volumeType::OUTSIDE;
+                break;
+            }
+        }
+
+        volType[pointi] = vt;
     }
 }
 

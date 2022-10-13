@@ -45,7 +45,6 @@ SourceFiles
 #define Foam_faFieldDecomposer_H
 
 #include "faMesh.H"
-#include "faMeshSubset.H"
 #include "faPatchFieldMapper.H"
 #include "edgeFields.H"
 
@@ -403,7 +402,7 @@ class faFieldDecomposer::fieldsCache
 
         class privateCache;
 
-        //- All field and field-field types for finiteArea
+        //- All field and field-field types for lagrangian
         std::unique_ptr<privateCache> cache_;
 
 
@@ -445,26 +444,6 @@ public:
         (
             const faMesh& mesh,
             const IOobjectList& objects
-        );
-
-        //- Read all fields given mesh and objects.
-        //- Supports reading/sending fields
-        void readAllFields
-        (
-            const bitSet& haveMeshOnProc,
-            const faMeshSubset* subsetter,
-            const faMesh& mesh,
-            IOobjectList& objects
-        );
-
-        //- Read all fields given mesh and objects.
-        //- Supports reading/sending fields
-        void readAllFields
-        (
-            const boolList& haveMeshOnProc,
-            const faMeshSubset* subsetter,
-            const faMesh& mesh,
-            IOobjectList& objects
         );
 
         //- Decompose and write all fields

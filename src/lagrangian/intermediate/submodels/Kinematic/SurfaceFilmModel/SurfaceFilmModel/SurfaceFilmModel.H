@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,8 +39,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_SurfaceFilmModel_H
-#define Foam_SurfaceFilmModel_H
+#ifndef SurfaceFilmModel_H
+#define SurfaceFilmModel_H
 
 #include "IOdictionary.H"
 #include "autoPtr.H"
@@ -53,13 +53,17 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
+// Forward declaration of classes
 namespace regionModels
 {
     namespace surfaceFilmModels
     {
         class surfaceFilmRegionModel;
     }
+}
+
+namespace regionModels
+{
     namespace areaSurfaceFilmModels
     {
         class liquidFilmBase;
@@ -78,28 +82,20 @@ class SurfaceFilmModel
 {
 protected:
 
-    // Data Types
+    // Protected data
 
         //- Convenience typedef to the cloud's parcel type
         typedef typename CloudType::parcelType parcelType;
 
         typedef typename
-            regionModels::areaSurfaceFilmModels::liquidFilmBase
-            areaFilm;
-
-        typedef typename
-            regionModels::surfaceFilmModels::surfaceFilmRegionModel
-            regionFilm;
-
-
-    // Protected Data
+            regionModels::areaSurfaceFilmModels::liquidFilmBase areaFilm;
 
         //- Gravitational acceleration constant
         const dimensionedVector& g_;
 
         //- Ejected parcel type label - id assigned to identify parcel for
-        //- post-processing. If not specified, defaults to originating cloud
-        //- type
+        //  post-processing. If not specified, defaults to originating cloud
+        //  type
         label ejectedParcelType_;
 
         //- Injection offset position
@@ -109,7 +105,7 @@ protected:
         scalar minDiameter_;
 
 
-        // Injector fields transferred from film patch
+        // Cached injector fields per film patch
 
             //- Parcel mass / patch face
             scalarField massParcelPatch_;
@@ -142,33 +138,29 @@ protected:
             scalar totalMassTransferred_;
 
 
-    // Protected Functions
+    // Protected functions
 
         //- Cache the film fields in preparation for injection
         virtual void cacheFilmFields
         (
             const label filmPatchi,
             const label primaryPatchi,
-            const regionFilm&
+            const regionModels::surfaceFilmModels::surfaceFilmRegionModel&
         );
 
         //- Cache the finite area film fields in preparation for injection
-        virtual void cacheFilmFields(const areaFilm& film);
+        virtual void cacheFilmFields
+        (
+            const label primaryPatchi,
+            const areaFilm&
+        );
 
         //- Inject particles in cloud
         template<class TrackCloudType>
         void injectParticles
         (
             const label primaryPatchi,
-            const labelUList& injectorCells,  // patch-based
-            TrackCloudType& cloud
-        );
-
-        //- Inject particles in cloud
-        template<class TrackCloudType>
-        void injectParticles
-        (
-            const UList<labelPair>& patchFaces,
+            const labelList& injectorCellsPatch,
             TrackCloudType& cloud
         );
 
@@ -220,7 +212,7 @@ public:
 
 
     //- Destructor
-    virtual ~SurfaceFilmModel() = default;
+    virtual ~SurfaceFilmModel();
 
 
     //- Selector
@@ -233,50 +225,54 @@ public:
 
     // Member Functions
 
-    // Access
+        // Access
 
-        //- Return gravitational acceleration constant
-        inline const dimensionedVector& g() const noexcept;
+            //- Return gravitational acceleration constant
+            inline const dimensionedVector& g() const;
 
-        //- The number of parcels transferred to the film model
-        inline label nParcelsTransferred() const noexcept;
+            //- Return const access to the number of parcels transferred to the
+            //  film model
+            inline label nParcelsTransferred() const;
 
-        //- Non-const access to number of parcels transferred to the film model
-        inline label& nParcelsTransferred() noexcept;
+            //- Return non-const access to the number of parcels transferred to
+            //  the film model
+            inline label& nParcelsTransferred();
 
-        //- The number of parcels injected from the film model
-        inline label nParcelsInjected() const noexcept;
+            //- Return const access to the number of parcels injected from the
+            //  film model
+            inline label nParcelsInjected() const;
 
-        //- Non-const access to number of parcels injected from the film model
-        inline label& nParcelsInjected() noexcept;
+            //- Return non-const access to the number of parcels injected from
+            //  the film model
+            inline label& nParcelsInjected();
 
-        //- The total mass transferred
-        inline scalar totalMassTransferred() const noexcept;
+            //- Return non-const total mass transferred
+            inline scalar& totalMassTransferred();
 
-        //- Non-const access to the total mass transferred
-        inline scalar& totalMassTransferred() noexcept;
-
-
-    // Member Functions
-
-        //- Transfer parcel from cloud to surface film
-        //  Returns true if parcel is to be transferred
-        virtual bool transferParcel
-        (
-            parcelType& p,
-            const polyPatch& pp,
-            bool& keepParticle
-        ) = 0;
-
-        //- Inject parcels into the cloud
-        template<class TrackCloudType>
-        void inject(TrackCloudType& cloud);
+            //- Return consr access to mass transferred
+            inline scalar totalMassTransferred() const;
 
 
-    // I-O
+        // Member Functions
 
-        //- Write surface film info
-        virtual void info();
+            //- Transfer parcel from cloud to surface film
+            //  Returns true if parcel is to be transferred
+            virtual bool transferParcel
+            (
+                parcelType& p,
+                const polyPatch& pp,
+                bool& keepParticle
+            ) = 0;
+
+            //- Inject parcels into the cloud
+            template<class TrackCloudType>
+            void inject(TrackCloudType& cloud);
+
+
+        // I-O
+
+            //- Write surface film info to stream
+            virtual void info(Ostream& os);
 };
 
 

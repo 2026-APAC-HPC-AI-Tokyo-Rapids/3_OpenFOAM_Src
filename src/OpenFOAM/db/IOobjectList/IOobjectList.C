@@ -90,21 +90,49 @@ void Foam::IOobjectList::syncNames(wordList& objNames)
     if (Pstream::parRun())
     {
         // Synchronize names
-        Pstream::combineReduce(objNames, ListOps::uniqueEqOp<word>());
+        Pstream::combineGather(objNames, ListOps::uniqueEqOp<word>());
+        Pstream::broadcast(objNames);
     }
 
-    Foam::sort(objNames);  // Consistent order
+    // Consistent order on all processors
+    Foam::sort(objNames);
 }
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::IOobjectList::IOobjectList()
+:
+    HashPtrTable<IOobject>()
+{}
+
+
+Foam::IOobjectList::IOobjectList(const label nObjects)
+:
+    HashPtrTable<IOobject>(nObjects)  // Could also use 2*nObjects instead
+{}
+
+
+Foam::IOobjectList::IOobjectList(const IOobjectList& list)
+:
+    HashPtrTable<IOobject>(list)
+{}
+
+
+Foam::IOobjectList::IOobjectList(IOobjectList&& list)
+:
+    HashPtrTable<IOobject>(std::move(list))
+{}
+
 
 Foam::IOobjectList::IOobjectList
 (
     const objectRegistry& db,
     const fileName& instance,
     const fileName& local,
-    IOobjectOption ioOpt
+    IOobject::readOption rOpt,
+    IOobject::writeOption wOpt,
+    bool registerObject
 )
 :
     HashPtrTable<IOobject>()
@@ -126,7 +154,9 @@ Foam::IOobjectList::IOobjectList
             newInstance,
             local,
             db,
-            ioOpt
+            rOpt,
+            wOpt,
+            registerObject
         );
 
         bool ok = false;
@@ -154,7 +184,51 @@ Foam::IOobjectList::IOobjectList
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::label Foam::IOobjectList::merge(IOobjectList&& other)
+bool Foam::IOobjectList::add(autoPtr<IOobject>& objectPtr)
+{
+    if (objectPtr)
+    {
+        return insert(objectPtr->name(), objectPtr);
+    }
+
+    return false;
+}
+
+
+bool Foam::IOobjectList::add(autoPtr<IOobject>&& objectPtr)
+{
+    if (objectPtr)
+    {
+        return insert(objectPtr->name(), objectPtr);
+    }
+
+    return false;
+}
+
+
+Foam::label Foam::IOobjectList::append(const IOobjectList& other)
+{
+    label count = 0;
+
+    forAllConstIters(other, iter)
+    {
+        if (!found(iter.key()))
+        {
+            if (IOobject::debug)
+            {
+                InfoInFunction << "Copy append " << iter.key() << nl;
+            }
+
+            set(iter.key(), new IOobject(*iter.val()));
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+
+Foam::label Foam::IOobjectList::append(IOobjectList&& other)
 {
     // Remove by name to avoid uncertainties about invalid iterators
 
@@ -168,7 +242,7 @@ Foam::label Foam::IOobjectList::merge(IOobjectList&& other)
         {
             if (IOobject::debug)
             {
-                InfoInFunction << "Merge " << key << nl;
+                InfoInFunction << "Move append " << key << nl;
             }
 
             if (add(other.remove(key)))
@@ -182,6 +256,12 @@ Foam::label Foam::IOobjectList::merge(IOobjectList&& other)
 }
 
 
+bool Foam::IOobjectList::remove(const IOobject& io)
+{
+    return erase(io.name());
+}
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 const Foam::IOobject* Foam::IOobjectList::cfindObject
@@ -189,28 +269,23 @@ const Foam::IOobject* Foam::IOobjectList::cfindObject
     const word& objName
 ) const
 {
-    // Like HashPtrTable::get(), or lookup() with a nullptr
-    const IOobject* io = nullptr;
+    const_iterator iter = cfind(objName);
 
-    const const_iterator iter(cfind(objName));
-    if (iter.good())
+    if (iter.found())
     {
-        io = iter.val();
-    }
-
-    if (IOobject::debug)
-    {
-        if (io)
+        if (IOobject::debug)
         {
             InfoInFunction << "Found " << objName << endl;
         }
-        else
-        {
-            InfoInFunction << "Could not find " << objName << endl;
-        }
+
+        return iter.val();
+    }
+    else if (IOobject::debug)
+    {
+        InfoInFunction << "Could not find " << objName << endl;
     }
 
-    return io;
+    return nullptr;
 }
 
 
@@ -368,6 +443,14 @@ void Foam::IOobjectList::checkNames(const bool syncPar) const
 
         checkNameOrder(objNames, syncPar);
     }
+}
+
+
+// * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
+
+void Foam::IOobjectList::operator=(IOobjectList&& list)
+{
+    transfer(list);
 }
 
 

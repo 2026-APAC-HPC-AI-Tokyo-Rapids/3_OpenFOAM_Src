@@ -131,7 +131,7 @@ Foam::zoneMotion::zoneMotion
 
     // No cell points selected (as set or zones) => move all points
 
-    moveAllCells_ = returnReduceAnd(pointIDs_.empty());
+    moveAllCells_ = returnReduce(pointIDs_.empty(), andOp<bool>());
 
     if (moveAllCells_)
     {

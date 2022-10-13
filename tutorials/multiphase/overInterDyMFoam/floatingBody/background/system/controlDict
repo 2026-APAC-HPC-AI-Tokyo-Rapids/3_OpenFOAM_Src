@@ -30,7 +30,7 @@ deltaT          0.001;
 
 writeControl    adjustable;
 
-writeInterval   0.05;
+writeInterval   0.5;
 
 purgeWrite      0;
 
@@ -82,20 +82,21 @@ functions
 
     alphaVol
     {
-        // Mandatory entries
-        type            volFieldValue;
-        libs            (fieldFunctionObjects);
-        fields          (alpha.water);
-        operation       volIntegrate;
-        regionType      all;
-
-        // Optional entries
-        postOperation   none;
-        // Write at same frequency as fields
+        libs            (utilityFunctionObjects);
+        type            coded;
+        name            alphaVolume;
         writeControl    timeStep;
-        writeInterval   1;
-        writeFields     false;
-        log             true;
+        writeInterval   10;
+
+        codeWrite
+        #{
+
+            const volScalarField& alpha =
+                mesh().lookupObject<volScalarField>("alpha.water");
+
+            Info<< "Alpha volume = " << alpha.weightedAverage(mesh().Vsc())
+                << endl;
+        #};
     }
 }
 

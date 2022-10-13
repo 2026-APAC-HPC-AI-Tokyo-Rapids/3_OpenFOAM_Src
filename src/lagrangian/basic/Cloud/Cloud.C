@@ -84,7 +84,7 @@ Foam::Cloud<ParticleType>::Cloud
     geometryType_(cloud::geometryType::COORDINATES)
 {
     checkPatches();
-    (void)polyMesh_.oldCellCentres();
+    polyMesh_.oldCellCentres();
 
     // Ask for the tetBasePtIs to trigger all processors to build
     // them, otherwise, if some processors have no particles then
@@ -273,7 +273,7 @@ void Foam::Cloud<ParticleType>::move
 
         pBufs.finishedNeighbourSends(neighbourProcs);
 
-        if (!returnReduceOr(pBufs.hasRecvData()))
+        if (!returnReduce(pBufs.hasRecvData(), orOp<bool>()))
         {
             // No parcels to transfer
             break;
@@ -322,8 +322,8 @@ void Foam::Cloud<ParticleType>::autoMap(const mapPolyMesh& mapper)
     // Ask for the tetBasePtIs to trigger all processors to build
     // them, otherwise, if some processors have no particles then
     // there is a comms mismatch.
-    (void)polyMesh_.tetBasePtIs();
-    (void)polyMesh_.oldCellCentres();
+    polyMesh_.tetBasePtIs();
+    polyMesh_.oldCellCentres();
 
     const vectorField& positions = globalPositionsPtr_();
 

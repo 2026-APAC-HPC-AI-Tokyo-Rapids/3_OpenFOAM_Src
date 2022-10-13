@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2018 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -54,15 +54,13 @@ bool Foam::regIOobject::readHeaderOk
 
     // Check if header is ok for READ_IF_PRESENT
     bool isHeaderOk = false;
-    if (isReadOptional())
+    if (readOpt() == IOobject::READ_IF_PRESENT)
     {
         if (masterOnly)
         {
             if (Pstream::master())
             {
-                const bool oldParRun = Pstream::parRun(false);
                 isHeaderOk = headerOk();
-                Pstream::parRun(oldParRun);
             }
             Pstream::broadcast(isHeaderOk);
         }
@@ -72,7 +70,14 @@ bool Foam::regIOobject::readHeaderOk
         }
     }
 
-    if (isReadRequired() || isHeaderOk)
+    if
+    (
+        (
+            readOpt() == IOobject::MUST_READ
+         || readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || isHeaderOk
+    )
     {
         return fileHandler().read(*this, masterOnly, fmt, typeName);
     }
@@ -85,7 +90,7 @@ bool Foam::regIOobject::readHeaderOk
 
 void Foam::regIOobject::readStream(const bool valid)
 {
-    if (readOpt() == IOobject::NO_READ)
+    if (readOpt() == NO_READ)
     {
         FatalErrorInFunction
             << "NO_READ specified for read-constructor of object " << name()
@@ -221,8 +226,7 @@ bool Foam::regIOobject::read()
 
     // Note: IOstream::binary flag is for all the processor comms. (Only for
     //       dictionaries should it be ascii)
-    bool ok =
-        fileHandler().read(*this, masterOnly, IOstreamOption::BINARY, type());
+    bool ok = fileHandler().read(*this, masterOnly, IOstream::BINARY, type());
 
     if (oldWatchFiles.size())
     {

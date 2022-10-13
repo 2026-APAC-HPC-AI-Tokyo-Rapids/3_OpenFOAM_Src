@@ -32,7 +32,7 @@ License
 #include "volFields.H"
 #include "triSurfaceTools.H"
 #include "triSurface.H"
-#include "triangle.H"
+#include "triPoints.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -184,7 +184,7 @@ void Foam::isoSurfacePoint::syncUnseparatedPoints
                 pointField nbrPatchInfo(procPatch.nPoints());
                 {
                     // We do not know the number of points on the other side
-                    // so cannot use UIPstream::read
+                    // so cannot use Pstream::read.
                     IPstream fromNbr
                     (
                         Pstream::commsTypes::blocking,
@@ -262,7 +262,7 @@ void Foam::isoSurfacePoint::syncUnseparatedPoints
         }
 
         // Globally consistent
-        Pstream::listCombineReduce(sharedPts, minEqOp<point>());
+        Pstream::listCombineAllGather(sharedPts, minEqOp<point>());
 
         // Now we will all have the same information. Merge it back with
         // my local information.
@@ -1115,7 +1115,7 @@ void Foam::isoSurfacePoint::trimToBox
     }
 
     // Generate inwards pointing planes
-    PtrList<plane> planes(boundBox::nFaces());
+    PtrList<plane> planes(treeBoundBox::faceNormals.size());
     forAll(treeBoundBox::faceNormals, faceI)
     {
         const vector& n = treeBoundBox::faceNormals[faceI];

@@ -651,8 +651,8 @@ Foam::label Foam::meshRefinement::markProximityRefinementWave
             //originNormal.clear();
             originSurface.clear();
 
-            originLocation.append(hit1[i].point());
-            originDistSqr.append(hit1[i].point().distSqr(fc));
+            originLocation.append(hit1[i].hitPoint());
+            originDistSqr.append(magSqr(fc-hit1[i].hitPoint()));
             //originNormal.append(normal1[i]);
             originSurface.append
             (
@@ -667,8 +667,8 @@ Foam::label Foam::meshRefinement::markProximityRefinementWave
             if (hit2[i].hit() && hit1[i] != hit2[i])
             {
                 const labelList& fz2 = faceZones[surface2[i]];
-                originLocation.append(hit2[i].point());
-                originDistSqr.append(hit2[i].point().distSqr(fc));
+                originLocation.append(hit2[i].hitPoint());
+                originDistSqr.append(magSqr(fc-hit2[i].hitPoint()));
                 //originNormal.append(normal2[i]);
                 originSurface.append
                 (
@@ -828,8 +828,8 @@ Foam::label Foam::meshRefinement::markProximityRefinementWave
                     //        max(smallGapDistance[celli], maxDist);
                     //
                     //
-                    //    str.writeLine(cc, origin[i]);
-                    //    str.writeLine(cc, origin[j]);
+                    //    str.write(linePointRef(cc, origin[i]));
+                    //    str.write(linePointRef(cc, origin[j]));
                     //
                     //    nMulti++;
                     //}
@@ -1408,7 +1408,7 @@ void Foam::meshRefinement::selectIntersectedFaces
 //
 //
 //    autoPtr<mapPolyMesh> mapPtr;
-//    if (returnReduceOr(haveLeak))
+//    if (returnReduce(haveLeak, orOp<bool>()))
 //    {
 //        // Use shortestPathSet to provide a minimum set of faces needed
 //        // to close hole. Tbd: maybe directly use wave?
@@ -1927,7 +1927,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::blockLeakFaces
 
 
     autoPtr<mapPolyMesh> mapPtr;
-    if (returnReduceOr(haveLeak))
+    if (returnReduce(haveLeak, orOp<bool>()))
     {
         // Use holeToFace to provide a minimum set of faces needed
         // to close hole.

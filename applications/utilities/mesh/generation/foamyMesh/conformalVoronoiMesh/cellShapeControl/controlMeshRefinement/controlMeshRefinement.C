@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2015 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -93,7 +92,9 @@ bool Foam::controlMeshRefinement::detectEdge
             magSqr(a - b) < tolSqr
         )
         {
-            pointFound.hitPoint(midPoint);
+            pointFound.setPoint(midPoint);
+            pointFound.setHit();
+
             return true;
         }
 
@@ -263,7 +264,7 @@ void Foam::controlMeshRefinement::initialMeshPopulation
         const cellSizeAndAlignmentControl& controlFunction =
             controlFunctions[fI];
 
-        const Switch forceInsertion =
+        const Switch& forceInsertion =
             controlFunction.forceInitialPointInsertion();
 
         Info<< "Inserting points from " << controlFunction.name()
@@ -449,7 +450,7 @@ void Foam::controlMeshRefinement::initialMeshPopulation
         const cellSizeAndAlignmentControl& controlFunction =
             controlFunctions[fI];
 
-        const Switch forceInsertion =
+        const Switch& forceInsertion =
             controlFunction.forceInitialPointInsertion();
 
         Info<< "Inserting points from " << controlFunction.name()
@@ -740,7 +741,7 @@ Foam::label Foam::controlMeshRefinement::refineMesh
 
         if (hitPt.hit())
         {
-            const Foam::point& pt = hitPt.point();
+            const Foam::point& pt = hitPt.hitPoint();
 
             if (!geometryToConformTo_.inside(pt))
             {

@@ -322,7 +322,7 @@ void Foam::syncTools::syncPointMap
             }
 
             // Broadcast: send merged values to all
-            Pstream::broadcast(sharedPointValues);
+            Pstream::scatter(sharedPointValues);
         }
 
         // Merge sharedPointValues (keyed on sharedPointAddr) into
@@ -667,7 +667,7 @@ void Foam::syncTools::syncEdgeMap
         }
 
         // Broadcast: send merged values to all
-        Pstream::broadcast(sharedEdgeValues);
+        Pstream::scatter(sharedEdgeValues);
     }
 
 
@@ -1029,7 +1029,7 @@ void Foam::syncTools::syncBoundaryFaceList
                         pp.start()-boundaryOffset
                     );
 
-                    UIPstream::read
+                    IPstream::read
                     (
                         Pstream::commsTypes::nonBlocking,
                         procPatch.neighbProcNo(),
@@ -1055,7 +1055,7 @@ void Foam::syncTools::syncBoundaryFaceList
                         pp.start()-boundaryOffset
                     );
 
-                    UOPstream::write
+                    OPstream::write
                     (
                         Pstream::commsTypes::nonBlocking,
                         procPatch.neighbProcNo(),
@@ -1261,7 +1261,7 @@ void Foam::syncTools::syncFaceList
                 recvInfos.set(patchi, new PackedList<Width>(patchSize));
                 PackedList<Width>& recvInfo = recvInfos[patchi];
 
-                UIPstream::read
+                IPstream::read
                 (
                     Pstream::commsTypes::nonBlocking,
                     procPatch.neighbProcNo(),
@@ -1296,7 +1296,7 @@ void Foam::syncTools::syncFaceList
                 );
                 PackedList<Width>& sendInfo = sendInfos[patchi];
 
-                UOPstream::write
+                OPstream::write
                 (
                     Pstream::commsTypes::nonBlocking,
                     procPatch.neighbProcNo(),

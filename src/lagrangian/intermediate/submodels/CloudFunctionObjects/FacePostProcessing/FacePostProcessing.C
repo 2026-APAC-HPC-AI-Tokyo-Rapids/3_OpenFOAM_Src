@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -44,9 +44,12 @@ void Foam::FacePostProcessing<CloudType>::makeLogFile
 )
 {
     // Create the output file if not already created
-    if (logToFile_)
+    if (log_)
     {
-        DebugInfo << "Creating output file." << endl;
+        if (debug)
+        {
+            Info<< "Creating output file." << endl;
+        }
 
         if (Pstream::master())
         {
@@ -99,7 +102,7 @@ void Foam::FacePostProcessing<CloudType>::write()
 
     const label proci = Pstream::myProcNo();
 
-    Log_<< type() << " output:" << nl;
+    Info<< type() << " output:" << nl;
 
     List<scalarField> zoneMassTotal(mass_.size());
     List<scalarField> zoneMassFlowRate(massFlowRate_.size());
@@ -127,7 +130,7 @@ void Foam::FacePostProcessing<CloudType>::write()
             );
         const scalar sumMassFlowRate = sum(zoneMassFlowRate[zoneI]);
 
-        Log_<< "    " << zoneName
+        Info<< "    " << zoneName
             << ": total mass = " << sumMassTotal
             << "; average mass flow rate = " << sumMassFlowRate
             << nl;
@@ -140,7 +143,7 @@ void Foam::FacePostProcessing<CloudType>::write()
         }
     }
 
-    Log_<< endl;
+    Info<< endl;
 
 
     if (surfaceFormat_ != "none")
@@ -195,11 +198,8 @@ void Foam::FacePostProcessing<CloudType>::write()
                 auto writer = surfaceWriter::New
                 (
                     surfaceFormat_,
-                    surfaceWriter::formatOptions
-                    (
-                        this->coeffDict(),
-                        surfaceFormat_
-                    )
+                    this->coeffDict().subOrEmptyDict("formatOptions")
+                        .subOrEmptyDict(surfaceFormat_)
                 );
 
                 if (debug)
@@ -254,9 +254,9 @@ Foam::FacePostProcessing<CloudType>::FacePostProcessing
 :
     CloudFunctionObject<CloudType>(dict, owner, modelName, typeName),
     faceZoneIDs_(),
-    surfaceFormat_(this->coeffDict().getWord("surfaceFormat")),
+    surfaceFormat_(this->coeffDict().lookup("surfaceFormat")),
     resetOnWrite_(this->coeffDict().getBool("resetOnWrite")),
-    logToFile_(this->coeffDict().getBool("log")),
+    log_(this->coeffDict().getBool("log")),
     totalTime_(0.0),
     mass_(),
     massTotal_(),
@@ -337,7 +337,7 @@ Foam::FacePostProcessing<CloudType>::FacePostProcessing
     faceZoneIDs_(pff.faceZoneIDs_),
     surfaceFormat_(pff.surfaceFormat_),
     resetOnWrite_(pff.resetOnWrite_),
-    logToFile_(pff.logToFile_),
+    log_(pff.log_),
     totalTime_(pff.totalTime_),
     mass_(pff.mass_),
     massTotal_(pff.massTotal_),

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017-2018 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,8 +51,7 @@ bool Foam::OFstreamCollator::writeFile
     const labelUList& recvSizes,
     const PtrList<SubList<char>>& slaveData,    // optional slave data
     IOstreamOption streamOpt,
-    IOstreamOption::atomicType atomic,
-    IOstreamOption::appendType append,
+    const bool append,
     const dictionary& headerEntries
 )
 {
@@ -77,10 +76,10 @@ bool Foam::OFstreamCollator::writeFile
     if (UPstream::master(comm))
     {
         Foam::mkDir(fName.path());
-        osPtr.reset(new OFstream(atomic, fName, streamOpt, append));
+        osPtr.reset(new OFstream(fName, streamOpt, append));
         auto& os = *osPtr;
 
-        if (append == IOstreamOption::NON_APPEND)
+        if (!append)
         {
             // No IOobject so cannot use IOobject::writeHeader
 
@@ -214,7 +213,6 @@ void* Foam::OFstreamCollator::writeAll(void *threadarg)
                 ptr->sizes_,
                 slaveData,
                 ptr->streamOpt_,
-                ptr->atomic_,
                 ptr->append_,
                 ptr->headerEntries_
             );
@@ -332,7 +330,7 @@ Foam::OFstreamCollator::~OFstreamCollator()
             Pout<< "~OFstreamCollator : Waiting for write thread" << endl;
         }
         thread_->join();
-        thread_.reset(nullptr);
+        thread_.clear();
     }
 
     if (threadComm_ != -1)
@@ -350,8 +348,7 @@ bool Foam::OFstreamCollator::write
     const fileName& fName,
     const string& data,
     IOstreamOption streamOpt,
-    IOstreamOption::atomicType atomic,
-    IOstreamOption::appendType append,
+    const bool append,
     const bool useThread,
     const dictionary& headerEntries
 )
@@ -390,7 +387,6 @@ bool Foam::OFstreamCollator::write
             recvSizes,
             dummySlaveData,
             streamOpt,
-            atomic,
             append,
             headerEntries
         );
@@ -429,7 +425,6 @@ bool Foam::OFstreamCollator::write
                 ),
                 recvSizes,
                 streamOpt,
-                atomic,
                 append,
                 headerEntries
             )
@@ -445,7 +440,7 @@ bool Foam::OFstreamCollator::write
         // Gather all data onto master. Is done in local communicator since
         // not in write thread. Note that we do not store in contiguous
         // buffer since that would limit to 2G chars.
-        const label startOfRequests = UPstream::nRequests();
+        const label startOfRequests = Pstream::nRequests();
         if (Pstream::master(localComm_))
         {
             for (label proci = 1; proci < slaveData.size(); proci++)
@@ -484,7 +479,7 @@ bool Foam::OFstreamCollator::write
                     << Foam::abort(FatalError);
             }
         }
-        UPstream::waitRequests(startOfRequests);
+        Pstream::waitRequests(startOfRequests);
 
         {
             std::lock_guard<std::mutex> guard(mutex_);
@@ -555,7 +550,6 @@ bool Foam::OFstreamCollator::write
                     data,
                     recvSizes,
                     streamOpt,
-                    atomic,
                     append,
                     headerEntries
                 )

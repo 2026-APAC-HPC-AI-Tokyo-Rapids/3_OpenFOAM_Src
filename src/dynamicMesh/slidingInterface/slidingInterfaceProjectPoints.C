@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -296,7 +296,7 @@ bool Foam::slidingInterface::projectPoints() const
                     integralAdjTol_*minSlavePointLength[pointi];
 
                 // Adjust the hit
-                if (nearPoint.dist(missPoint) < mergeTol)
+                if (mag(nearPoint - missPoint) < mergeTol)
                 {
                     if (debug)
                     {
@@ -307,7 +307,7 @@ bool Foam::slidingInterface::projectPoints() const
 //                         << pointi << " miss point: " << missPoint
 //                         << " near point: " << nearPoint
 //                         << " mergeTol: " << mergeTol
-//                         << " dist: " << nearPoint.dist(missPoint) << endl;
+//                         << " dist: " << mag(nearPoint - missPoint) << endl;
 
                     projectedSlavePoints[pointi] = nearPoint;
 
@@ -558,7 +558,7 @@ bool Foam::slidingInterface::projectPoints() const
                 if (edgeHit.hit())
                 {
                     const scalar dist =
-                        edgeHit.point().dist(projectedSlavePoints[pointi]);
+                        mag(edgeHit.hitPoint() - projectedSlavePoints[pointi]);
 
                     if (dist < mergeTol && dist < minDistance)
                     {
@@ -566,7 +566,7 @@ bool Foam::slidingInterface::projectPoints() const
                         nMovedPoints++;
 
                         slavePointEdgeHits[pointi] = edgei;
-                        projectedSlavePoints[pointi] = edgeHit.point();
+                        projectedSlavePoints[pointi] = edgeHit.hitPoint();
 
                         minDistance = dist;
 
@@ -578,7 +578,7 @@ bool Foam::slidingInterface::projectPoints() const
 //                             << " or ("
 //                             << masterLocalPoints[curEdge.start()]
 //                             << masterLocalPoints[curEdge.end()]
-//                             << ") hit: " << edgeHit.point()
+//                             << ") hit: " << edgeHit.hitPoint()
 //                             << ". dist: " << dist
 //                             << " mergeTol: " << mergeTol << endl;
                     }
@@ -962,7 +962,7 @@ bool Foam::slidingInterface::projectPoints() const
                     // Strict checking of slave cut to avoid capturing
                     // end points.
                     const scalar cutOnSlave =
-                        ((edgeLineHit.point() - edgeLine.start()) & edgeVec)
+                        ((edgeLineHit.hitPoint() - edgeLine.start()) & edgeVec)
                         /sqr(edgeMag);
 
                     const scalar distInEdgePlane =
@@ -973,7 +973,7 @@ bool Foam::slidingInterface::projectPoints() const
                             (
                                 (
                                     masterLocalPoints[cmp]
-                                  - edgeLineHit.point()
+                                  - edgeLineHit.hitPoint()
                                 )
                               & edgeNormalInPlane
                             )

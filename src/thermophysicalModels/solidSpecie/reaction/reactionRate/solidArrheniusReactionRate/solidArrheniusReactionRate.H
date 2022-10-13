@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_solidArrheniusReactionRate_H
-#define Foam_solidArrheniusReactionRate_H
+#ifndef solidArrheniusReactionRate_H
+#define solidArrheniusReactionRate_H
 
 #include "scalarField.H"
 #include "typeInfo.H"
@@ -46,27 +46,23 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
+// Forward declaration of friend functions and operators
+
 class solidArrheniusReactionRate;
 
 Ostream& operator<<(Ostream&, const solidArrheniusReactionRate&);
 
 
 /*---------------------------------------------------------------------------*\
-                  Class solidArrheniusReactionRate Declaration
+                       Class solidArrheniusReactionRate Declaration
 \*---------------------------------------------------------------------------*/
 
 class solidArrheniusReactionRate
 {
-    // Private Data
+    // Private data
 
-        //- Pre-exponential factor
         scalar A_;
-
-        //- Activation temperature
         scalar Ta_;
-
-        //- Critical temperature
         scalar Tcrit_;
 
 
@@ -103,8 +99,6 @@ public:
             return "Arrhenius";
         }
 
-        //- Return reaction rate constant
-        //  frequency of collisions resulting in a reaction
         inline scalar operator()
         (
             const scalar p,
@@ -113,7 +107,7 @@ public:
         ) const;
 
 
-        //- Write to stream
+         //- Write to stream
         inline void write(Ostream& os) const;
 
 

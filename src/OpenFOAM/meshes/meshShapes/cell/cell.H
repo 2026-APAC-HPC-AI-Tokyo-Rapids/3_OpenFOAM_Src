@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,8 +37,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_cell_H
-#define Foam_cell_H
+#ifndef cell_H
+#define cell_H
 
 #include "faceList.H"
 #include "oppositeFace.H"
@@ -47,9 +47,6 @@ SourceFiles
 
 namespace Foam
 {
-
-// Forward Declarations
-class primitiveMesh;
 
 /*---------------------------------------------------------------------------*\
                            Class cell Declaration
@@ -149,16 +146,6 @@ public:
             const UList<point>& meshPoints,
             const faceUList& meshFaces
         ) const;
-
-        //- The bounding box for the cell
-        Pair<point> box
-        (
-            const UList<point>& meshPoints,
-            const faceUList& meshFaces
-        ) const;
-
-        //- The bounding box for the cell associated with given mesh
-        Pair<point> box(const primitiveMesh& mesh) const;
 };
 
 

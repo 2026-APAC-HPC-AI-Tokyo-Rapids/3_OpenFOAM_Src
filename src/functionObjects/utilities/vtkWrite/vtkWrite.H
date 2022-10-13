@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -46,7 +46,6 @@ Description
         decompose       false;
         ...
         fields          (U p);
-        // excludeFields  ("force.*");
 
         selection
         {
@@ -85,8 +84,7 @@ Description
     \table
         Property    | Description                           | Required | Default
         type        | Type name: vtkWrite                   | yes |
-        fields      | Select fields to output (wordRe list) | yes |
-        excludeFields | Exclude fields from output (wordRe list) | no  |
+        fields      | Fields to output (wordRe list)        | yes |
         boundary    | Convert boundary fields               | no  | true
         internal    | Convert internal fields               | no  | true
         single      | Combine patches into a single boundary | no | false
@@ -111,7 +109,6 @@ Description
         region      | Name for a single region              | no  | region0
         regions     | List of regions (wordRe list)         | no  |
         patches     | Limit to listed patches (wordRe list) | no  |
-        excludePatches | Exclude specified patches          | no  |
         selection   | Cell selection (topoSet actions)      | no  | empty dict
     \endtable
 
@@ -131,12 +128,12 @@ See also
 
 SourceFiles
     vtkWrite.C
-    vtkWriteImpl.C
+    vtkWriteTemplates.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_functionObjects_vtkWrite_H
-#define Foam_functionObjects_vtkWrite_H
+#ifndef functionObjects_vtkWrite_H
+#define functionObjects_vtkWrite_H
 
 #include "timeFunctionObject.H"
 #include "foamVtkInternalWriter.H"
@@ -201,14 +198,8 @@ class vtkWrite
         //- Requested names of patches to process
         wordRes selectPatches_;
 
-        //- Selection of patches to block
-        wordRes blockPatches_;
-
-        //- Requested selection of fields to process
+        //- Requested names of fields to process
         wordRes selectFields_;
-
-        //- Selection of fields to block
-        wordRes blockFields_;
 
         //- Dictionary of volume selections
         dictionary selection_;
@@ -251,7 +242,7 @@ class vtkWrite
             autoPtr<vtk::internalWriter>& internalWriter,
             UPtrList<vtk::patchWriter>& patchWriters,
             const fvMeshSubset& proxy,
-            const wordHashSet& candidateNames
+            const wordHashSet& acceptField
         ) const;
 
         //- Write all volume fields with point interpolation
@@ -265,22 +256,22 @@ class vtkWrite
                 PrimitivePatchInterpolation<primitivePatch>
             >& patchInterps,
             const fvMeshSubset& proxy,
-            const wordHashSet& candidateNames
+            const wordHashSet& acceptField
         ) const;
 
         //- Write selected GeoField fields.
         template<class GeoField>
-        label writeVolFieldsImpl
+        label writeVolFields
         (
             autoPtr<vtk::internalWriter>& internalWriter,
             UPtrList<vtk::patchWriter>& patchWriters,
             const fvMeshSubset& proxy,
-            const wordHashSet& candidateNames
+            const wordHashSet& acceptField
         ) const;
 
         //- Write selected GeoField fields with point interpolation
         template<class GeoField>
-        label writeVolFieldsImpl
+        label writeVolFields
         (
             autoPtr<vtk::internalWriter>& internalWriter,
             const autoPtr<volPointInterpolation>& pInterp,
@@ -290,7 +281,7 @@ class vtkWrite
                 PrimitivePatchInterpolation<primitivePatch>
             >& patchInterps,
             const fvMeshSubset& proxy,
-            const wordHashSet& candidateNames
+            const wordHashSet& acceptField
         ) const;
 
 
@@ -348,6 +339,12 @@ public:
 
 } // End namespace functionObjects
 } // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#ifdef NoRepository
+    #include "vtkWriteTemplates.C"
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

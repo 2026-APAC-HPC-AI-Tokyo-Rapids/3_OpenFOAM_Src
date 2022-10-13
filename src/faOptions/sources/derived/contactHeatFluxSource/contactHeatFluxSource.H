@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -76,12 +76,11 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_fa_contactHeatFluxSource_H
-#define Foam_fa_contactHeatFluxSource_H
+#ifndef fa_contactHeatFluxSource_H
+#define fa_contactHeatFluxSource_H
 
 #include "faOption.H"
 #include "Function1.H"
-#include "PtrList.H"
 #include "areaFields.H"
 #include "faceSetOption.H"
 #include "temperatureCoupledBase.H"
@@ -99,31 +98,9 @@ namespace fa
 
 class contactHeatFluxSource
 :
-    public fa::faceSetOption
+    public fa::faceSetOption,
+    public temperatureCoupledBase
 {
-    // Private Classes
-
-         //- Wrapper to make non-abstract
-         struct temperatureCoupling : public Foam::temperatureCoupledBase
-         {
-             // Inherit constructors
-             using temperatureCoupledBase::temperatureCoupledBase;
-
-             //- The fvPatch
-             const fvPatch& patch() const noexcept { return patch_; }
-
-             // Dummy implementations
-
-             //- Map (and resize as needed) from self given a mapping object
-             virtual void autoMap(const fvPatchFieldMapper&)
-             {}
-
-             // Dummy implementation
-             virtual void rmap(const fvPatchField<scalar>&, const labelList&)
-             {}
-        };
-
-
     // Private Data
 
         //- Name of temperature field
@@ -133,7 +110,10 @@ class contactHeatFluxSource
         word TprimaryName_;
 
         //- Primary region temperature
-        const volScalarField& Tprimary_;
+        const volScalarField& Tp_;
+
+        //- Temperature - wall [K]
+        areaScalarField Tw1_;
 
         //- Thickness of layers
         scalarList thicknessLayers_;
@@ -147,14 +127,11 @@ class contactHeatFluxSource
         //- Current time index (used for updating)
         label curTimeIndex_;
 
-        //- Contact coupling (per-patch)
-        PtrList<temperatureCoupling> coupling_;
-
 
     // Private Member Functions
 
-        //- Return htc [W/m2/K] coupling to the primary region
-        tmp<DimensionedField<scalar, areaMesh>> htc() const;
+        //- Return htc from the primary region
+        tmp<areaScalarField> htc() const;
 
 
 public:
@@ -171,7 +148,7 @@ public:
             const word& sourceName,
             const word& modelType,
             const dictionary& dict,
-            const fvMesh& mesh
+            const fvPatch& patch
         );
 
         //- No copy construct
@@ -186,6 +163,28 @@ public:
 
 
     // Member Functions
+
+        // Mapping functions
+
+            //- Map (and resize as needed) from self given a mapping object
+            virtual void autoMap
+            (
+                const fvPatchFieldMapper& mapper
+            )
+            {
+                temperatureCoupledBase::autoMap(mapper);
+            }
+
+            //- Reverse map the given fvPatchField onto this fvPatchField
+            virtual void rmap
+            (
+                const fvPatchField<scalar>& fld,
+                const labelList& map
+            )
+            {
+                temperatureCoupledBase::rmap(fld, map);
+            }
+
 
         // Evaluation
 

@@ -110,7 +110,7 @@ void Foam::processorGAMGInterfaceField::initInterfaceMatrixUpdate
         // Fast path.
         scalarReceiveBuf_.setSize(scalarSendBuf_.size());
         outstandingRecvRequest_ = UPstream::nRequests();
-        UIPstream::read
+        IPstream::read
         (
             Pstream::commsTypes::nonBlocking,
             procInterface_.neighbProcNo(),
@@ -121,7 +121,7 @@ void Foam::processorGAMGInterfaceField::initInterfaceMatrixUpdate
         );
 
         outstandingSendRequest_ = UPstream::nRequests();
-        UOPstream::write
+        OPstream::write
         (
             Pstream::commsTypes::nonBlocking,
             procInterface_.neighbProcNo(),
@@ -169,7 +169,7 @@ void Foam::processorGAMGInterfaceField::updateInterfaceMatrix
         if
         (
             outstandingRecvRequest_ >= 0
-         && outstandingRecvRequest_ < UPstream::nRequests()
+         && outstandingRecvRequest_ < Pstream::nRequests()
         )
         {
             UPstream::waitRequest(outstandingRecvRequest_);

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -264,7 +264,7 @@ void Foam::shortestPathSet::sync
             celli,
             Tuple2<point, bool>(origin, findMinDistance)
         );
-        Pstream::combineReduce
+        Pstream::combineAllGather
         (
             searchData,
             [](ProcData& x, const ProcData& y)
@@ -497,8 +497,8 @@ bool Foam::shortestPathSet::genSingleLeakPath
                 << " Skipped route detection." << endl;
         }
     }
-
-    if (!returnReduceOr(targetFound))
+    reduce(targetFound, orOp<bool>());
+    if (!targetFound)
     {
         //Pout<< "now :"
         //    << " nLeakCell:"
@@ -638,7 +638,7 @@ bool Foam::shortestPathSet::genSingleLeakPath
 
         // Situation 1: we found the destination cell (do nothing),
         // frontCellI is -1 on all processors
-        if (returnReduceAnd(frontCellI == -1))
+        if (returnReduce(frontCellI == -1, andOp<bool>()))
         {
             //Pout<< "now :"
             //    << " nLeakCell:"
@@ -1064,7 +1064,10 @@ void Foam::shortestPathSet::genSamples
                    /"isLeakCell" + Foam::name(iter) + ".obj"
                 );
                 Pout<< "Writing new isLeakCell to " << str.name() << endl;
-                str.write(leakCcs);
+                forAll(leakCcs, i)
+                {
+                    str.write(leakCcs[i]);
+                }
             }
             if (debug & 2)
             {
@@ -1087,10 +1090,13 @@ void Foam::shortestPathSet::genSamples
                         << " distance:" << samplingCurveDist[samplei]
                         << endl;
 
-                    str.writeLine
+                    str.write
                     (
-                        samplingPts[samplei-1],
-                        samplingPts[samplei]
+                        linePointRef
+                        (
+                            samplingPts[samplei-1],
+                            samplingPts[samplei]
+                        )
                     );
                 }
             }
@@ -1115,9 +1121,9 @@ void Foam::shortestPathSet::genSamples
             fm,
             dimensionedScalar(dimless, Zero)
         );
-        for (const label celli : isLeakCell)
+        forAll(isLeakCell, celli)
         {
-            fld[celli] = scalar(1);
+            fld[celli] = isLeakCell[celli];
         }
         fld.correctBoundaryConditions();
         fld.write();
@@ -1187,8 +1193,8 @@ void Foam::shortestPathSet::genSamples
             {
                 str.write(mesh.points()[pointi]);
             }
-            Pout<< "Writing " << str.nVertices()
-                << " points to " << str.name() << endl;
+            Pout<< "Writing " << str.nVertices() << " points to " << str.name()
+                << endl;
         }
     }
 
@@ -1260,8 +1266,8 @@ void Foam::shortestPathSet::genSamples
         mkDir(mesh.time().timePath());
         OBJstream str(mesh.time().timePath()/"isLeakFace.obj");
         str.write(leakFaces, mesh.points(), false);
-        Pout<< "Writing " << leakFaces.size()
-            << " faces to " << str.name() << endl;
+        Pout<< "Writing " << leakFaces.size() << " faces to " << str.name()
+            << endl;
     }
 
 

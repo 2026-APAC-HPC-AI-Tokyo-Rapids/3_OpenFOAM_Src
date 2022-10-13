@@ -28,6 +28,7 @@ License
 
 #include "tetOverlapVolume.H"
 #include "tetrahedron.H"
+#include "tetPoints.H"
 #include "polyMesh.H"
 #include "OFstream.H"
 #include "treeBoundBox.H"
@@ -40,6 +41,12 @@ namespace Foam
 {
     defineTypeNameAndDebug(tetOverlapVolume, 0);
 }
+
+
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::tetOverlapVolume::tetOverlapVolume()
+{}
 
 
 // * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * * //

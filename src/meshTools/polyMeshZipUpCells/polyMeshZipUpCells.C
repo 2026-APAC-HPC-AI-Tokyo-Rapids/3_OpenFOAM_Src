@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,8 +28,6 @@ License
 #include "polyMeshZipUpCells.H"
 #include "polyMesh.H"
 #include "Time.H"
-#include "CircularBuffer.H"
-#include "DynamicList.H"
 
 // #define DEBUG_ZIPUP 1
 // #define DEBUG_CHAIN 1
@@ -68,9 +65,6 @@ bool Foam::polyMeshZipUpCells(polyMesh& mesh)
     label nCycles = 0;
 
     labelHashSet problemCells;
-
-    DynamicList<bool> singleEdgeUsage(256);
-    CircularBuffer<label> pointChain(256);
 
     do
     {
@@ -204,8 +198,7 @@ bool Foam::polyMeshZipUpCells(polyMesh& mesh)
                 }
             }
 
-            singleEdgeUsage.resize_nocopy(singleEdges.size());
-            singleEdgeUsage = false;
+            boolList singleEdgeUsage(singleEdges.size(), false);
 
             // loop through all edges and eliminate the ones that are
             // blocked out
@@ -253,7 +246,7 @@ bool Foam::polyMeshZipUpCells(polyMesh& mesh)
             // Find a good edge
             forAll(singleEdges, edgeI)
             {
-                pointChain.clear();
+                SLList<label> pointChain;
 
                 bool blockHead = false;
                 bool blockTail = false;
@@ -266,8 +259,8 @@ bool Foam::polyMeshZipUpCells(polyMesh& mesh)
                     label newEdgeStart = singleEdges[edgeI].start();
                     label newEdgeEnd = singleEdges[edgeI].end();
 
-                    pointChain.push_front(newEdgeStart);
-                    pointChain.push_back(newEdgeEnd);
+                    pointChain.insert(newEdgeStart);
+                    pointChain.append(newEdgeEnd);
 
                     #ifdef DEBUG_CHAIN
                     Info<< "found edge to start with: "
@@ -327,16 +320,16 @@ bool Foam::polyMeshZipUpCells(polyMesh& mesh)
                                 // Try to add the edge onto the head
                                 if (!blockHead)
                                 {
-                                    if (pointChain.front() == addStart)
+                                    if (pointChain.first() == addStart)
                                     {
                                         // Added at start mark as used
-                                        pointChain.push_front(addEnd);
+                                        pointChain.insert(addEnd);
 
                                         singleEdgeUsage[addEdgeI] = true;
                                     }
-                                    else if (pointChain.front() == addEnd)
+                                    else if (pointChain.first() == addEnd)
                                     {
-                                        pointChain.push_front(addStart);
+                                        pointChain.insert(addStart);
 
                                         singleEdgeUsage[addEdgeI] = true;
                                     }
@@ -346,24 +339,24 @@ bool Foam::polyMeshZipUpCells(polyMesh& mesh)
                                 // did not add it
                                 if (!blockTail && !singleEdgeUsage[addEdgeI])
                                 {
-                                    if (pointChain.back() == addStart)
+                                    if (pointChain.last() == addStart)
                                     {
                                         // Added at start mark as used
-                                        pointChain.push_back(addEnd);
+                                        pointChain.append(addEnd);
 
                                         singleEdgeUsage[addEdgeI] = true;
                                     }
-                                    else if (pointChain.back() == addEnd)
+                                    else if (pointChain.last() == addEnd)
                                     {
-                                        pointChain.push_back(addStart);
+                                        pointChain.append(addStart);
 
                                         singleEdgeUsage[addEdgeI] = true;
                                     }
                                 }
 
                                 // check if the new head or tail are blocked
-                                label curEdgeStart = pointChain.front();
-                                label curEdgeEnd = pointChain.back();
+                                label curEdgeStart = pointChain.first();
+                                label curEdgeEnd = pointChain.last();
 
                                 #ifdef DEBUG_CHAIN
                                 Info<< "curEdgeStart: " << curEdgeStart
@@ -403,7 +396,7 @@ bool Foam::polyMeshZipUpCells(polyMesh& mesh)
                                     Info<< "closed loop" << endl;
                                     #endif
 
-                                    pointChain.pop_front();
+                                    pointChain.removeHead();
 
                                     blockHead = true;
                                     blockTail = true;
@@ -412,8 +405,8 @@ bool Foam::polyMeshZipUpCells(polyMesh& mesh)
                                 }
 
                                 #ifdef DEBUG_CHAIN
-                                Info<< "current pointChain: "
-                                    << pointChain << endl;
+                                Info<< "current pointChain: " << pointChain
+                                    << endl;
                                 #endif
 
                                 if (stopSearching) break;
@@ -428,7 +421,7 @@ bool Foam::polyMeshZipUpCells(polyMesh& mesh)
 
                 if (pointChain.size() > 2)
                 {
-                    edgesToInsert[nEdgesToInsert] = pointChain.list();
+                    edgesToInsert[nEdgesToInsert] = pointChain;
                     nEdgesToInsert++;
                 }
             }

@@ -33,8 +33,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_objectHit_H
-#define Foam_objectHit_H
+#ifndef objectHit_H
+#define objectHit_H
 
 #include "bool.H"
 #include "label.H"
@@ -43,10 +43,6 @@ Description
 
 namespace Foam
 {
-
-// Forward Declarations
-class objectHit;
-inline Ostream& operator<<(Ostream& os, const objectHit& obj);
 
 /*---------------------------------------------------------------------------*\
                            Class objectHit Declaration
@@ -67,7 +63,7 @@ public:
 
     // Constructors
 
-        //- Default construct. Nothing hit and object index = -1
+        //- Default construct. Nothing hit and object = -1
         constexpr objectHit() noexcept
         :
             hit_(false),
@@ -114,7 +110,7 @@ public:
 
     // Edit
 
-        //- Reset to default construct state (false, -1)
+        //- Reset to default construct state
         void reset() noexcept
         {
             hit_ = false;
@@ -133,27 +129,21 @@ public:
             hit_ = false;
         }
 
-        //- Set the hit object index
-        void setIndex(const label index) noexcept
-        {
-            index_ = index;
-        }
-
 
     // Ostream Operator
 
         inline friend Ostream& operator<<(Ostream& os, const objectHit& obj)
         {
-             return os << obj.hit() << token::SPACE << obj.index();
+             return os << obj.hit() << token::SPACE << obj.hitObject();
         }
 };
 
 
-// * * * * * * * * * * * * * * Global Operators  * * * * * * * * * * * * * * //
+// Global Operators
 
 inline bool operator==(const objectHit& a, const objectHit& b)
 {
-    return a.hit() == b.hit() && a.index() == b.index();
+    return a.hit() == b.hit() && a.hitObject() == b.hitObject();
 }
 
 

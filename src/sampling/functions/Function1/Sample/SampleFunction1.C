@@ -45,7 +45,7 @@ void Foam::Function1Types::Sample<Type>::setSampleCell() const
 
         celli_ = mesh.findCell(position_);
 
-        if (returnReduceAnd(celli_ < 0))
+        if (!returnReduce(celli_ != -1, orOp<bool>()))
         {
             FatalErrorInFunction
                 << "Sample cell could not be found at position "

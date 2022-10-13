@@ -39,7 +39,7 @@ interpolationSchemes
     default            linear;
 }
 
-lnGradSchemes
+snGradSchemes
 {
     default            limited 0.333;
 }

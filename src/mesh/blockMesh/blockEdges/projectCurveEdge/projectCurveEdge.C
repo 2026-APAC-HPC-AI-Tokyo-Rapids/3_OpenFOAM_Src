@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -147,7 +147,7 @@ Foam::blockEdges::projectCurveEdge::position(const scalarList& lambdas) const
             {
                 if (nearInfo[i].hit())
                 {
-                    points[i] = nearInfo[i].point();
+                    points[i] = nearInfo[i].hitPoint();
                 }
             }
 
@@ -196,7 +196,7 @@ Foam::blockEdges::projectCurveEdge::position(const scalarList& lambdas) const
             {
                 forAll(points, i)
                 {
-                    debugStr().writeLine(start[i], points[i]);
+                    debugStr().write(linePointRef(start[i], points[i]));
                 }
             }
         }
@@ -257,7 +257,7 @@ Foam::blockEdges::projectCurveEdge::position(const scalarList& lambdas) const
             forAll(points, i)
             {
                 const point predicted(points[i] + residual[i]);
-                debugStr().writeLine(points[i], predicted);
+                debugStr().write(linePointRef(points[i], predicted));
             }
         }
 

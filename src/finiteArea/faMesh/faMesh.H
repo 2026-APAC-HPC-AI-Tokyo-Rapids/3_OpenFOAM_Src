@@ -253,12 +253,6 @@ class faMesh
         //- Primitive patch
         mutable std::unique_ptr<uindirectPrimitivePatch> patchPtr_;
 
-        //- List of poly patch/patch-face for faceLabels
-        mutable std::unique_ptr<List<labelPair>> polyPatchFacesPtr_;
-
-        //- List of polyPatch ids used by the area mesh
-        mutable std::unique_ptr<labelList> polyPatchIdsPtr_;
-
         //- List of proc/mesh-face for boundary edge neighbours
         mutable std::unique_ptr<List<labelPair>> bndConnectPtr_;
 
@@ -287,7 +281,7 @@ class faMesh
         mutable edgeScalarField* magLePtr_;
 
         //- Face centres
-        mutable areaVectorField* faceCentresPtr_;
+        mutable areaVectorField* centresPtr_;
 
         //- Edge centres
         mutable edgeVectorField* edgeCentresPtr_;
@@ -327,6 +321,9 @@ class faMesh
 
 
     // Static Private Data
+
+        //- Geometry treatment (0: primitive, 1: standard)
+        static int geometryOrder_;
 
         //- Quadrics fit for pointAreaNormals (experimental)
         static const int quadricsFit_;
@@ -371,15 +368,6 @@ class faMesh
             //- Calculate patch starts in the edge list
             void calcPatchStarts() const;
 
-            //- Calculate which polyPatches, polyPatch/local-face
-            //- are related to the areaMesh
-            void calcWhichPatchFaces() const;
-
-            //- Calculate the edge normals (direct calculation)
-            //- with flat boundary addressing
-            //  Possible communication
-            tmp<vectorField> calcRawEdgeNormals(int calcType) const;
-
             //- Calculate edge lengths
             //  Triggers communication via calcEdgeAreaNormals
             void calcLe() const;
@@ -390,7 +378,7 @@ class faMesh
 
             //- Calculate face centres
             //  No communication
-            void calcFaceCentres() const;
+            void calcAreaCentres() const;
 
             //- Calculate edge centres
             //  No communication
@@ -507,12 +495,6 @@ public:
         typedef faBoundaryMesh BoundaryMesh;
 
 
-    // Tuning switches
-
-        //- Geometry treatment
-        static int geometryOrder_;
-
-
     //- Runtime type information
     TypeName("faMesh");
 
@@ -576,8 +558,8 @@ public:
 
     // Static Functions
 
-        //- Return the current geometry treatment
-        //  A zero level or negative is with restricted neighbour information
+        //- Return the current geometry treatment (0: primitive, 1: standard)
+        //  A zero level is with restricted neighbour information
         static int geometryOrder() noexcept
         {
             return geometryOrder_;
@@ -585,7 +567,7 @@ public:
 
         //- Set the preferred geometry treatment
         //  \return the previous value
-        static int geometryOrder(int order) noexcept
+        static int geometryOrder(const int order) noexcept
         {
             int old(geometryOrder_);
             geometryOrder_ = order;
@@ -720,14 +702,6 @@ public:
             //- Return the underlying polyMesh face labels
             inline const labelList& faceLabels() const noexcept;
 
-            //- The area-face corresponding to the mesh-face, -1 if not found
-            inline label whichFace(const label meshFacei) const;
-
-            //- The polyPatches related to the areaMesh, in sorted order
-            inline const labelList& whichPolyPatches() const;
-
-            //- The polyPatch/local-face for each faceLabels()
-            inline const List<labelPair>& whichPatchFaces() const;
 
             //- Return parallel info
             const faGlobalMeshData& globalData() const;
@@ -778,69 +752,23 @@ public:
             //- Face centres of boundary halo neighbours
             const pointField& haloFaceCentres() const;
 
-            //- Face unit-normals of boundary halo neighbours
+            //- Face normals of boundary halo neighbours
             const vectorField& haloFaceNormals() const;
 
             //- Face centres of boundary halo neighbours for specified patch
             tmp<pointField> haloFaceCentres(const label patchi) const;
 
-            //- Face unit-normals of boundary halo neighbours for specified patch
+            //- Face normals of boundary halo neighbours for specified patch
             tmp<vectorField> haloFaceNormals(const label patchi) const;
 
 
-    // Interfacing
-
-        //- The volume (owner) cells associated with the area-mesh
-        labelList faceCells() const;
-
-
-    // Storage Management
+    // Storage management
 
         //- Remove all files from mesh instance
         void removeFiles(const fileName& instanceDir) const;
 
         //- Remove all files from mesh instance()
         void removeFiles() const;
-
-
-        //- Has face areas: S()
-        bool hasFaceAreas() const noexcept { return bool(SPtr_); }
-
-        //- Has face centres: areaCentres()
-        bool hasAreaCentres() const noexcept { return bool(faceCentresPtr_); }
-
-        //- Has edge centres: edgeCentres()
-        bool hasAdgeCentres() const noexcept { return bool(edgeCentresPtr_); }
-
-        //- Has edge length vectors: Le()
-        bool hasLe() const noexcept { return bool(LePtr_); }
-
-        //- Has edge length magnitudes: magLe()
-        bool hasMagLe() const noexcept { return bool(magLePtr_); }
-
-        //- Has face area normals: faceAreaNormals()
-        bool hasFaceAreaNormals() const noexcept
-        {
-            return bool(faceAreaNormalsPtr_);
-        }
-
-        //- Has edge area normals: edgeAreaNormals()
-        bool hasEdgeAreaNormals() const noexcept
-        {
-            return bool(edgeAreaNormalsPtr_);
-        }
-
-        //- Has point area normals: pointAreaNormals()
-        bool hasPointAreaNormals() const noexcept
-        {
-            return bool(pointAreaNormalsPtr_);
-        }
-
-        //- Has face curvatures: faceCurvatures()
-        bool hasFaceCurvatures() const noexcept
-        {
-            return bool(faceCurvaturesPtr_);
-        }
 
 
     // Mesh motion and morphing

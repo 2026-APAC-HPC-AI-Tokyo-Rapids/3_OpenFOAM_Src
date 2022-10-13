@@ -44,7 +44,7 @@ using namespace Foam;
 template<class T>
 Ostream& printInfo(const MinMax<T>& range)
 {
-    Info<< range << " good=" << range.good();
+    Info<< range << " valid=" << range.valid();
 
     return Info;
 }

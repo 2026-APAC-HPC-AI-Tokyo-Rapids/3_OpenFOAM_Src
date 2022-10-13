@@ -82,7 +82,7 @@ public:
     // Static Functions
 
         //- The ensight element name for the specified 'Cell' type
-        inline static const char* key(const elemType etype) noexcept;
+        inline static const char* key(const elemType etype);
 
 
 private:
@@ -183,10 +183,7 @@ public:
 
         //- The global size of all element types.
         //  This value is only meaningful after a reduce operation.
-        label totalSize() const noexcept;
-
-        //- Same as totalSize()
-        label total() const noexcept { return totalSize(); }
+        label total() const;
 
         //- The global size of the specified element type.
         //  This value is only meaningful after a reduce operation.

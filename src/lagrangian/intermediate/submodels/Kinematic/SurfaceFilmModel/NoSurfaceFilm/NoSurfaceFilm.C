@@ -88,4 +88,9 @@ void Foam::NoSurfaceFilm<CloudType>::setParcelProperties
 {}
 
 
+template<class CloudType>
+void Foam::NoSurfaceFilm<CloudType>::info(Ostream&)
+{}
+
+
 // ************************************************************************* //

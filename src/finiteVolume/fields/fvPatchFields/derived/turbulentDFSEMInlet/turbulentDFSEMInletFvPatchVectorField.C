@@ -164,7 +164,7 @@ void Foam::turbulentDFSEMInletFvPatchVectorField::initialisePatch()
     sumTriMagSf_ = Zero;
     sumTriMagSf_[Pstream::myProcNo() + 1] = sum(triMagSf);
 
-    Pstream::listCombineReduce(sumTriMagSf_, maxEqOp<scalar>());
+    Pstream::listCombineAllGather(sumTriMagSf_, maxEqOp<scalar>());
 
     for (label i = 1; i < triMagSf.size(); ++i)
     {
@@ -190,10 +190,8 @@ void Foam::turbulentDFSEMInletFvPatchVectorField::initialisePatch()
     patchBounds_.inflate(0.1);
 
     // Determine if all eddies spawned from a single processor
-    singleProc_ = returnReduceOr
-    (
-        patch.size() == returnReduce(patch.size(), sumOp<label>())
-    );
+    singleProc_ = patch.size() == returnReduce(patch.size(), sumOp<label>());
+    reduce(singleProc_, orOp<bool>());
 }
 
 
@@ -279,8 +277,9 @@ Foam::pointIndexHit Foam::turbulentDFSEMInletFvPatchVectorField::setNewPosition
             const face& tf = triFace_[triI];
             const triPointRef tri(points[tf[0]], points[tf[1]], points[tf[2]]);
 
-            pos.hitPoint(tri.randomPoint(rndGen_));
+            pos.setHit();
             pos.setIndex(triToFace_[triI]);
+            pos.rawPoint() = tri.randomPoint(rndGen_);
         }
     }
     else
@@ -303,8 +302,9 @@ Foam::pointIndexHit Foam::turbulentDFSEMInletFvPatchVectorField::setNewPosition
         const face& tf = triFace_[triI];
         const triPointRef tri(points[tf[0]], points[tf[1]], points[tf[2]]);
 
-        pos.hitPoint(tri.randomPoint(rndGen_));
+        pos.setHit();
         pos.setIndex(triToFace_[triI]);
+        pos.rawPoint() = tri.randomPoint(rndGen_);
     }
 
     return pos;
@@ -626,7 +626,7 @@ turbulentDFSEMInletFvPatchVectorField
     triCumulativeMagSf_(),
     sumTriMagSf_(Pstream::nProcs() + 1, Zero),
     patchNormal_(Zero),
-    patchBounds_(),
+    patchBounds_(boundBox::invertedBox),
 
     eddies_(Zero),
     v0_(Zero),
@@ -709,7 +709,7 @@ turbulentDFSEMInletFvPatchVectorField
     triCumulativeMagSf_(),
     sumTriMagSf_(Pstream::nProcs() + 1, Zero),
     patchNormal_(Zero),
-    patchBounds_(),
+    patchBounds_(boundBox::invertedBox),
 
     eddies_(),
     v0_(Zero),
@@ -1033,8 +1033,8 @@ void Foam::turbulentDFSEMInletFvPatchVectorField::updateCoeffs()
         {
             Info<< "Magnitude of bulk velocity: " << UBulk << endl;
 
-            Info<< "Number of eddies: "
-                << returnReduce(eddies_.size(), sumOp<label>())
+            label n = eddies_.size();
+            Info<< "Number of eddies: " << returnReduce(n, sumOp<label>())
                 << endl;
 
             Info<< "Patch:" << patch().patch().name()

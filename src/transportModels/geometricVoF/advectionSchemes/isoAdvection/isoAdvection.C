@@ -62,7 +62,7 @@ Foam::isoAdvection::isoAdvection
     mesh_(alpha1.mesh()),
     dict_(mesh_.solverDict(alpha1.name())),
     alpha1_(alpha1),
-    alpha1In_(alpha1.primitiveFieldRef()),
+    alpha1In_(alpha1.ref()),
     phi_(phi),
     U_(U),
     dVf_
@@ -695,15 +695,20 @@ void Foam::isoAdvection::writeIsoFaces
             Info<< nl << "isoAdvection: writing iso faces to file: "
                 << os.name() << nl << endl;
 
-            for
-            (
-                const DynamicList<List<point>>& procFacePts
-              : allProcFaces
-            )
+            face f;
+            forAll(allProcFaces, proci)
             {
+                const DynamicList<List<point>>& procFacePts =
+                    allProcFaces[proci];
+
                 for (const List<point>& facePts : procFacePts)
                 {
-                    os.writeFace(facePts, false);
+                    if (facePts.size() != f.size())
+                    {
+                        f = face(identity(facePts.size()));
+                    }
+
+                    os.write(f, facePts, false);
                 }
             }
         }
@@ -715,9 +720,15 @@ void Foam::isoAdvection::writeIsoFaces
         Info<< nl << "isoAdvection: writing iso faces to file: "
             << os.name() << nl << endl;
 
+        face f;
         for (const List<point>& facePts : faces)
         {
-            os.writeFace(facePts, false);
+            if (facePts.size() != f.size())
+            {
+                f = face(identity(facePts.size()));
+            }
+
+            os.write(f, facePts, false);
         }
     }
 }

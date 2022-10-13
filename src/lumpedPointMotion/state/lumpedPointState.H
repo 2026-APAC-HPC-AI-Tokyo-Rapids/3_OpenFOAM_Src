@@ -122,7 +122,7 @@ private:
         bool degrees_;
 
         //- Tensor rotation of lumped points
-        mutable std::unique_ptr<tensorField> rotationPtr_;
+        mutable unique_ptr<tensorField> rotationPtr_;
 
 
     // Private Member Functions

@@ -81,10 +81,6 @@ extern const dimensionSet dimViscosity;
 extern const dimensionSet dimDynamicViscosity;
 
 
-/*---------------------------------------------------------------------------*\
-                        Class dimensionSets Declaration
-\*---------------------------------------------------------------------------*/
-
 //- Construction of unit sets
 class dimensionSets
 {

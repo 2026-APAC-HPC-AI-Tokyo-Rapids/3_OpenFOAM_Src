@@ -206,7 +206,7 @@ void Foam::functionObjects::forceCoeffs::createIntegratedDataFile()
 {
     if (!coeffFilePtr_.valid())
     {
-        coeffFilePtr_ = newFileAtStartTime("coefficient");
+        coeffFilePtr_ = createFile("coefficient");
         writeIntegratedDataFileHeader("Coefficients", coeffFilePtr_());
     }
 }

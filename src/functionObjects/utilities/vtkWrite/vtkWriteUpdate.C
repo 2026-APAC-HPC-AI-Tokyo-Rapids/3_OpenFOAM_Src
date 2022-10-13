@@ -59,8 +59,6 @@ Foam::labelList Foam::functionObjects::vtkWrite::getSelectedPatches
 {
     DynamicList<label> patchIDs(patches.size());
 
-    wordRes::filter patchFilter(selectPatches_, blockPatches_);
-
     for (const polyPatch& pp : patches)
     {
         if (isType<emptyPolyPatch>(pp))
@@ -72,7 +70,12 @@ Foam::labelList Foam::functionObjects::vtkWrite::getSelectedPatches
             break; // No processor patches
         }
 
-        if (patchFilter(pp.name()))
+        if
+        (
+            selectPatches_.size()
+          ? selectPatches_.match(pp.name())
+          : true
+        )
         {
             patchIDs.append(pp.index());
         }
@@ -177,14 +180,9 @@ bool Foam::functionObjects::vtkWrite::readSelection(const dictionary& dict)
     selectPatches_.clear();
     dict.readIfPresent("patches", selectPatches_);
 
-    blockPatches_.clear();
-    dict.readIfPresent("excludePatches", blockPatches_);
-
     selectFields_.clear();
     dict.readEntry("fields", selectFields_);
-
-    blockFields_.clear();
-    dict.readIfPresent("excludeFields", blockFields_);
+    selectFields_.uniq();
 
     // Actions to define selection
     selection_ = dict.subOrEmptyDict("selection");

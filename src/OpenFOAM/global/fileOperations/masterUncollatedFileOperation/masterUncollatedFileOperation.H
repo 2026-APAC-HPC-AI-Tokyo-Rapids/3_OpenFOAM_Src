@@ -88,20 +88,12 @@ class masterUncollatedFileOperation
 :
     public fileOperation
 {
-    // Private Data
-
-        //- Communicator allocated/managed by us
-        label managedComm_;
-
-
-    // Private Member Functions
-
-        //- Any initialisation steps after constructing
-        void init(bool verbose);
-
 protected:
 
     // Protected Data
+
+        //- Any communicator allocated by me
+        const label myComm_;
 
         //- Cached times for a given directory
         mutable HashPtrTable<DynamicList<instant>> times_;
@@ -291,17 +283,15 @@ protected:
         class rmDirOp
         {
             bool silent_;
-            bool emptyOnly_;
         public:
-            rmDirOp(bool silent=false, bool emptyOnly=false)
+            rmDirOp(const bool silent=false)
             :
-                silent_(silent),
-                emptyOnly_(emptyOnly)
+                silent_(silent)
             {}
 
             bool operator()(const fileName& f) const
             {
-                return Foam::rmDir(f, silent_, emptyOnly_);
+                return Foam::rmDir(f, silent_);
             }
         };
 
@@ -359,7 +349,7 @@ protected:
                 (
                     (isFile_ ? Foam::isFile(f) : Foam::isDir(f))
                   ? f
-                  : fileName::null  // const reference, not temporary
+                  : fileName::null
                 );
             }
         };
@@ -434,7 +424,7 @@ protected:
         (
             const bool checkGlobal,
             const bool isFile,
-            const IOobject& io,
+            const IOobject&,
             const bool search,
             pathType& searchType,
             word& processorsDir,
@@ -613,15 +603,20 @@ public:
             virtual bool rm(const fileName&) const;
 
             //- Remove a directory and its contents
-            //  \param dir the directory to remove
             //  \param silent do not report missing directory
-            //  \param emptyOnly only remove empty directories (recursive)
             virtual bool rmDir
             (
                 const fileName& dir,
-                const bool silent = false,
-                const bool emptyOnly = false
+                const bool silent = false
             ) const;
+
+//            //- Open a shared library. Return handle to library. Print error
+//            //  message if library cannot be loaded (check = true)
+//            virtual void* dlOpen
+//            (
+//                const fileName& lib,
+//                const bool check = true
+//            ) const;
 
 
         // (reg)IOobject functinality
@@ -700,15 +695,6 @@ public:
                 const bool valid = true
             ) const;
 
-            //- Generate an OSstream that writes a file
-            virtual autoPtr<OSstream> NewOFstream
-            (
-                IOstreamOption::atomicType atomic,
-                const fileName& pathname,
-                IOstreamOption streamOpt = IOstreamOption(),
-                const bool valid = true
-            ) const;
-
 
         // File modification checking
 
@@ -746,6 +732,9 @@ public:
 
 
         // Other
+
+            //- Same file?
+            static bool uniformFile(const fileNameList&);
 
             //- Get sorted list of times
             virtual instantList findTimes(const fileName&, const word&) const;

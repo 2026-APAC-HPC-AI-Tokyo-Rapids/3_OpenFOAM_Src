@@ -311,7 +311,7 @@ void Foam::conformalVoronoiMesh::buildSurfaceConformation()
                 )
                 {
                     // meshTools::writeOBJ(Pout, vert);
-                    // meshTools::writeOBJ(Pout, surfHit.point());
+                    // meshTools::writeOBJ(Pout, surfHit.hitPoint());
                     // Pout<< "l cr0 cr1" << endl;
 
                     addSurfaceAndEdgeHits
@@ -729,7 +729,7 @@ Foam::label Foam::conformalVoronoiMesh::synchroniseSurfaceTrees
         }
     }
 
-    Pstream::listCombineReduce(hits, plusEqOp<labelHashSet>());
+    Pstream::listCombineAllGather(hits, plusEqOp<labelHashSet>());
 
     forAll(surfaceHits, eI)
     {
@@ -804,7 +804,7 @@ Foam::label Foam::conformalVoronoiMesh::synchroniseEdgeTrees
             if (nearest.hit())
             {
 //                Pout<< "Not inserting " << peI << " " << pt << " "
-//                    << nearest.point() << " on proc " << proci
+//                    << nearest.rawPoint() << " on proc " << proci
 //                    << ", near edge = " << nearest
 //                    << " near ftPt = "<< info
 //                    << " " << featureEdgeExclusionDistanceSqr(pt)
@@ -816,7 +816,7 @@ Foam::label Foam::conformalVoronoiMesh::synchroniseEdgeTrees
         }
     }
 
-    Pstream::listCombineReduce(hits, plusEqOp<labelHashSet>());
+    Pstream::listCombineAllGather(hits, plusEqOp<labelHashSet>());
 
     forAll(featureEdgeHits, eI)
     {
@@ -1477,9 +1477,9 @@ void Foam::conformalVoronoiMesh::reportProcessorOccupancy()
 //                    << vit->type() << nl
 //                    << vit->ppMaster() << nl
 //                    << "nearFeaturePt "
-//                    << nearFeaturePt(surfHit.point()) << nl
+//                    << nearFeaturePt(surfHit.hitPoint()) << nl
 //                    << vert << nl
-//                    << surfHit.point()
+//                    << surfHit.hitPoint()
 //                    << endl;
 //            }
 //        }
@@ -1614,7 +1614,7 @@ void Foam::conformalVoronoiMesh::limitDisplacement
         {
             limit = true;
 
-            if (surfHit.point().distSqr(pt) <= searchDistanceSqr)
+            if (magSqr(pt - surfHit.hitPoint()) <= searchDistanceSqr)
             {
                 // Cannot limit displacement, point closer than tolerance
                 displacement = Zero;
@@ -1711,7 +1711,7 @@ bool Foam::conformalVoronoiMesh::nearSurfacePoint
     (
         closeToSurfacePt
      && (
-            closePoint.hitPoint().distSqr(pt)
+            magSqr(pt - closePoint.hitPoint())
           > sqr(pointPairDistance(pt))
         )
     )
@@ -1807,25 +1807,23 @@ Foam::conformalVoronoiMesh::nearestFeatureEdgeLocations
     const Foam::point& pt
 ) const
 {
-    const auto& tree = edgeLocationTreePtr_();
-
     const scalar exclusionRangeSqr = featureEdgeExclusionDistanceSqr(pt);
 
-    labelList elems = tree.findSphere(pt, exclusionRangeSqr);
+    labelList elems
+        = edgeLocationTreePtr_().findSphere(pt, exclusionRangeSqr);
 
-    DynamicList<pointIndexHit> dynPointHit(elems.size());
+    DynamicList<pointIndexHit> dynPointHit;
 
-    for (const label index : elems)
+    forAll(elems, elemI)
     {
-        dynPointHit.append
-        (
-            pointIndexHit
-            (
-                true,
-                tree.shapes().centre(index),
-                index
-            )
-        );
+        label index = elems[elemI];
+
+        const Foam::point& pointi
+            = edgeLocationTreePtr_().shapes().shapePoints()[index];
+
+        pointIndexHit nearHit(true, pointi, index);
+
+        dynPointHit.append(nearHit);
     }
 
     return dynPointHit;
@@ -1967,8 +1965,11 @@ void Foam::conformalVoronoiMesh::buildEdgeLocationTree
 {
     treeBoundBox overallBb
     (
-        geometryToConformTo_.globalBounds().extend(rndGen_, 1e-4, ROOTVSMALL)
+        geometryToConformTo_.globalBounds().extend(rndGen_, 1e-4)
     );
+
+    overallBb.min() -= Foam::point::uniform(ROOTVSMALL);
+    overallBb.max() += Foam::point::uniform(ROOTVSMALL);
 
     edgeLocationTreePtr_.reset
     (
@@ -1991,8 +1992,11 @@ void Foam::conformalVoronoiMesh::buildSurfacePtLocationTree
 {
     treeBoundBox overallBb
     (
-        geometryToConformTo_.globalBounds().extend(rndGen_, 1e-4, ROOTVSMALL)
+        geometryToConformTo_.globalBounds().extend(rndGen_, 1e-4)
     );
+
+    overallBb.min() -= Foam::point::uniform(ROOTVSMALL);
+    overallBb.max() += Foam::point::uniform(ROOTVSMALL);
 
     surfacePtLocationTreePtr_.reset
     (
@@ -2075,7 +2079,7 @@ void Foam::conformalVoronoiMesh::addSurfaceAndEdgeHits
 
                 if (edHit.hit())
                 {
-                    const Foam::point& edPt = edHit.point();
+                    const Foam::point& edPt = edHit.hitPoint();
 
                     if
                     (
@@ -2091,7 +2095,7 @@ void Foam::conformalVoronoiMesh::addSurfaceAndEdgeHits
                     {
                         if
                         (
-                            surfPt.distSqr(edPt)
+                            magSqr(edPt - surfPt)
                           < surfacePtReplaceDistCoeffSqr*cellSizeSqr
                         )
                         {
@@ -2137,7 +2141,7 @@ void Foam::conformalVoronoiMesh::addSurfaceAndEdgeHits
                             surfacePtToEdgePtDist.insert
                             (
                                 existingEdgeLocations_.size() - 1,
-                                surfPt.distSqr(edPt)
+                                magSqr(edPt - surfPt)
                             );
                         }
                         else if (firstPass)
@@ -2148,7 +2152,7 @@ void Foam::conformalVoronoiMesh::addSurfaceAndEdgeHits
 
                             if
                             (
-                                surfPt.distSqr(edPt)
+                                magSqr(edPt - surfPt)
                               < surfacePtToEdgePtDist[hitIndex]
                             )
                             {
@@ -2158,7 +2162,7 @@ void Foam::conformalVoronoiMesh::addSurfaceAndEdgeHits
                                 existingEdgeLocations_[hitIndex] =
                                     edHit.hitPoint();
                                 surfacePtToEdgePtDist[hitIndex] =
-                                    surfPt.distSqr(edPt);
+                                    magSqr(edPt - surfPt);
 
                                 // Change edge location in featureEdgeHits
                                 // remove index from edge tree

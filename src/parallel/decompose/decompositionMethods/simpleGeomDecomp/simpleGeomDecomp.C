@@ -359,7 +359,7 @@ Foam::labelList Foam::simpleGeomDecomp::decompose
     const scalarField& weights
 ) const
 {
-    if (returnReduceOr(points.size() != weights.size()))
+    if (returnReduce((points.size() != weights.size()), orOp<bool>()))
     {
         // Ignore zero-sized weights ... and poorly sized ones too
         return decompose(points);

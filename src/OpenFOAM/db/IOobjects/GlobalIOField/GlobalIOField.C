@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,21 +38,21 @@ Foam::GlobalIOField<Type>::GlobalIOField(const IOobject& io)
     // Check for MUST_READ_IF_MODIFIED
     warnNoRereading<GlobalIOField<Type>>();
 
-    readHeaderOk(IOstreamOption::BINARY, typeName);
+    readHeaderOk(IOstream::BINARY, typeName);
 }
 
 
 template<class Type>
-Foam::GlobalIOField<Type>::GlobalIOField(const IOobject& io, const label len)
+Foam::GlobalIOField<Type>::GlobalIOField(const IOobject& io, const label size)
 :
     regIOobject(io)
 {
     // Check for MUST_READ_IF_MODIFIED
     warnNoRereading<GlobalIOField<Type>>();
 
-    if (!readHeaderOk(IOstreamOption::BINARY, typeName))
+    if (!readHeaderOk(IOstream::BINARY, typeName))
     {
-        Field<Type>::resize(len);
+        Field<Type>::setSize(size);
     }
 }
 
@@ -69,7 +69,7 @@ Foam::GlobalIOField<Type>::GlobalIOField
     // Check for MUST_READ_IF_MODIFIED
     warnNoRereading<GlobalIOField<Type>>();
 
-    if (!readHeaderOk(IOstreamOption::BINARY, typeName))
+    if (!readHeaderOk(IOstream::BINARY, typeName))
     {
         Field<Type>::operator=(content);
     }
@@ -90,7 +90,7 @@ Foam::GlobalIOField<Type>::GlobalIOField
 
     Field<Type>::transfer(content);
 
-    readHeaderOk(IOstreamOption::BINARY, typeName);
+    readHeaderOk(IOstream::BINARY, typeName);
 }
 
 
@@ -113,7 +113,7 @@ Foam::GlobalIOField<Type>::GlobalIOField
         Field<Type>::transfer(tfld.ref());
     }
 
-    if (!readHeaderOk(IOstreamOption::BINARY, typeName) && !reuse)
+    if (!readHeaderOk(IOstream::BINARY, typeName))
     {
         Field<Type>::operator=(tfld());
     }

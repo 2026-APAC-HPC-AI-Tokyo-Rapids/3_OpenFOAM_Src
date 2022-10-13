@@ -95,8 +95,7 @@ int main(int argc, char *argv[])
 
     Info<< "Time = " << runTime.timeName() << nl << endl;
 
-    // Mesh information (verbose)
-    faMeshTools::printMeshChecks(aMesh);
+    #include "printMeshSummary.H"
 
     if (args.found("write-vtk"))
     {

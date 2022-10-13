@@ -1,3 +1,5 @@
+    fvMesh& mesh = fluidRegions[i];
+
     twoPhaseSystem& fluid  = phaseSystemFluid[i];
 
     phaseModel& phase1 = fluid.phase1();

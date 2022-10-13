@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -58,7 +58,14 @@ externalWallHeatFluxTemperatureFvPatchScalarField
 )
 :
     mixedFvPatchScalarField(p, iF),
-    temperatureCoupledBase(patch()),  // default method (fluidThermo)
+    temperatureCoupledBase
+    (
+        patch(),
+        "undefined",
+        "undefined",
+        "undefined-K",
+        "undefined-alpha"
+    ),
     mode_(fixedHeatFlux),
     Q_(nullptr),
     q_(nullptr),
@@ -369,15 +376,15 @@ void Foam::externalWallHeatFluxTemperatureFvPatchScalarField::updateCoeffs()
                     }
                 }
             }
+            scalarField hp(1/(1/htcCoeff + totalSolidRes));
 
             const scalar Ta =
                 Ta_->value(this->db().time().timeOutputValue());
 
-            scalarField hrad(Tp.size(), Zero);
+            scalarField hpTa(hp*Ta);
 
             if (emissivity_ > 0)
             {
-                const scalar eSig(emissivity_*sigma.value());
                 // Evaluate the radiative flux to the environment
                 // from the surface temperature ...
                 if (totalSolidRes > 0)
@@ -385,47 +392,20 @@ void Foam::externalWallHeatFluxTemperatureFvPatchScalarField::updateCoeffs()
                     // ... including the effect of the solid wall thermal
                     // resistance
                     scalarField TpLambda(htcCoeff/(htcCoeff + 1/totalSolidRes));
-                    scalarField Ts(TpLambda*Ta + (1 - TpLambda)*Tp);
-                    hrad = eSig*((pow3(Ta) + pow3(Ts)) + Ta*Ts*(Ta + Ts));
+                    scalarField Ts(TpLambda*Tp + (1 - TpLambda)*Ta);
+                    scalarField lambdaTa4(pow4((1 - TpLambda)*Ta));
 
-                    forAll(hrad, i)
-                    {
-                        scalar hradTmp0 = hrad[i];
-                        scalar TaLambda =
-                            (htcCoeff[i] + hradTmp0)
-                           /(htcCoeff[i] + hradTmp0 + 1/totalSolidRes);
-
-                        scalar TsiNew = TaLambda*Ta + (1 - TaLambda)*Tp[i];
-                        scalar Tsi = Ts[i];
-
-                        while (mag(Tsi - TsiNew)/Tsi > 0.01)
-                        {
-                            Tsi = TsiNew;
-                            scalar hradNew
-                            (
-                                eSig*((pow3(Ta) + pow3(Tsi)) + Ta*Tsi*(Ta + Tsi))
-                            );
-
-                            TaLambda =
-                                (htcCoeff[i] + hradNew)
-                               /(htcCoeff[i] + hradNew + 1/totalSolidRes);
-
-                            TsiNew = TaLambda*Ta + (1 - TaLambda)*Tp[i];
-                        };
-
-                        hrad[i] =
-                            eSig*((pow3(Ta) + pow3(Tsi)) + Ta*Tsi*(Ta + Tsi));
-                    }
+                    hp += emissivity_*sigma.value()*(pow4(Ts) - lambdaTa4)/Tp;
+                    hpTa += emissivity_*sigma.value()*(lambdaTa4 + pow4(Ta));
                 }
                 else
                 {
-                    hrad = eSig*((pow3(Ta) + pow3(Tp)) + Ta*Tp*(Ta + Tp));
+                    // ... if there is no solid wall thermal resistance use
+                    // the current wall temperature
+                    hp += emissivity_*sigma.value()*pow3(Tp);
+                    hpTa += emissivity_*sigma.value()*pow4(Ta);
                 }
             }
-
-            const scalarField hp(1/(1/(htcCoeff + hrad) + totalSolidRes));
-
-            const scalarField hpTa(hp*Ta);
 
             const scalarField kappaDeltaCoeffs
             (

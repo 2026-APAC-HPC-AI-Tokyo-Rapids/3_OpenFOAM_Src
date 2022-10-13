@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -104,10 +104,9 @@ void Foam::HeatTransferCoeff<CloudType>::postEvolve
     }
 
 
-    const bool haveParticles = c.size();
-    if (c.time().writeTime() && returnReduceOr(haveParticles))
+    if (c.size() && c.time().writeTime())
     {
-        htc.write(haveParticles);
+        htc.write();
     }
 }
 

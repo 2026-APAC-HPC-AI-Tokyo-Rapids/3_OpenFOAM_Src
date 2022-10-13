@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -119,65 +119,6 @@ Foam::PrimitivePatch<FaceList, PointField>::calcBdryPoints() const
 
     boundaryPointsPtr_.reset(new labelList(bp.sortedToc()));
     DebugInfo << "    Finished." << nl;
-}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-template<class FaceList, class PointField>
-Foam::Pair<typename Foam::PrimitivePatch<FaceList, PointField>::point_type>
-Foam::PrimitivePatch<FaceList, PointField>::box() const
-{
-    Pair<point_type> bb
-    (
-        point_type::uniform(ROOTVGREAT),
-        point_type::uniform(-ROOTVGREAT)
-    );
-
-    if (hasMeshPoints())
-    {
-        // Less looping if meshPoints() are already available
-        for (const label pointi : meshPoints())
-        {
-            bb.first()  = min(bb.first(),  points_[pointi]);
-            bb.second() = max(bb.second(), points_[pointi]);
-        }
-    }
-    else
-    {
-        // Walk the points on each face
-        for (const face_type& f : *this)
-        {
-            for (const label pointi : f)
-            {
-                bb.first()  = min(bb.first(),  points_[pointi]);
-                bb.second() = max(bb.second(), points_[pointi]);
-            }
-        }
-    }
-
-    return bb;
-}
-
-
-template<class FaceList, class PointField>
-Foam::scalar
-Foam::PrimitivePatch<FaceList, PointField>::sphere(const label facei) const
-{
-    scalar radiusSqr = 0;
-
-    const point_type& fc = this->faceCentres()[facei];
-
-    for (const label fp : this->operator[](facei))
-    {
-        const scalar sqrDist = magSqr(fc - points_[fp]);
-        if (radiusSqr < sqrDist)
-        {
-            radiusSqr = sqrDist;
-        }
-    }
-
-    return radiusSqr;
 }
 
 

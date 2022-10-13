@@ -40,7 +40,6 @@ Description
 
 SourceFiles
     fvPatchField.C
-    fvPatchFieldBase.C
     fvPatchFieldNew.C
 
 \*---------------------------------------------------------------------------*/
@@ -59,6 +58,7 @@ namespace Foam
 {
 
 // Forward Declarations
+
 class objectRegistry;
 class dictionary;
 class fvPatchFieldMapper;
@@ -73,16 +73,21 @@ Ostream& operator<<(Ostream&, const fvPatchField<Type>&);
 
 
 /*---------------------------------------------------------------------------*\
-                      Class fvPatchFieldBase Declaration
+                        Class fvPatchField Declaration
 \*---------------------------------------------------------------------------*/
 
-//- Template invariant parts for fvPatchField
-class fvPatchFieldBase
+template<class Type>
+class fvPatchField
+:
+    public Field<Type>
 {
     // Private Data
 
         //- Reference to patch
         const fvPatch& patch_;
+
+        //- Reference to internal field
+        const DimensionedField<Type, volMesh>& internalField_;
 
         //- Update index used so that updateCoeffs is called only once during
         //- the construction of the matrix
@@ -95,141 +100,10 @@ class fvPatchFieldBase
         //- Use implicit formulation
         bool useImplicit_;
 
-        //- Optional patch type
-        //  Used to allow specified boundary conditions to be applied
-        //  to constraint patches by providing the constraint
+        //- Optional patch type, used to allow specified boundary conditions
+        //  to be applied to constraint patches by providing the constraint
         //  patch type as 'patchType'
         word patchType_;
-
-
-protected:
-
-    // Protected Member Functions
-
-        //- Read dictionary entries.
-        //  Useful when initially constructed without a dictionary
-        virtual void readDict(const dictionary& dict);
-
-        //- Set updated state
-        void setUpdated(bool state) noexcept
-        {
-            updated_ = state;
-        }
-
-        //- Set matrix manipulated state
-        void setManipulated(bool state) noexcept
-        {
-            manipulatedMatrix_ = state;
-        }
-
-public:
-
-    //- Debug switch to disallow the use of generic fvPatchField
-    static int disallowGenericPatchField;
-
-    //- Runtime type information
-    TypeName("fvPatchField");
-
-
-    // Constructors
-
-        //- Construct from patch
-        explicit fvPatchFieldBase(const fvPatch& p);
-
-        //- Construct from patch and patch type
-        explicit fvPatchFieldBase(const fvPatch& p, const word& patchType);
-
-        //- Construct from patch and dictionary
-        fvPatchFieldBase(const fvPatch& p, const dictionary& dict);
-
-        //- Copy construct with new patch
-        fvPatchFieldBase(const fvPatchFieldBase& rhs, const fvPatch& p);
-
-        //- Copy construct
-        fvPatchFieldBase(const fvPatchFieldBase& rhs);
-
-
-    //- Destructor
-    virtual ~fvPatchFieldBase() = default;
-
-
-    // Member Functions
-
-    // Access
-
-        //- The associated objectRegistry
-        const objectRegistry& db() const;
-
-        //- Return the patch
-        const fvPatch& patch() const noexcept
-        {
-            return patch_;
-        }
-
-        //- The optional patch type
-        const word& patchType() const noexcept
-        {
-            return patchType_;
-        }
-
-        //- The optional patch type
-        word& patchType() noexcept
-        {
-            return patchType_;
-        }
-
-
-    // Solution
-
-        //- True if the boundary condition has already been updated
-        bool updated() const noexcept
-        {
-            return updated_;
-        }
-
-        //- True if the matrix has already been manipulated
-        bool manipulatedMatrix() const noexcept
-        {
-            return manipulatedMatrix_;
-        }
-
-        //- Use implicit formulation for coupled patches only
-        bool useImplicit() const noexcept
-        {
-            return useImplicit_;
-        }
-
-        //- Set useImplicit on/off
-        //  \return old value
-        bool useImplicit(bool on) noexcept
-        {
-            bool old(useImplicit_);
-            useImplicit_ = on;
-            return old;
-        }
-
-
-    // Check
-
-        //- Check that patches are identical
-        void checkPatch(const fvPatchFieldBase& rhs) const;
-};
-
-
-/*---------------------------------------------------------------------------*\
-                        Class fvPatchField Declaration
-\*---------------------------------------------------------------------------*/
-
-template<class Type>
-class fvPatchField
-:
-    public fvPatchFieldBase,
-    public Field<Type>
-{
-    // Private Data
-
-        //- Reference to internal field
-        const DimensionedField<Type, volMesh>& internalField_;
 
 
 public:
@@ -242,6 +116,13 @@ public:
 
     //- Type for a \em calculated patch
     typedef calculatedFvPatchField<Type> Calculated;
+
+
+    //- Runtime type information
+    TypeName("fvPatchField");
+
+    //- Debug switch to disallow the use of genericFvPatchField
+    static int disallowGenericFvPatchField;
 
 
     // Declare run-time constructor selection tables
@@ -340,18 +221,18 @@ public:
         //- Construct as copy
         fvPatchField(const fvPatchField<Type>&);
 
+        //- Construct and return a clone
+        virtual tmp<fvPatchField<Type>> clone() const
+        {
+            return tmp<fvPatchField<Type>>::New(*this);
+        }
+
         //- Construct as copy setting internal field reference
         fvPatchField
         (
             const fvPatchField<Type>&,
             const DimensionedField<Type, volMesh>&
         );
-
-        //- Construct and return a clone
-        virtual tmp<fvPatchField<Type>> clone() const
-        {
-            return tmp<fvPatchField<Type>>::New(*this);
-        }
 
         //- Construct and return a clone setting internal field reference
         virtual tmp<fvPatchField<Type>> clone
@@ -423,21 +304,35 @@ public:
 
 
     //- Destructor
-    virtual ~fvPatchField() = default;
+    virtual ~fvPatchField<Type>() = default;
 
 
     // Member Functions
 
-        //- The type name for calculated patch fields
-        static const word& calculatedType();
+        // Implicit Functions
 
-        //- The type name for zeroGradient patch fields
-        static const word& zeroGradientType();
+            //- Use implicit formulation for coupled patches only
+            bool useImplicit() const noexcept
+            {
+                return useImplicit_;
+            }
+
+            //- Set useImplicit on/off
+            //  \return old value
+            bool useImplicit(bool on) noexcept
+            {
+                bool old(useImplicit_);
+                useImplicit_ = on;
+                return old;
+            }
 
 
         // Attributes
 
-            //- True if this patch field fixes a value.
+            //- Return the type of the calculated for of fvPatchField
+            static const word& calculatedType();
+
+            //- Return true if this patch field fixes a value.
             //  Needed to check if a level has to be specified while solving
             //  Poissons equations.
             virtual bool fixesValue() const
@@ -445,14 +340,14 @@ public:
                 return false;
             }
 
-            //- True if the value of the patch field
-            //- is altered by assignment (the default)
+            //- Return true if the value of the patch field
+            //  is altered by assignment (the default)
             virtual bool assignable() const
             {
                 return true;
             }
 
-            //- True if this patch field is coupled
+            //- Return true if this patch field is coupled
             virtual bool coupled() const
             {
                 return false;
@@ -461,17 +356,49 @@ public:
 
         // Access
 
+            //- Return local objectRegistry
+            const objectRegistry& db() const;
+
+            //- Return patch
+            const fvPatch& patch() const
+            {
+                return patch_;
+            }
+
             //- Return dimensioned internal field reference
-            const DimensionedField<Type, volMesh>& internalField()
-            const noexcept
+            const DimensionedField<Type, volMesh>& internalField() const
             {
                 return internalField_;
             }
 
             //- Return internal field reference
-            const Field<Type>& primitiveField() const noexcept
+            const Field<Type>& primitiveField() const
             {
                 return internalField_;
+            }
+
+            //- Optional patch type
+            const word& patchType() const
+            {
+                return patchType_;
+            }
+
+            //- Optional patch type
+            word& patchType()
+            {
+                return patchType_;
+            }
+
+            //- Return true if the boundary condition has already been updated
+            bool updated() const
+            {
+                return updated_;
+            }
+
+            //- Return true if the matrix has already been manipulated
+            bool manipulatedMatrix() const
+            {
+                return manipulatedMatrix_;
             }
 
 
@@ -670,7 +597,7 @@ public:
         virtual void operator==(const Type&);
 
 
-    // Ostream Operator
+    // Ostream operator
 
         friend Ostream& operator<< <Type>(Ostream&, const fvPatchField<Type>&);
 };
@@ -685,21 +612,22 @@ public:
 #ifdef NoRepository
     #include "fvPatchField.C"
     #include "calculatedFvPatchField.H"
-    #include "zeroGradientFvPatchField.H"
 #endif
 
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-// Runtime selection macros
-
 #define makeFvPatchField(fvPatchTypeField)                                     \
                                                                                \
+defineNamedTemplateTypeNameAndDebug(fvPatchTypeField, 0);                      \
+template<>                                                                     \
+int fvPatchTypeField::disallowGenericFvPatchField                              \
+(                                                                              \
+    debug::debugSwitch("disallowGenericFvPatchField", 0)                       \
+);                                                                             \
 defineTemplateRunTimeSelectionTable(fvPatchTypeField, patch);                  \
 defineTemplateRunTimeSelectionTable(fvPatchTypeField, patchMapper);            \
 defineTemplateRunTimeSelectionTable(fvPatchTypeField, dictionary);
 
 
-#undef  addToPatchFieldRunTimeSelection
 #define addToPatchFieldRunTimeSelection(PatchTypeField, typePatchTypeField)    \
     addToRunTimeSelectionTable                                                 \
     (                                                                          \
@@ -722,7 +650,6 @@ defineTemplateRunTimeSelectionTable(fvPatchTypeField, dictionary);
 
 
 // Use with caution
-#undef  addRemovableToPatchFieldRunTimeSelection
 #define addRemovableToPatchFieldRunTimeSelection\
 (PatchTypeField, typePatchTypeField)                                           \
                                                                                \

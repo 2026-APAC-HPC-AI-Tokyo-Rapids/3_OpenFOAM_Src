@@ -25,8 +25,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_faPatchFields_H
-#define Foam_faPatchFields_H
+#ifndef faPatchFields_H
+#define faPatchFields_H
 
 #include "faPatchField.H"
 #include "faPatchFieldsFwd.H"

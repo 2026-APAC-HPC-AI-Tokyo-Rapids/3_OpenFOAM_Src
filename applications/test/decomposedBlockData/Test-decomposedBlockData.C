@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     Info<< "Reading " << file << nl << endl;
     decomposedBlockData data
     (
-        UPstream::worldComm,
+        Pstream::worldComm,
         IOobject
         (
             file,
@@ -78,7 +78,8 @@ int main(int argc, char *argv[])
     OFstream os
     (
         objPath,
-        IOstreamOption::BINARY,
+        IOstream::BINARY,
+        IOstream::currentVersion,
         runTime.writeCompression()
     );
     if (!os.good())

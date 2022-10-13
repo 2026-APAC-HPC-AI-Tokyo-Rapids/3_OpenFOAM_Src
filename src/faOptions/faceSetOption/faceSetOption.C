@@ -26,7 +26,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "faceSetOption.H"
-#include "faceSet.H"
 #include "areaFields.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -47,10 +46,7 @@ const Foam::Enum
 Foam::fa::faceSetOption::selectionModeTypeNames_
 ({
     { selectionModeType::smAll, "all" },
-    { selectionModeType::smFaceSet, "faceSet" },
-    { selectionModeType::smFaceZone, "faceZone" },
-    { selectionModeType::smPatch, "patch" },
-    { selectionModeType::smFaceZone, "volFaceZone" }  // Compat?
+    { selectionModeType::smVolFaceZone, "volFaceZone" }
 });
 
 
@@ -58,44 +54,15 @@ Foam::fa::faceSetOption::selectionModeTypeNames_
 
 void Foam::fa::faceSetOption::setSelection(const dictionary& dict)
 {
-    selectionNames_.clear();
-
     switch (selectionMode_)
     {
         case smAll:
         {
             break;
         }
-        case smFaceSet:
+        case smVolFaceZone:
         {
-            selectionNames_.resize(1);
-            dict.readEntry("faceSet", selectionNames_.first());
-            break;
-        }
-        case smFaceZone:
-        {
-            if
-            (
-                !dict.readIfPresent("faceZones", selectionNames_)
-             || selectionNames_.empty()
-            )
-            {
-                selectionNames_.resize(1);
-                dict.readEntry("faceZone", selectionNames_.first());
-            }
-            break;
-        }
-        case smPatch:
-        {
-            if
-            (
-                !dict.readIfPresent("patches", selectionNames_)
-             || selectionNames_.empty()
-            )
-            {
-                selectionNames_.resize(1);
-                dict.readEntry("patch", selectionNames_.first());
-            }
+            dict.readEntry("faceZone", zoneName_);
             break;
         }
         default:
@@ -115,22 +82,21 @@ void Foam::fa::faceSetOption::setArea()
 {
     // Set area information
 
-    scalar sumArea = 0;
+    scalar sumArea = 0.0;
     for (const label facei : faces_)
     {
         sumArea += regionMesh().S()[facei];
     }
     reduce(sumArea, sumOp<scalar>());
 
-    const scalar old(A_);
+    const scalar AOld = A_;
     A_ = sumArea;
 
-    // Compare area values, stringified using current write precision
-    if
-    (
-        Time::timeName(old, IOstream::defaultPrecision())
-     != Time::timeName(A_, IOstream::defaultPrecision())
-    )
+    // Convert both areas to representation using current writeprecision
+    word AOldName(Time::timeName(AOld, IOstream::defaultPrecision()));
+    word AName(Time::timeName(A_, IOstream::defaultPrecision()));
+
+    if (AName != AOldName)
     {
         Info<< indent
             << "- selected " << returnReduce(faces_.size(), sumOp<label>())
@@ -143,6 +109,46 @@ void Foam::fa::faceSetOption::setFaceSelection()
 {
     switch (selectionMode_)
     {
+        case smVolFaceZone:
+        {
+            Info<< indent
+                << "- selecting faces using volume-mesh faceZone "
+                << zoneName_ << nl;
+
+            // Also handles groups, multiple zones (as wordRe match) ...
+            labelList zoneIDs = mesh_.faceZones().indices(zoneName_);
+
+            if (zoneIDs.empty())
+            {
+                FatalErrorInFunction
+                    << "No matching faceZones: " << zoneName_ << nl
+                    << "Valid zones : "
+                    << flatOutput(mesh_.faceZones().names()) << nl
+                    << "Valid groups: "
+                    << flatOutput(mesh_.faceZones().groupNames())
+                    << nl
+                    << exit(FatalError);
+            }
+
+            const bitSet isZoneFace(mesh_.faceZones().selection(zoneIDs));
+
+            const labelUList& faceLabels = regionMesh().faceLabels();
+
+            faces_.resize_nocopy(faceLabels.size());
+
+            label nUsed = 0;
+            for (const label facei : faceLabels)
+            {
+                if (isZoneFace[facei])
+                {
+                    faces_[nUsed] = facei;
+                    ++nUsed;
+                }
+            }
+            faces_.resize(nUsed);
+            break;
+        }
+
         case smAll:
         {
             Info<< indent << "- selecting all faces" << endl;
@@ -150,121 +156,6 @@ void Foam::fa::faceSetOption::setFaceSelection()
 
             break;
         }
-
-        case smFaceSet:
-        {
-            Info<< indent
-                << "- selecting face subset using volume-mesh faceSet "
-                << zoneName() << nl;
-
-            const faceSet subset(mesh_, zoneName());
-
-            const labelUList& faceLabels = regionMesh().faceLabels();
-
-            faces_.resize_nocopy(faceLabels.size());
-
-            label nUsed = 0;
-            forAll(faceLabels, facei)
-            {
-                const label meshFacei = faceLabels[facei];
-
-                if (subset.test(meshFacei))
-                {
-                    faces_[nUsed] = facei;
-                    ++nUsed;
-                }
-            }
-            faces_.resize(nUsed);
-            break;
-        }
-
-        case smFaceZone:
-        {
-            Info<< indent
-                << "- selecting face subset using volume-mesh faceZones "
-                << flatOutput(selectionNames_) << nl;
-
-            const auto& zones = mesh_.faceZones();
-
-            // Also handles groups, multiple zones etc ...
-            labelList zoneIDs = zones.indices(selectionNames_);
-
-            if (zoneIDs.empty())
-            {
-                FatalErrorInFunction
-                    << "No matching faceZones: "
-                    << flatOutput(selectionNames_) << nl
-                    << "Valid zones : "
-                    << flatOutput(zones.names()) << nl
-                    << "Valid groups: "
-                    << flatOutput(zones.groupNames())
-                    << nl
-                    << exit(FatalError);
-            }
-
-            const bitSet subset(mesh_.faceZones().selection(zoneIDs));
-
-            const labelUList& faceLabels = regionMesh().faceLabels();
-
-            faces_.resize_nocopy(faceLabels.size());
-
-            label nUsed = 0;
-            forAll(faceLabels, facei)
-            {
-                const label meshFacei = faceLabels[facei];
-
-                if (subset.test(meshFacei))
-                {
-                    faces_[nUsed] = facei;
-                    ++nUsed;
-                }
-            }
-            faces_.resize(nUsed);
-            break;
-        }
-
-        case smPatch:
-        {
-            Info<< indent
-                << "- selecting face subset using volume-mesh patches "
-                << flatOutput(selectionNames_) << nl;
-
-            const polyBoundaryMesh& pbm = mesh_.boundaryMesh();
-
-            // Also handles groups, multiple patches etc ...
-            labelList patchIDs = pbm.indices(selectionNames_);
-
-            if (patchIDs.empty())
-            {
-                FatalErrorInFunction
-                    << "No matching patches: "
-                    << flatOutput(selectionNames_) << nl
-                    << "Valid patches : "
-                    << flatOutput(pbm.names()) << nl
-                    << "Valid groups: "
-                    << flatOutput(pbm.groupNames()) << nl
-                    << exit(FatalError);
-            }
-
-            const List<labelPair>& patchFaces = regionMesh().whichPatchFaces();
-
-            faces_.resize_nocopy(patchFaces.size());
-
-            label nUsed = 0;
-            forAll(patchFaces, facei)
-            {
-                const label patchi = patchFaces[facei].first();
-
-                if (patchIDs.found(patchi))
-                {
-                    faces_[nUsed] = facei;
-                    ++nUsed;
-                }
-            }
-            faces_.resize(nUsed);
-            break;
-        }
-
         default:
         {
             FatalErrorInFunction
@@ -274,12 +165,6 @@ void Foam::fa::faceSetOption::setFaceSelection()
                 << selectionModeTypeNames_
                 << exit(FatalError);
         }
-    }
-
-    if (smAll != selectionMode_ && returnReduceAnd(faces_.empty()))
-    {
-        WarningInFunction
-            << "No faces selected!" << endl;
     }
 }
 
@@ -291,14 +176,14 @@ Foam::fa::faceSetOption::faceSetOption
     const word& name,
     const word& modelType,
     const dictionary& dict,
-    const fvMesh& mesh
+    const fvPatch& patch
 )
 :
-    fa::option(name, modelType, dict, mesh),
+    fa::option(name, modelType, dict, patch),
     timeStart_(-1),
     duration_(0),
     selectionMode_(selectionModeTypeNames_.get("selectionMode", coeffs_)),
-    selectionNames_(),
+    zoneName_(),
     A_(0)
 {
     if (isActive())
@@ -344,8 +229,6 @@ bool Foam::fa::faceSetOption::read(const dictionary& dict)
 {
     if (fa::option::read(dict))
     {
-        timeStart_ = -1;
-
         if (coeffs_.readIfPresent("timeStart", timeStart_))
         {
             coeffs_.readEntry("duration", duration_);

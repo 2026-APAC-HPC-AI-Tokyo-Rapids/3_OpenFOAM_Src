@@ -379,48 +379,39 @@ public:
             }
 
             //- The write stream option (format, compression, version)
-            IOstreamOption writeStreamOption() const noexcept
+            IOstreamOption writeStreamOption() const
             {
                 return writeStreamOption_;
             }
 
             //- The write stream format
-            IOstreamOption::streamFormat writeFormat() const noexcept
+            IOstream::streamFormat writeFormat() const
             {
                 return writeStreamOption_.format();
             }
 
             //- The write stream compression
-            IOstreamOption::compressionType writeCompression() const noexcept
+            IOstream::compressionType writeCompression() const
             {
                 return writeStreamOption_.compression();
             }
 
             //- The write stream version
-            IOstreamOption::versionNumber writeVersion() const noexcept
+            IOstream::versionNumber writeVersion() const
             {
                 return writeStreamOption_.version();
             }
 
             //- Default graph format
-            const word& graphFormat() const noexcept
+            const word& graphFormat() const
             {
                 return graphFormat_;
             }
 
             //- Supports re-reading
-            Switch runTimeModifiable() const noexcept
+            const Switch& runTimeModifiable() const
             {
                 return runTimeModifiable_;
-            }
-
-            //- Set re-reading support on/off (use with caution).
-            //  \return the previous value
-            Switch runTimeModifiable(const Switch sw) noexcept
-            {
-                Switch old(runTimeModifiable_);
-                runTimeModifiable_ = sw;
-                return old;
             }
 
             //- Read control dictionary, update controls and time
@@ -442,7 +433,7 @@ public:
             (
                 const fileName& dir,
                 const word& name = word::null,
-                IOobjectOption::readOption rOpt = IOobjectOption::MUST_READ,
+                const IOobject::readOption rOpt = IOobject::MUST_READ,
                 const word& stopInstance = word::null
             ) const;
 
@@ -517,7 +508,7 @@ public:
             }
 
             //- Mutable access to the loaded dynamic libraries
-            dlLibraryTable& libs() const noexcept
+            dlLibraryTable& libs() const
             {
                 return libs_;
             }
@@ -527,7 +518,7 @@ public:
             //- sub-cycles.
             //  The interpretation of non-zero values is dependent on the
             //  routine.
-            label subCycling() const noexcept
+            label subCycling() const
             {
                 return subCycling_;
             }

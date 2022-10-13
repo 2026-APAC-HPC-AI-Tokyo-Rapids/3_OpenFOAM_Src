@@ -85,10 +85,13 @@ solvers
 PIMPLE
 {
     momentumPredictor   true;
+    correctPhi          false;
+    checkMeshCourantNo  yes;
     nOuterCorrectors    1;
     nCorrectors         4;
     nNonOrthogonalCorrectors 0;
-    pRefPoint           (0.0001 0.0001 0.001);
+    ddtCorr             true;
+    pRefCell            0;
     pRefValue           1e5;
 }
 

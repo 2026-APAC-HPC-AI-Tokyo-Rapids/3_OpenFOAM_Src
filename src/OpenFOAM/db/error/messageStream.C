@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -23,9 +23,6 @@ License
 
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
-
-Note
-    Included by global/globals.C
 
 \*---------------------------------------------------------------------------*/
 
@@ -264,7 +261,7 @@ Foam::OSstream& Foam::messageStream::operator()
         functionName,
         sourceFileName,
         sourceFileLineNumber,
-        ioStream.relativeName(),
+        ioStream.name(),
         ioStream.lineNumber(),
         -1  // No known endLineNumber
     );

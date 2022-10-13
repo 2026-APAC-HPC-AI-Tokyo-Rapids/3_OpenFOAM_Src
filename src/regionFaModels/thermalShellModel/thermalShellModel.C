@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,28 +48,28 @@ defineRunTimeSelectionTable(thermalShellModel, dictionary);
 thermalShellModel::thermalShellModel
 (
     const word& modelType,
-    const fvMesh& mesh,
+    const fvPatch& p,
     const dictionary& dict
 )
 :
-    regionFaModel(mesh, "thermalShell", modelType, dict, true),
+    regionFaModel(p, "thermalShell", modelType, dict, true),
     TName_(dict.get<word>("T")),
-    Tp_(mesh.lookupObject<volScalarField>(TName_)),
+    Tp_(p.boundaryMesh().mesh().lookupObject<volScalarField>(TName_)),
     T_
     (
         IOobject
         (
             "Ts_" + regionName_,
-            primaryMesh().time().timeName(),
-            primaryMesh(),
+            p.boundaryMesh().mesh().time().timeName(),
+            p.boundaryMesh().mesh(),
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
         regionMesh()
     ),
-    faOptions_(Foam::fa::options::New(primaryMesh()))
+    faOptions_(Foam::fa::options::New(p))
 {
-    if (faOptions_.optionList::empty())
+    if (!faOptions_.optionList::size())
     {
         Info << "No finite area options present" << endl;
     }

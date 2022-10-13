@@ -50,8 +50,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_messageStream_H
-#define Foam_messageStream_H
+#ifndef messageStream_H
+#define messageStream_H
 
 #include "label.H"
 #include "string.H"
@@ -364,10 +364,6 @@ extern messageStream SeriousError;
 //- Report write to Foam::Info if the local log switch is true
 #define Log                                                                    \
     if (log) Info
-
-//- Report write to Foam::Info if the class log switch is true
-#define Log_                                                                   \
-    if (this->log) Info
 
 
 //- Report an IO information message using Foam::Info

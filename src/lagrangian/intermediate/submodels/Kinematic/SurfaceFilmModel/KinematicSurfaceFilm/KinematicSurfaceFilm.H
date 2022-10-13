@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -42,8 +42,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_KinematicSurfaceFilm_H
-#define Foam_KinematicSurfaceFilm_H
+#ifndef KinematicSurfaceFilm_H
+#define KinematicSurfaceFilm_H
 
 #include "SurfaceFilmModel.H"
 #include "UPtrList.H"
@@ -54,13 +54,17 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
+//Forward declaration of classes
 namespace regionModels
 {
     namespace surfaceFilmModels
     {
         class surfaceFilmRegionModel;
     }
+}
+
+namespace regionModels
+{
     namespace areaSurfaceFilmModels
     {
         class liquidFilmBase;
@@ -83,9 +87,9 @@ public:
         //- Options for the interaction types
         enum interactionType
         {
-            itAbsorb,       //!< "absorb"
-            itBounce,       //!< "bounce"
-            itSplashBai     //!< "splashBai"
+            itAbsorb,
+            itBounce,
+            itSplashBai
         };
 
         //- Names for interactionType
@@ -103,7 +107,7 @@ public:
 
 protected:
 
-    // Data Types
+    // Protected Data
 
         //- Convenience typedef to the cloud's parcel type
         typedef typename CloudType::parcelType parcelType;
@@ -113,9 +117,6 @@ protected:
 
         typedef typename
             regionModels::surfaceFilmModels::surfaceFilmRegionModel regionFilm;
-
-
-    // Protected Data
 
         //- Reference to the cloud random number generator
         Random& rndGen_;
@@ -146,10 +147,6 @@ protected:
 
             //- Interaction type enumeration
             interactionType interactionType_;
-
-            //- Particle type IDs that can interact with the film
-            //  If empty (default) all type IDs are included
-            labelList parcelTypes_;
 
             //- Film thickness beyond which patch is assumed to be wet
             scalar deltaWet_;
@@ -205,7 +202,11 @@ protected:
         // Injection from sheet (ejection) helper functions
 
             //- Cache the film fields in preparation for injection
-            virtual void cacheFilmFields(const areaFilm& film);
+            virtual void cacheFilmFields
+            (
+                const label primaryPatchi,
+                const areaFilm&
+            );
 
             //- Cache the film fields in preparation for injection
             virtual void cacheFilmFields
@@ -342,8 +343,8 @@ public:
 
         // I-O
 
-            //- Write surface film info
-            virtual void info();
+            //- Write surface film info to stream
+            virtual void info(Ostream& os);
 };
 
 

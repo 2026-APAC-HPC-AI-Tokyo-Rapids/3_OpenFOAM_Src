@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -52,15 +52,13 @@ Usage
         type            streamLine;
         libs            (fieldFunctionObjects);
 
-        // Optional entries
-        U               <velocity-name>;
-        direction       forward;
-        cloud           particleTracks;
-
         // Mandatory entries (runtime modifiable)
-        fields          (<field1> ... <fieldN>);
+        U               <fieldTrack>;
+        fields          (<fieldTrack> <field1> ... <fieldN>);
         setFormat       vtk;
+        direction       bidirectional;
         lifeTime        10000;
+        cloud           particleTracks;
         seedSampleSet
         {
             type        uniform;
@@ -89,20 +87,20 @@ Usage
       Property     | Description                           | Type | Req'd | Dflt
       type         | Type name: streamLine                 | word |  yes  | -
       libs         | Library name: fieldFunctionObjects    | word |  yes  | -
-      U            | Name of tracking velocity field       | word |  no   | U
+      U            | Name of tracking velocity field       | word |  yes  | -
       fields       | Names of operand fields to sample     | wordList | yes | -
       setFormat    | Type of output data                   | word |  yes  | -
-      direction    | Direction (enum) to track             | word |  no   | forward
+      direction    | Direction to track                    | vector | yes | -
       lifetime     | Maximum number of particle tracking steps | label | yes | -
-      cloud        | Cloud name to use for streamlines     | word |  no  | typeName
-      seedSampleSet| Seeding description (see below)       | dict |  yes  | -
-      bounds       | Bounding box to trim tracks    | vector pair | no | -
+      cloud        | Name of cloud                         | word |  yes  | -
+      seedSampleSet| Name of seeding method (see below)    | word |  yes  | -
+      bounds       | Bounding box to trim tracks    | vector | no | invertedBox
       trackLength  | Tracking segment length              | scalar | no | VGREAT
       nSubCycle    | Number of tracking steps per cell    | label  | no | 1
       interpolationScheme | Interp. scheme for sample   | word | no | cellPoint
     \endtable
 
-    Example types for the \c seedSampleSet sub-dict:
+    Options for the \c seedSampleSet entry:
     \verbatim
         uniform | uniform particle seeding
         cloud   | cloud of points
@@ -122,9 +120,9 @@ Usage
 
     Options for the \c direction entry:
     \verbatim
+        bidirectional
         forward
         backward
-        bidirectional
     \endverbatim
 
     The inherited entries are elaborated in:
@@ -149,8 +147,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_functionObjects_streamLine_H
-#define Foam_functionObjects_streamLine_H
+#ifndef functionObjects_streamLine_H
+#define functionObjects_streamLine_H
 
 #include "streamLineBase.H"
 
@@ -159,7 +157,6 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
 class objectRegistry;
 class dictionary;
 
@@ -172,7 +169,7 @@ namespace functionObjects
 
 class streamLine
 :
-    public functionObjects::streamLineBase
+    public streamLineBase
 {
     // Private Data
 

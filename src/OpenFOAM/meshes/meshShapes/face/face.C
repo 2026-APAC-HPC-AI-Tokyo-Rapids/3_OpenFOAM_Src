@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,9 +28,10 @@ License
 
 #include "face.H"
 #include "triFace.H"
-#include "triangle.H"
+#include "triPointRef.H"
 #include "mathematicalConstants.H"
 #include "Circulator.H"
+#include <algorithm>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -520,12 +521,13 @@ Foam::point Foam::face::centre(const UList<point>& points) const
     // If the face is a triangle, do a direct calculation
     if (nPoints == 3)
     {
-        return triPointRef::centre
-        (
-            points[operator[](0)],
-            points[operator[](1)],
-            points[operator[](2)]
-        );
+        return
+            (1.0/3.0)
+           *(
+               points[operator[](0)]
+             + points[operator[](1)]
+             + points[operator[](2)]
+            );
     }
 
 
@@ -585,12 +587,12 @@ Foam::vector Foam::face::areaNormal(const UList<point>& p) const
 
     if (nPoints == 3)
     {
-        return triPointRef::areaNormal
+        return triPointRef
         (
             p[operator[](0)],
             p[operator[](1)],
             p[operator[](2)]
-        );
+        ).areaNormal();
     }
 
     label pI;
@@ -619,12 +621,12 @@ Foam::vector Foam::face::areaNormal(const UList<point>& p) const
 
         // Note: for best accuracy, centre point always comes last
         //
-        n += triPointRef::areaNormal
+        n += triPointRef
         (
             p[operator[](pI)],
             nextPoint,
             centrePoint
-        );
+        ).areaNormal();
     }
 
     return n;

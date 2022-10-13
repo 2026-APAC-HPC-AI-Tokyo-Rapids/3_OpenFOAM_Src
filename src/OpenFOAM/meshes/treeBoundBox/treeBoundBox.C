@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -30,7 +30,6 @@ License
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-// Point order using octant points
 const Foam::faceList Foam::treeBoundBox::faces
 ({
     face({0, 4, 6, 2}),  // 0: x-min, left
@@ -41,7 +40,6 @@ const Foam::faceList Foam::treeBoundBox::faces
     face({4, 5, 7, 6})   // 5: z-max, front
 });
 
-// Point order using octant points
 const Foam::edgeList Foam::treeBoundBox::edges
 ({
     {0, 1}, // 0
@@ -105,6 +103,12 @@ Foam::tmp<Foam::pointField> Foam::treeBoundBox::points() const
 }
 
 
+Foam::treeBoundBox Foam::treeBoundBox::subBbox(const direction octant) const
+{
+    return subBbox(centre(), octant);
+}
+
+
 Foam::treeBoundBox Foam::treeBoundBox::subBbox
 (
     const point& mid,
@@ -114,147 +118,43 @@ Foam::treeBoundBox Foam::treeBoundBox::subBbox
     if (octant > 7)
     {
         FatalErrorInFunction
-            << "octant:" << int(octant) << " should be [0..7]"
+            << "octant should be [0..7]"
             << abort(FatalError);
     }
 
-    // Start the box with a single point (the mid-point) and push out the
-    // min/max dimensions according to the octant.
-
-    treeBoundBox bb(mid);
+    // start with a copy of this bounding box and adjust limits accordingly
+    treeBoundBox subBb(*this);
+    point& bbMin = subBb.min();
+    point& bbMax = subBb.max();
 
     if (octant & treeBoundBox::RIGHTHALF)
     {
-        bb.max().x() = max().x();
+        bbMin.x() = mid.x();    // mid -> max
     }
     else
     {
-        bb.min().x() = min().x();
+        bbMax.x() = mid.x();    // min -> mid
     }
 
     if (octant & treeBoundBox::TOPHALF)
     {
-        bb.max().y() = max().y();
+        bbMin.y() = mid.y();    // mid -> max
     }
     else
     {
-        bb.min().y() = min().y();
+        bbMax.y() = mid.y();    // min -> mid
     }
 
     if (octant & treeBoundBox::FRONTHALF)
     {
-        bb.max().z() = max().z();
+        bbMin.z() = mid.z();    // mid -> max
     }
     else
     {
-        bb.min().z() = min().z();
+        bbMax.z() = mid.z();    // min -> mid
     }
 
-    return bb;
-}
-
-
-Foam::treeBoundBox Foam::treeBoundBox::subHalf
-(
-    const scalar mid,
-    const direction whichFace
-) const
-{
-    // Start with a copy of this bounding box and adjust limits accordingly
-    // - corresponds to a clipping plane
-
-    treeBoundBox bb(*this);
-
-    switch (whichFace)
-    {
-        case LEFT   : bb.max().x() = mid; break;
-        case RIGHT  : bb.min().x() = mid; break;
-
-        case BOTTOM : bb.max().y() = mid; break;
-        case TOP    : bb.min().y() = mid; break;
-
-        case BACK   : bb.max().z() = mid; break;
-        case FRONT  : bb.min().z() = mid; break;
-
-        default:
-        {
-            FatalErrorInFunction
-                << "face:" << int(whichFace) << " should be [0..5]"
-                << abort(FatalError);
-        }
-    }
-
-    return bb;
-}
-
-
-Foam::treeBoundBox Foam::treeBoundBox::subHalf
-(
-    const direction whichFace
-) const
-{
-    direction cmpt =
-    (
-        (whichFace == faceId::LEFT || whichFace == faceId::RIGHT)
-      ? vector::X
-      : (whichFace == faceId::BOTTOM || whichFace == faceId::TOP)
-      ? vector::Y
-      : vector::Z
-    );
-
-    scalar mid = 0.5*(min()[cmpt] + max()[cmpt]);
-
-    return subHalf(mid, whichFace);
-}
-
-
-Foam::treeBoundBox Foam::treeBoundBox::subBbox(const direction octant) const
-{
-    return subBbox(centre(), octant);
-}
-
-
-bool Foam::treeBoundBox::subOverlaps
-(
-    const direction octant,
-    const boundBox& bb
-) const
-{
-    // Slightly accelerated version of
-    //     subBbox(octant).overlaps(bb)
-
-    point subMin = centre();
-    point subMax = subMin;
-
-    if (octant & RIGHTHALF)
-    {
-        subMax.x() = max().x();
-    }
-    else
-    {
-        subMin.x() = min().x();
-    }
-
-    if (octant & TOPHALF)
-    {
-        subMax.y() = max().y();
-    }
-    else
-    {
-        subMin.y() = min().y();
-    }
-
-    if (octant & FRONTHALF)
-    {
-        subMax.z() = max().z();
-    }
-    else
-    {
-        subMin.z() = min().z();
-    }
-
-    // NB: ordering of corners *is* irrelevant
-    return box_box_overlaps(subMin, subMax, bb.min(), bb.max());
+    return subBb;
 }
 
 
@@ -288,7 +188,7 @@ bool Foam::treeBoundBox::intersects
     pt = start;
 
     // Allow maximum of 3 clips.
-    for (direction i = 0; i < 4; ++i)
+    for (label i = 0; i < 4; ++i)
     {
         direction ptBits = posBits(pt);
 
@@ -557,7 +457,7 @@ Foam::scalar Foam::treeBoundBox::maxDist(const point& pt) const
     point near, far;
     calcExtremities(pt, near, far);
 
-    return pt.dist(far);
+    return Foam::mag(far - pt);
 }
 
 
@@ -576,8 +476,14 @@ Foam::label Foam::treeBoundBox::distanceCmp
     // get nearest and furthest away vertex
     calcExtremities(pt, nearThis, farThis);
 
-    const scalar minDistThis = pt.distSqr(nearThis);
-    const scalar maxDistThis = pt.distSqr(farThis);
+    const scalar minDistThis =
+        sqr(nearThis.x() - pt.x())
+     +  sqr(nearThis.y() - pt.y())
+     +  sqr(nearThis.z() - pt.z());
+    const scalar maxDistThis =
+        sqr(farThis.x() - pt.x())
+     +  sqr(farThis.y() - pt.y())
+     +  sqr(farThis.z() - pt.z());
 
     //
     // Distance point <-> other
@@ -588,8 +494,14 @@ Foam::label Foam::treeBoundBox::distanceCmp
     // get nearest and furthest away vertex
     other.calcExtremities(pt, nearOther, farOther);
 
-    const scalar minDistOther = pt.distSqr(nearOther);
-    const scalar maxDistOther = pt.distSqr(farOther);
+    const scalar minDistOther =
+        sqr(nearOther.x() - pt.x())
+     +  sqr(nearOther.y() - pt.y())
+     +  sqr(nearOther.z() - pt.z());
+    const scalar maxDistOther =
+        sqr(farOther.x() - pt.x())
+     +  sqr(farOther.y() - pt.y())
+     +  sqr(farOther.z() - pt.z());
 
     //
     // Categorize

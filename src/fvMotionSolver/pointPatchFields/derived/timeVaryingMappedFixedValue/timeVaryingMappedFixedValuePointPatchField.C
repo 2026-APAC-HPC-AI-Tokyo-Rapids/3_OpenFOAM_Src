@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2017 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,17 +41,18 @@ timeVaryingMappedFixedValuePointPatchField
 )
 :
     fixedValuePointPatchField<Type>(p, iF),
+    fieldTableName_(iF.name()),
     setAverage_(false),
     perturb_(0),
-    fieldTableName_(iF.name()),
-    pointsName_("points"),
-    mapMethod_(),
     mapperPtr_(nullptr),
-    sampleTimes_(),
-    sampleIndex_(-1, -1),
-    sampleAverage_(Zero, Zero),
-    sampleValues_(),
-    offset_(nullptr)
+    sampleTimes_(0),
+    startSampleTime_(-1),
+    startSampledValues_(0),
+    startAverage_(Zero),
+    endSampleTime_(-1),
+    endSampledValues_(0),
+    endAverage_(Zero),
+    offset_()
 {}
 
 
@@ -65,16 +66,25 @@ timeVaryingMappedFixedValuePointPatchField
 )
 :
     fixedValuePointPatchField<Type>(p, iF, dict, false),
+    fieldTableName_(iF.name()),
     setAverage_(dict.getOrDefault("setAverage", false)),
     perturb_(dict.getOrDefault("perturb", 1e-5)),
-    fieldTableName_(iF.name()),
-    pointsName_(dict.getOrDefault<word>("points", "points")),
-    mapMethod_(),
+    mapMethod_
+    (
+        dict.getOrDefault<word>
+        (
+            "mapMethod",
+            "planarInterpolation"
+        )
+    ),
     mapperPtr_(nullptr),
-    sampleTimes_(),
-    sampleIndex_(-1, -1),
-    sampleAverage_(Zero, Zero),
-    sampleValues_(),
+    sampleTimes_(0),
+    startSampleTime_(-1),
+    startSampledValues_(0),
+    startAverage_(Zero),
+    endSampleTime_(-1),
+    endSampledValues_(0),
+    endAverage_(Zero),
     offset_
     (
         Function1<Type>::NewIfPresent("offset", dict, word::null, &this->db())
@@ -82,24 +92,16 @@ timeVaryingMappedFixedValuePointPatchField
 {
     if
     (
-        dict.readIfPresent("mapMethod", mapMethod_)
-     && !mapMethod_.empty()
+        mapMethod_ != "planarInterpolation"
      && mapMethod_ != "nearest"
-     && !mapMethod_.starts_with("planar")
     )
     {
         FatalIOErrorInFunction(dict)
-            << "Unknown mapMethod type " << mapMethod_
-            << "\n\nValid mapMethod types :\n"
-            << "(nearest planar)" << nl
-            << exit(FatalIOError);
+            << "mapMethod should be one of 'planarInterpolation'"
+            << ", 'nearest'" << exit(FatalIOError);
     }
 
-    dict.readIfPresentCompat
-    (
-        "fieldTable", {{"fieldTableName", 2206}},
-        fieldTableName_
-    );
+    dict.readIfPresent("fieldTableName", fieldTableName_);
 
     if (dict.found("value"))
     {
@@ -130,16 +132,18 @@ timeVaryingMappedFixedValuePointPatchField
 )
 :
     fixedValuePointPatchField<Type>(ptf, p, iF, mapper),
+    fieldTableName_(ptf.fieldTableName_),
     setAverage_(ptf.setAverage_),
     perturb_(ptf.perturb_),
-    fieldTableName_(ptf.fieldTableName_),
-    pointsName_(ptf.pointsName_),
     mapMethod_(ptf.mapMethod_),
     mapperPtr_(nullptr),
-    sampleTimes_(),
-    sampleIndex_(-1, -1),
-    sampleAverage_(Zero, Zero),
-    sampleValues_(),
+    sampleTimes_(0),
+    startSampleTime_(-1),
+    startSampledValues_(0),
+    startAverage_(Zero),
+    endSampleTime_(-1),
+    endSampledValues_(0),
+    endAverage_(Zero),
     offset_(ptf.offset_.clone())
 {}
 
@@ -152,16 +156,18 @@ timeVaryingMappedFixedValuePointPatchField
 )
 :
     fixedValuePointPatchField<Type>(ptf),
+    fieldTableName_(ptf.fieldTableName_),
     setAverage_(ptf.setAverage_),
     perturb_(ptf.perturb_),
-    fieldTableName_(ptf.fieldTableName_),
-    pointsName_(ptf.pointsName_),
     mapMethod_(ptf.mapMethod_),
     mapperPtr_(ptf.mapperPtr_),
     sampleTimes_(ptf.sampleTimes_),
-    sampleIndex_(ptf.sampleIndex_),
-    sampleAverage_(ptf.sampleAverage_),
-    sampleValues_(ptf.sampleValues_),
+    startSampleTime_(ptf.startSampleTime_),
+    startSampledValues_(ptf.startSampledValues_),
+    startAverage_(ptf.startAverage_),
+    endSampleTime_(ptf.endSampleTime_),
+    endSampledValues_(ptf.endSampledValues_),
+    endAverage_(ptf.endAverage_),
     offset_(ptf.offset_.clone())
 {}
 
@@ -175,16 +181,18 @@ timeVaryingMappedFixedValuePointPatchField
 )
 :
     fixedValuePointPatchField<Type>(ptf, iF),
+    fieldTableName_(ptf.fieldTableName_),
     setAverage_(ptf.setAverage_),
     perturb_(ptf.perturb_),
-    fieldTableName_(ptf.fieldTableName_),
-    pointsName_(ptf.pointsName_),
     mapMethod_(ptf.mapMethod_),
     mapperPtr_(ptf.mapperPtr_),
     sampleTimes_(ptf.sampleTimes_),
-    sampleIndex_(ptf.sampleIndex_),
-    sampleAverage_(ptf.sampleAverage_),
-    sampleValues_(ptf.sampleValues_),
+    startSampleTime_(ptf.startSampleTime_),
+    startSampledValues_(ptf.startSampledValues_),
+    startAverage_(ptf.startAverage_),
+    endSampleTime_(ptf.endSampleTime_),
+    endSampledValues_(ptf.endSampledValues_),
+    endAverage_(ptf.endAverage_),
     offset_(ptf.offset_.clone())
 {}
 
@@ -198,20 +206,15 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::autoMap
 )
 {
     fixedValuePointPatchField<Type>::autoMap(m);
-
-    if (sampleValues_.first().size())
+    if (startSampledValues_.size())
     {
-        sampleValues_.first().autoMap(m);
+        startSampledValues_.autoMap(m);
+        endSampledValues_.autoMap(m);
     }
-
-    if (sampleValues_.second().size())
-    {
-        sampleValues_.second().autoMap(m);
-    }
-
     // Clear interpolator
-    mapperPtr_.reset(nullptr);
-    sampleIndex_ = labelPair(-1, -1);
+    mapperPtr_.clear();
+    startSampleTime_ = -1;
+    endSampleTime_ = -1;
 }
 
 
@@ -227,95 +230,23 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::rmap
     const timeVaryingMappedFixedValuePointPatchField<Type>& tiptf =
         refCast<const timeVaryingMappedFixedValuePointPatchField<Type>>(ptf);
 
-    sampleValues_.first().rmap(tiptf.sampleValues_.first(), addr);
-    sampleValues_.second().rmap(tiptf.sampleValues_.second(), addr);
+    startSampledValues_.rmap(tiptf.startSampledValues_, addr);
+    endSampledValues_.rmap(tiptf.endSampledValues_, addr);
 
     // Clear interpolator
-    mapperPtr_.reset(nullptr);
-    sampleIndex_ = labelPair(-1, -1);
+    mapperPtr_.clear();
+    startSampleTime_ = -1;
+    endSampleTime_ = -1;
 }
 
 
 template<class Type>
-void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::updateSampledValues
-(
-    const label sampleIndex,
-    Field<Type>& field,
-    Type& avg
-) const
-{
-    tmp<Field<Type>> tvalues;
-
-    // Update sampled data fields
-    {
-        const Time& time = this->db().time();
-
-        if (debug)
-        {
-            Pout<< "checkTable : Reading values from "
-                <<
-                (
-                    "boundaryData"
-                  / this->patch().name()
-                  / sampleTimes_[sampleIndex].name()
-                  / fieldTableName_
-                ) << endl;
-        }
-
-        // Reread values and interpolate
-        const fileName valsFile
-        (
-            time.caseConstant()
-            /"boundaryData"
-            /this->patch().name()
-            /sampleTimes_[sampleIndex].name()
-            /fieldTableName_
-        );
-
-        IOobject io
-        (
-            valsFile,               // absolute path
-            time,
-            IOobject::MUST_READ,
-            IOobject::NO_WRITE,
-            IOobject::NO_REGISTER,
-            true                    // is global object (currently not used)
-        );
-
-        rawIOField<Type> vals(io, setAverage_);
-
-        if (vals.hasAverage())
-        {
-            avg = vals.average();
-        }
-
-        if (vals.size() != mapperPtr_().sourceSize())
-        {
-            FatalErrorInFunction
-                << "Number of values (" << vals.size()
-                << ") differs from the number of points ("
-                <<  mapperPtr_().sourceSize()
-                << ") in file " << valsFile << exit(FatalError);
-        }
-
-        tvalues = tmp<Field<Type>>::New(std::move(vals.field()));
-    }
-
-    // From input values to interpolated (sampled) positions
-    field = mapperPtr_().interpolate(tvalues);
-}
-
-
-template<class Type>
-void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::checkTable
-(
-    const scalar t
-)
+void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::checkTable()
 {
    const Time& time = this->db().time();
 
     // Initialise
-    if (sampleIndex_.first() == -1 && sampleIndex_.second() == -1)
+    if (startSampleTime_ == -1 && endSampleTime_ == -1)
     {
         const polyMesh& pMesh = this->patch().boundaryMesh().mesh()();
 
@@ -329,9 +260,11 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::checkTable
         else
         {
             // Load points from facesInstance
-            DebugInFunction
-                << "Reloading points0 from " << pMesh.facesInstance()
-                << endl;
+            if (debug)
+            {
+                Info<< "Reloading points0 from " << pMesh.facesInstance()
+                    << endl;
+            }
 
             pointIOField points0
             (
@@ -343,7 +276,7 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::checkTable
                     pMesh,
                     IOobject::MUST_READ,
                     IOobject::NO_WRITE,
-                    IOobject::NO_REGISTER
+                    false
                 )
             );
             meshPts = pointField(points0, this->patch().meshPoints());
@@ -355,7 +288,7 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::checkTable
             time.caseConstant()
            /"boundaryData"
            /this->patch().name()
-           /pointsName_
+           /"points"
         );
 
         IOobject io
@@ -364,17 +297,18 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::checkTable
             time,
             IOobject::MUST_READ,
             IOobject::NO_WRITE,
-            IOobject::NO_REGISTER,
+            false,              // no need to register
             true                // is global object (currently not used)
         );
 
-        // Read data (no average value!)
-        const rawIOField<point> samplePoints(io);
+        // Read data
+        const rawIOField<point> samplePoints(io, false);
 
         // tbd: run-time selection
-        const bool nearestOnly =
+        bool nearestOnly =
         (
-            !mapMethod_.empty() && !mapMethod_.starts_with("planar")
+           !mapMethod_.empty()
+         && mapMethod_ != "planarInterpolation"
         );
 
         // Allocate the interpolator
@@ -389,26 +323,34 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::checkTable
             )
         );
 
-
         // Read the times for which data is available
+
         const fileName samplePointsDir = samplePointsFile.path();
         sampleTimes_ = Time::findTimes(samplePointsDir);
 
-        DebugInFunction
-            << "Found times "
-            << pointToPointPlanarInterpolation::timeNames(sampleTimes_)
-            << endl;
+        if (debug)
+        {
+            Info<< "timeVaryingMappedFixedValuePointPatchField : In directory "
+                << samplePointsDir << " found times "
+                << pointToPointPlanarInterpolation::timeNames(sampleTimes_)
+                << endl;
+        }
     }
 
-    // Find range of current time indices in sampleTimes
-    Pair<label> timeIndices = instant::findRange
+    // Find current time in sampleTimes
+    label lo = -1;
+    label hi = -1;
+
+    bool foundTime = mapperPtr_().findTime
     (
         sampleTimes_,
-        t,  // time.value(),
-        sampleIndex_.first()
+        startSampleTime_,
+        time.value(),
+        lo,
+        hi
     );
 
-    if (timeIndices.first() < 0)
+    if (!foundTime)
     {
         FatalErrorInFunction
             << "Cannot find starting sampling values for current time "
@@ -425,46 +367,135 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::checkTable
 
     // Update sampled data fields.
 
-    if (sampleIndex_.first() != timeIndices.first())
+    if (lo != startSampleTime_)
     {
-        sampleIndex_.first() = timeIndices.first();
+        startSampleTime_ = lo;
 
-        if (sampleIndex_.first() == sampleIndex_.second())
+        if (startSampleTime_ == endSampleTime_)
         {
-            // Can reuse previous end values
-            sampleValues_.first() = sampleValues_.second();
-            sampleAverage_.first() = sampleAverage_.second();
+            // No need to reread since are end values
+            if (debug)
+            {
+                Pout<< "checkTable : Setting startValues to (already read) "
+                    <<   "boundaryData"
+                        /this->patch().name()
+                        /sampleTimes_[startSampleTime_].name()
+                    << endl;
+            }
+            startSampledValues_ = endSampledValues_;
+            startAverage_ = endAverage_;
         }
         else
         {
-            // Update first() values
-            this->updateSampledValues
+            if (debug)
+            {
+                Pout<< "checkTable : Reading startValues from "
+                    <<   "boundaryData"
+                        /this->patch().name()
+                        /sampleTimes_[lo].name()
+                    << endl;
+            }
+
+            // Reread values and interpolate
+            const fileName valsFile
             (
-                sampleIndex_.first(),
-                sampleValues_.first(),
-                sampleAverage_.first()
+                time.caseConstant()
+               /"boundaryData"
+               /this->patch().name()
+               /sampleTimes_[startSampleTime_].name()
+               /fieldTableName_
             );
+
+            IOobject io
+            (
+                valsFile,   // absolute path
+                time,
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE,
+                false,              // no need to register
+                true                // is global object (currently not used)
+            );
+
+            const rawIOField<Type> vals(io, setAverage_);
+            if (setAverage_)
+            {
+                startAverage_ = vals.average();
+            }
+
+            if (vals.size() != mapperPtr_().sourceSize())
+            {
+                FatalErrorInFunction
+                    << "Number of values (" << vals.size()
+                    << ") differs from the number of points ("
+                    <<  mapperPtr_().sourceSize()
+                    << ") in file " << valsFile << exit(FatalError);
+            }
+
+            startSampledValues_ = mapperPtr_().interpolate(vals);
         }
     }
 
-    if (sampleIndex_.second() != timeIndices.second())
+    if (hi != endSampleTime_)
     {
-        sampleIndex_.second() = timeIndices.second();
+        endSampleTime_ = hi;
 
-        if (sampleIndex_.second() == -1)
+        if (endSampleTime_ == -1)
         {
-            // Index no longer valid - clear values accordingly
-            sampleValues_.second().clear();
+            // endTime no longer valid. Might as well clear endValues.
+            if (debug)
+            {
+                Pout<< "checkTable : Clearing endValues" << endl;
+            }
+            endSampledValues_.clear();
         }
         else
         {
-            // Update second() values
-            this->updateSampledValues
+            if (debug)
+            {
+                Pout<< "checkTable : Reading endValues from "
+                    <<   "boundaryData"
+                        /this->patch().name()
+                        /sampleTimes_[endSampleTime_].name()
+                    << endl;
+            }
+
+            // Reread values and interpolate
+            const fileName valsFile
             (
-                sampleIndex_.second(),
-                sampleValues_.second(),
-                sampleAverage_.second()
+                time.caseConstant()
+               /"boundaryData"
+               /this->patch().name()
+               /sampleTimes_[endSampleTime_].name()
+               /fieldTableName_
             );
+
+            IOobject io
+            (
+                valsFile,   // absolute path
+                time,
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE,
+                false,              // no need to register
+                true                // is global object (currently not used)
+            );
+
+
+            const rawIOField<Type> vals(io, setAverage_);
+            if (setAverage_)
+            {
+                endAverage_ = vals.average();
+            }
+
+            if (vals.size() != mapperPtr_().sourceSize())
+            {
+                FatalErrorInFunction
+                    << "Number of values (" << vals.size()
+                    << ") differs from the number of points ("
+                    <<  mapperPtr_().sourceSize()
+                    << ") in file " << valsFile << exit(FatalError);
+            }
+
+            endSampledValues_ = mapperPtr_().interpolate(vals);
         }
     }
 }
@@ -478,44 +509,51 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::updateCoeffs()
         return;
     }
 
-    // Current time value
-    const scalar x = this->db().time().value();
-
-    checkTable(x);
+    checkTable();
 
     // Interpolate between the sampled data
-    auto& fld = static_cast<Field<Type>&>(*this);
+
     Type wantedAverage;
 
-    if (sampleIndex_.second() == -1)
+    if (endSampleTime_ == -1)
     {
-        // Only start value
-        fld = sampleValues_.first();
-        wantedAverage = sampleAverage_.first();
+        // only start value
+        if (debug)
+        {
+            Pout<< "updateCoeffs : Sampled, non-interpolated values"
+                << " from start time:"
+                << sampleTimes_[startSampleTime_].name() << nl;
+        }
+
+        this->operator==(startSampledValues_);
+        wantedAverage = startAverage_;
     }
     else
     {
-        const scalar beg = sampleTimes_[sampleIndex_.first()].value();
-        const scalar end = sampleTimes_[sampleIndex_.second()].value();
-        const scalar s = (x - beg)/(end - beg);
+        scalar start = sampleTimes_[startSampleTime_].value();
+        scalar end = sampleTimes_[endSampleTime_].value();
 
-        fld = (1 - s)*sampleValues_.first() + s*sampleValues_.second();
+        scalar s = (this->db().time().value()-start)/(end-start);
 
-        wantedAverage
-            = (1 - s)*sampleAverage_.first() + s*sampleAverage_.second();
+        if (debug)
+        {
+            Pout<< "updateCoeffs : Sampled, interpolated values"
+                << " between start time:"
+                << sampleTimes_[startSampleTime_].name()
+                << " and end time:" << sampleTimes_[endSampleTime_].name()
+                << " with weight:" << s << endl;
+        }
 
-        DebugInFunction
-            << "Sampled, interpolated values"
-            << " between time:"
-            << sampleTimes_[sampleIndex_.first()].name()
-            << " and time:" << sampleTimes_[sampleIndex_.second()].name()
-            << " with weight:" << s << endl;
+        this->operator==((1-s)*startSampledValues_ + s*endSampledValues_);
+        wantedAverage = (1-s)*startAverage_ + s*endAverage_;
     }
 
     // Enforce average. Either by scaling (if scaling factor > 0.5) or by
     // offsetting.
     if (setAverage_)
     {
+        const Field<Type>& fld = *this;
+
         Type averagePsi = gAverage(fld);
 
         if (debug)
@@ -535,7 +573,7 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::updateCoeffs()
                 Pout<< "updateCoeffs :"
                     << " offsetting with:" << offset << endl;
             }
-            fld += offset;
+            this->operator==(fld+offset);
         }
         else
         {
@@ -546,7 +584,7 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::updateCoeffs()
                 Pout<< "updateCoeffs :"
                     << " scaling with:" << scale << endl;
             }
-            fld *= scale;
+            this->operator==(scale*fld);
         }
     }
 
@@ -554,7 +592,7 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::updateCoeffs()
     if (offset_)
     {
         const scalar t = this->db().time().timeOutputValue();
-        fld += offset_->value(t);
+        this->operator==(*this + offset_->value(t));
     }
 
     if (debug)
@@ -576,6 +614,9 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::write
 {
     fixedValuePointPatchField<Type>::write(os);
 
+    os.writeEntryIfDifferent("setAverage", Switch(false), setAverage_);
+    os.writeEntryIfDifferent<scalar>("perturb", 1e-5, perturb_);
+
     os.writeEntryIfDifferent
     (
         "fieldTable",
@@ -583,22 +624,12 @@ void Foam::timeVaryingMappedFixedValuePointPatchField<Type>::write
         fieldTableName_
     );
 
-    if (!pointsName_.empty())
-    {
-        os.writeEntryIfDifferent<word>("points", "points", pointsName_);
-    }
-
-    if (!mapMethod_.empty() && !mapMethod_.starts_with("planar"))
-    {
-        os.writeEntry("mapMethod", mapMethod_);
-    }
-
-    if (setAverage_)
-    {
-        os.writeEntry("setAverage", setAverage_);
-    }
-
-    os.writeEntryIfDifferent<scalar>("perturb", 1e-5, perturb_);
+    os.writeEntryIfDifferent<word>
+    (
+        "mapMethod",
+        "planarInterpolation",
+        mapMethod_
+    );
 
     if (offset_)
     {

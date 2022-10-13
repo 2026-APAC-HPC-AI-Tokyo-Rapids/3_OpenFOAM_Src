@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2015 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -113,7 +113,7 @@ bool Foam::CV2D::insertPointPairAtIntersection
             if (pHit.hit())
             {
                 scalar dist2 =
-                    toPoint2D(pHit.point()).distSqr(vertices[vi]);
+                    magSqr(toPoint2D(pHit.hitPoint()) - vertices[vi]);
 
                 // Check the point is further away than the furthest so far
                 if (dist2 > interDist2)
@@ -131,7 +131,7 @@ bool Foam::CV2D::insertPointPairAtIntersection
                     if (dist2 > mps2)
                     {
                         found = true;
-                        interPoint = toPoint2D(pHit.point());
+                        interPoint = toPoint2D(pHit.hitPoint());
                         interTri = pHit.index();
                         interDist2 = dist2;
                         interHitSurface = hitSurface;

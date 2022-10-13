@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2017 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -65,13 +65,11 @@ Foam::autoPtr<Foam::extendedEdgeMesh> Foam::extendedEdgeMesh::New
     const fileName& name
 )
 {
-    const word ext =
-    (
-        name.has_ext("gz")
-      ? name.stem().ext()
-      : name.ext()
-    );
-
+    word ext(name.ext());
+    if (ext == "gz")
+    {
+        ext = name.lessExt().ext();
+    }
     return New(name, ext);
 }
 

@@ -474,6 +474,24 @@ Foam::fileOperations::masterUncollatedFileOperation::localObjectPath
 }
 
 
+bool Foam::fileOperations::masterUncollatedFileOperation::uniformFile
+(
+    const fileNameList& filePaths
+)
+{
+    const fileName& object0 = filePaths[0];
+
+    for (label i = 1; i < filePaths.size(); i++)
+    {
+        if (filePaths[i] != object0)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+
 void Foam::fileOperations::masterUncollatedFileOperation::readAndSend
 (
     const fileName& filePath,
@@ -697,7 +715,21 @@ Foam::fileOperations::masterUncollatedFileOperation::read
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-void Foam::fileOperations::masterUncollatedFileOperation::init(bool verbose)
+Foam::fileOperations::masterUncollatedFileOperation::
+masterUncollatedFileOperation
+(
+    bool verbose
+)
+:
+    fileOperation
+    (
+        UPstream::allocateCommunicator
+        (
+            UPstream::worldComm,
+            subRanks(Pstream::nProcs())
+        )
+    ),
+    myComm_(comm_)
 {
     verbose = (verbose && Foam::infoDetailLevel > 0);
 
@@ -734,34 +766,42 @@ void Foam::fileOperations::masterUncollatedFileOperation::init(bool verbose)
 Foam::fileOperations::masterUncollatedFileOperation::
 masterUncollatedFileOperation
 (
-    bool verbose
-)
-:
-    fileOperation
-    (
-        UPstream::allocateCommunicator
-        (
-            UPstream::worldComm,
-            subRanks(Pstream::nProcs())
-        )
-    ),
-    managedComm_(comm_)
-{
-    init(verbose);
-}
-
-
-Foam::fileOperations::masterUncollatedFileOperation::
-masterUncollatedFileOperation
-(
     const label comm,
     bool verbose
 )
 :
     fileOperation(comm),
-    managedComm_(-1)  // Externally managed
+    myComm_(-1)
 {
-    init(verbose);
+    verbose = (verbose && Foam::infoDetailLevel > 0);
+
+    if (verbose)
+    {
+        DetailInfo
+            << "I/O    : " << typeName
+            << " (maxMasterFileBufferSize " << maxMasterFileBufferSize << ')'
+            << endl;
+    }
+
+    if (IOobject::fileModificationChecking == IOobject::timeStampMaster)
+    {
+        if (verbose)
+        {
+            WarningInFunction
+                << "Resetting fileModificationChecking to timeStamp" << endl;
+        }
+        IOobject::fileModificationChecking = IOobject::timeStamp;
+    }
+    else if (IOobject::fileModificationChecking == IOobject::inotifyMaster)
+    {
+        if (verbose)
+        {
+            WarningInFunction
+                << "Resetting fileModificationChecking to inotify"
+                << endl;
+        }
+        IOobject::fileModificationChecking = IOobject::inotify;
+    }
 }
 
 
@@ -770,9 +810,9 @@ masterUncollatedFileOperation
 Foam::fileOperations::masterUncollatedFileOperation::
 ~masterUncollatedFileOperation()
 {
-    if (UPstream::isUserComm(managedComm_))
+    if (myComm_ != -1 && myComm_ != UPstream::worldComm)
     {
-        UPstream::freeCommunicator(managedComm_);
+        UPstream::freeCommunicator(myComm_);
     }
 }
 
@@ -978,14 +1018,13 @@ bool Foam::fileOperations::masterUncollatedFileOperation::rm
 bool Foam::fileOperations::masterUncollatedFileOperation::rmDir
 (
     const fileName& dir,
-    const bool silent,
-    const bool emptyOnly
+    const bool silent
 ) const
 {
     return masterOp<bool>
     (
         dir,
-        rmDirOp(silent, emptyOnly),
+        rmDirOp(silent),
         Pstream::msgType(),
         comm_
     );
@@ -1446,7 +1485,11 @@ Foam::fileOperations::masterUncollatedFileOperation::findInstance
 
 
     // Handling failures afterwards
-    const bool exitIfMissing = startIO.isReadRequired();
+    const bool exitIfMissing
+    (
+        startIO.readOpt() == IOobject::MUST_READ
+     || startIO.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+    );
 
     enum failureCodes { FAILED_STOPINST = 1, FAILED_CONSTINST = 2 };
     int failed(0);
@@ -1992,7 +2035,7 @@ Foam::fileOperations::masterUncollatedFileOperation::readStream
             }
             // Reduce (not broadcast)
             // - if we have multiple master files (FUTURE)
-            Pstream::reduceOr(bigSize);  //, comm_);
+            reduce(bigSize, orOp<bool>());  //, UPstream::msgType(), comm_);
 
             const UPstream::commsTypes myCommsType
             (
@@ -2415,30 +2458,7 @@ Foam::fileOperations::masterUncollatedFileOperation::NewOFstream
         (
             pathName,
             streamOpt,
-            IOstreamOption::NON_APPEND,
-            valid
-        )
-    );
-}
-
-
-Foam::autoPtr<Foam::OSstream>
-Foam::fileOperations::masterUncollatedFileOperation::NewOFstream
-(
-    IOstreamOption::atomicType atomic,
-    const fileName& pathName,
-    IOstreamOption streamOpt,
-    const bool valid
-) const
-{
-    return autoPtr<OSstream>
-    (
-        new masterOFstream
-        (
-            atomic,
-            pathName,
-            streamOpt,
-            IOstreamOption::NON_APPEND,
+            false,  // append=false
             valid
         )
     );

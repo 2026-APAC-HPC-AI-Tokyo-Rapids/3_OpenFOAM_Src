@@ -76,20 +76,14 @@ Foam::argList::initValidTables::initValidTables()
     (
         "case",
         "dir",
-        "Case directory (instead of current directory)"
+        "Specify case directory to use (instead of cwd)"
     );
     argList::addOption
     (
         "lib",
         "name",
-        "Additional library or library list to load.\n"
-        "[Can be used multiple times]",
-        true  // advanced option
-    );
-    argList::addBoolOption
-    (
-        "no-libs",
-        "Disable use of the controlDict 'libs' entry",
+        "Additional library or library list to load"
+        " (can be used multiple times)",
         true  // advanced option
     );
 
@@ -97,8 +91,9 @@ Foam::argList::initValidTables::initValidTables()
     (
         "debug-switch",
         "name=val",
-        "Set named DebugSwitch (default value: 1).\n"
-        "[Can be used multiple times]",
+        "Specify the value of a registered debug switch."
+        " Default is 1 if the value is omitted."
+        " (Can be used multiple times)",
         true  // advanced option
     );
 
@@ -106,8 +101,9 @@ Foam::argList::initValidTables::initValidTables()
     (
         "info-switch",
         "name=val",
-        "Set named InfoSwitch (default value: 1).\n"
-        "[Can be used multiple times]",
+        "Specify the value of a registered info switch."
+        " Default is 1 if the value is omitted."
+        " (Can be used multiple times)",
         true  // advanced option
     );
 
@@ -115,8 +111,9 @@ Foam::argList::initValidTables::initValidTables()
     (
         "opt-switch",
         "name=val",
-        "Set named OptimisationSwitch (default value: 1).\n"
-        "[Can be used multiple times]",
+        "Specify the value of a registered optimisation switch."
+        " Default is 1 if the value is omitted."
+        " (Can be used multiple times)",
         true  // advanced option
     );
 
@@ -139,7 +136,7 @@ Foam::argList::initValidTables::initValidTables()
     (
         "decomposeParDict",
         "file",
-        "Alternative decomposePar dictionary file"
+        "Use specified file for decomposePar dictionary"
     );
     argList::addOption
     (
@@ -239,51 +236,6 @@ static void printHostsSubscription(const UList<string>& hostProcs)
     }
 
     Info<< ')' << nl;
-}
-
-
-static bool printRootsSubscription
-(
-    const UList<string>& hostProcs,
-    const UList<fileName>& roots
-)
-{
-    if (hostProcs.size() == roots.size()+1)
-    {
-        // Sort roots according to hostProc
-        DynamicList<string> sortedProcs;
-        DynamicList<label> sortedRoots;
-
-        forAll(roots, i)
-        {
-            const fileName& root = roots[i];
-            const string& host = hostProcs[i+1];
-            const label index = sortedProcs.find(host);
-
-            if (index == -1)
-            {
-                sortedProcs.append(host);
-                sortedRoots.append(i);
-            }
-            else if (roots[sortedRoots[index]] != root)
-            {
-                // Not properly sorted...
-                return false;
-            }
-        }
-
-        Info<< "Roots  :\n(" << nl;
-        forAll(sortedProcs, i)
-        {
-            Info<< "    (" << sortedProcs[i].c_str() << ' '
-                << roots[sortedRoots[i]] << ')' << nl;
-        }
-        Info<< ')' << nl;
-
-        return true;
-    }
-
-    return false;
 }
 
 } // End namespace Foam
@@ -531,8 +483,8 @@ void Foam::argList::noFunctionObjects(bool addWithOption)
         argList::addBoolOption
         (
             "withFunctionObjects",
-            "Execute functionObjects"
-            // An advanced option, but seldom used so expose it more
+            "Execute functionObjects",
+            true  // advanced option
         );
     }
 }
@@ -953,10 +905,8 @@ Foam::argList::argList
                     Info<< nl
                         <<"Error: option '-" << optName
                         << "' requires an argument" << nl << nl
-                        << "See '" << executable_ << " -help' for usage" << nl
-                        << " or '" << executable_
-                        << " -help-full' for extended usage" << nl
-                        << nl;
+                        << "See '" << executable_ << " -help' for usage"
+                        << nl << nl;
 
                     Pstream::exit(1);  // works for serial and parallel
                 }
@@ -1231,7 +1181,6 @@ void Foam::argList::parse
     stringList hostMachine;
     stringList hostProcs;
     const int writeHostsSwitch = Foam::debug::infoSwitch("writeHosts", 1);
-    const int writeRootsSwitch = Foam::debug::infoSwitch("writeRoots", 1);
 
     // Collect machine/pid, and check that the build is identical
     if (runControl_.parRun())
@@ -1418,17 +1367,12 @@ void Foam::argList::parse
 
                 if (dictStream && dictStream->good())
                 {
-                    // Get numberOfSubdomains if it exists.
-                    // - mandatory when running with distributed roots
-
-                    IOobjectOption::readOption nDomainsReadOpt
-                        = IOobjectOption::READ_IF_PRESENT;
-
                     dictionary decompDict(*dictStream);
+                    bool nDomainsMandatory = false;
 
                     if (decompDict.getOrDefault("distributed", false))
                     {
-                        nDomainsReadOpt = IOobjectOption::MUST_READ;
+                        nDomainsMandatory = true;
                         runControl_.distributed(true);
                         decompDict.readEntry("roots", roots);
 
@@ -1440,12 +1384,14 @@ void Foam::argList::parse
                         }
                     }
 
+                    // Get numberOfSubdomains if it exists.
+                    // - mandatory when running with distributed roots
                     decompDict.readEntry
                     (
                         "numberOfSubdomains",
                         dictNProcs,
                         keyType::LITERAL,
-                        nDomainsReadOpt
+                        nDomainsMandatory
                     );
                 }
                 else
@@ -1663,7 +1609,7 @@ void Foam::argList::parse
             // Clear here to ensures it doesn't show in the jobInfo
             hostProcs.clear();
         }
-        if (!writeRootsSwitch)
+        if (!debug::infoSwitch("writeRoots", 1))
         {
             roots.clear();
         }
@@ -1702,17 +1648,7 @@ void Foam::argList::parse
             }
             if (roots.size())
             {
-                bool hasPrinted = false;
-                if (writeRootsSwitch == 1)
-                {
-                    // Compact output
-                    hasPrinted = printRootsSubscription(hostProcs, roots);
-                }
-                if (writeRootsSwitch && !hasPrinted)
-                {
-                    // Full output
-                    Info<< "Roots  : " << roots << nl;
-                }
+                Info<< "Roots  : " << roots << nl;
             }
             Info<< "Pstream initialized with:" << nl
                 << "    floatTransfer      : " << Pstream::floatTransfer << nl
@@ -1815,33 +1751,7 @@ Foam::argList::~argList()
     jobInfo.stop();     // Normal job termination
 
     // Delete file handler to flush any remaining IO
-    (void)Foam::fileHandler(nullptr);
-}
-
-
-// * * * * * * * * * * * * * * * Capabilities  * * * * * * * * * * * * * * * //
-
-bool Foam::argList::allowFunctionObjects() const
-{
-    if (validOptions.found("withFunctionObjects"))
-    {
-        // '-withFunctionObjects' is available and explicitly enabled
-        return options_.found("withFunctionObjects");
-    }
-    else if (validOptions.found("noFunctionObjects"))
-    {
-        // '-noFunctionObjects' is available and not explicitly disabled
-        return !options_.found("noFunctionObjects");
-    }
-
-    // Disallow functions if there is no way to enable/disable them
-    return false;
-}
-
-
-bool Foam::argList::allowLibs() const
-{
-    return !options_.found("no-libs");
+    Foam::fileHandler(nullptr);
 }
 
 
@@ -1979,7 +1889,7 @@ void Foam::argList::displayDoc(bool source) const
     }
 
     // Can use FOAM_DOC_BROWSER='application file://%f' if required
-    if (docBrowser.contains("%f"))
+    if (docBrowser.find("%f") != std::string::npos)
     {
         docBrowser.replace("%f", url);
     }
@@ -2037,10 +1947,8 @@ bool Foam::argList::check(bool checkArgs, bool checkOpts) const
         {
             FatalError
                 << nl
-                << "See '" << executable_ << " -help' for usage" << nl
-                << " or '" << executable_
-                << " -help-full' for extended usage" << nl
-                << nl;
+                << "See '" << executable_ << " -help' for usage"
+                << nl << nl;
         }
     }
 
@@ -2060,7 +1968,7 @@ bool Foam::argList::checkRootCase() const
         return false;
     }
 
-    const fileName pathDir(fileHandler().filePath(path(), false));
+    const fileName pathDir(fileHandler().filePath(path()));
 
     if (checkProcessorDirectories_ && pathDir.empty() && Pstream::master())
     {

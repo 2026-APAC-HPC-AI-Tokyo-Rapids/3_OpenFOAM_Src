@@ -195,14 +195,13 @@ void Foam::Time::setControls()
 
     // Check if time directory exists
     // If not increase time precision to see if it is formatted differently.
-    // Note: - do not use raw fileHandler().exists(...) since does not check
+    // Note: do not use raw fileHandler().exists(...) since does not check
     //       alternative processorsDDD directories naming
-    //       - do not look for compressed (is directory)
-
-    if (fileHandler().filePath(timePath(), false).empty())
+    if (fileHandler().filePath(timePath()).empty())
     {
-        const int oldPrecision = precision_;
+        int oldPrecision = precision_;
         int requiredPrecision = -1;
+        bool found = false;
         word oldTime(timeName());
         for
         (
@@ -219,10 +218,14 @@ void Foam::Time::setControls()
             {
                 break;
             }
-            oldTime = std::move(newTime);
+            oldTime = newTime;
 
-            // Does a time directory exist with the new format?
-            if (!fileHandler().filePath(timePath(), false).empty())
+            // Check the existence of the time directory with the new format
+            //found = fileHandler().exists(timePath(), false);
+            const fileName dirName(fileHandler().filePath(timePath()));
+            found = !dirName.empty();
+
+            if (found)
             {
                 requiredPrecision = precision_;
             }
@@ -456,7 +459,7 @@ Foam::Time::Time
     writeOnce_(false),
     sigWriteNow_(*this, true),
     sigStopAtWriteNow_(*this, true),
-    writeStreamOption_(IOstreamOption::ASCII),
+    writeStreamOption_(IOstream::ASCII),
     graphFormat_("raw"),
     runTimeModifiable_(false),
     functionObjects_(*this, false)
@@ -522,7 +525,7 @@ Foam::Time::Time
     writeOnce_(false),
     sigWriteNow_(*this, true),
     sigStopAtWriteNow_(*this, true),
-    writeStreamOption_(IOstreamOption::ASCII),
+    writeStreamOption_(IOstream::ASCII),
     graphFormat_("raw"),
     runTimeModifiable_(false),
     functionObjects_(*this, false)
@@ -532,15 +535,25 @@ Foam::Time::Time
     // * '-withFunctionObjects' exists and used = enable
     // * '-noFunctionObjects' exists and used = disable
     // * default: no functions if there is no way to enable/disable them
-    if (enableFunctionObjects && args.allowFunctionObjects())
+    if
+    (
+        argList::validOptions.found("withFunctionObjects")
+      ? args.found("withFunctionObjects")
+      : argList::validOptions.found("noFunctionObjects")
+      ? !args.found("noFunctionObjects")
+      : false
+    )
     {
-        functionObjects_.on();
+        if (enableFunctionObjects)
+        {
+            functionObjects_.on();
+        }
     }
 
     // Libraries
     //
     // * enable by default unless '-no-libs' option was used
-    if (enableLibs && args.allowLibs())
+    if (enableLibs && !args.found("no-libs"))
     {
         libs_.open("libs", controlDict_);
     }
@@ -606,7 +619,7 @@ Foam::Time::Time
     writeOnce_(false),
     sigWriteNow_(*this, true),
     sigStopAtWriteNow_(*this, true),
-    writeStreamOption_(IOstreamOption::ASCII),
+    writeStreamOption_(IOstream::ASCII),
     graphFormat_("raw"),
     runTimeModifiable_(false),
     functionObjects_(*this, false)
@@ -680,7 +693,7 @@ Foam::Time::Time
     purgeWrite_(0),
     subCycling_(0),
     writeOnce_(false),
-    writeStreamOption_(IOstreamOption::ASCII),
+    writeStreamOption_(IOstream::ASCII),
     graphFormat_("raw"),
     runTimeModifiable_(false),
     functionObjects_(*this, false)
@@ -784,7 +797,7 @@ Foam::word Foam::Time::findInstance
 (
     const fileName& dir,
     const word& name,
-    IOobjectOption::readOption rOpt,
+    const IOobject::readOption rOpt,
     const word& stopInstance
 ) const
 {

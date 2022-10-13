@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -593,7 +593,11 @@ bool Foam::MRFZone::read(const dictionary& dict)
             excludedPatchLabels_[i++] = patchi;
         }
 
-        if (!returnReduceOr(cellZoneID_ != -1))
+        bool cellZoneFound = (cellZoneID_ != -1);
+
+        reduce(cellZoneFound, orOp<bool>());
+
+        if (!cellZoneFound)
         {
             FatalErrorInFunction
                 << "cannot find MRF cellZone " << cellZoneName_

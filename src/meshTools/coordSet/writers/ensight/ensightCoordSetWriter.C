@@ -62,27 +62,17 @@ static void writeTrackField
 )
 {
     // Write field (serial only)
-    os.write(ensightPTraits<Type>::typeName);
-    os.newline();
-
+    os.writeKeyword(ensightPTraits<Type>::typeName);
     forAll(fieldPtrs, tracki)
     {
-        const Field<Type>& fld = fieldPtrs[tracki];
+        // Write as point data
 
         os.beginPart(tracki);  // Part index (0-based)
-
-        // Skip if empty. This check is probably redundant
-        if (fld.empty())
-        {
-            continue;
-        }
-
-        // Write as coordinates data
         ensightOutput::Detail::writeFieldComponents
         (
             os,
             ensightFile::coordinates,
-            fld,
+            fieldPtrs[tracki],
             false  /* serial only! */
         );
     }
@@ -176,7 +166,7 @@ void Foam::coordSetWriters::ensightWriter::writeGeometry
 Foam::coordSetWriters::ensightWriter::ensightWriter()
 :
     coordSetWriter(),
-    writeFormat_(IOstreamOption::ASCII),
+    writeFormat_(IOstream::ASCII),
     collateTimes_(true),
     caching_("fieldsDict")  // Historic name
 {}
@@ -187,7 +177,7 @@ Foam::coordSetWriters::ensightWriter::ensightWriter(const dictionary& options)
     coordSetWriter(options),
     writeFormat_
     (
-        IOstreamOption::formatEnum("format", options, IOstreamOption::ASCII)
+        IOstreamOption::formatEnum("format", options, IOstream::ASCII)
     ),
     collateTimes_(options.getOrDefault("collateTimes", true)),
     caching_("fieldsDict")  // Historic name

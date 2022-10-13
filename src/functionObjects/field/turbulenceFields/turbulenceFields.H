@@ -182,9 +182,7 @@ public:
             cfR,            //!< "Reynolds stress tensor"
             cfDevRhoReff,   //!< "Divergence of the Reynolds stress"
             cfL,            //!< "Integral-length/Mixing-length scale"
-            cfI,            //!< "Turbulence intensity"
-            cfLESRegion,    //!< "DES model LES region indicator field"
-            cffd            //!< "DES model shielding function"
+            cfI             //!< "Turbulence intensity"
         };
 
         //- Names for compressibleField turbulence fields
@@ -202,9 +200,7 @@ public:
             ifR,            //!< "Reynolds stress tensor"
             ifDevReff,   //!< "Deviatoric part of the effective Reynolds stress"
             ifL,            //!< "Integral-length/Mixing-length scale"
-            ifI,            //!< "Turbulence intensity"
-            ifLESRegion,    //!< "DES model LES region indicator field"
-            iffd            //!< "DES model shielding function"
+            ifI             //!< "Turbulence intensity"
         };
 
         //- Names for incompressibleField turbulence fields

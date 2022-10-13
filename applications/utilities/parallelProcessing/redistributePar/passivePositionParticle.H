@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_passivePositionParticle_H
-#define Foam_passivePositionParticle_H
+#ifndef passivePositionParticle_H
+#define passivePositionParticle_H
 
 #include "passiveParticle.H"
 
@@ -130,9 +130,7 @@ public:
         };
 
 
-    // Member Functions
-
-        const point& cachedPosition() const noexcept
+        const point& cachedPosition() const
         {
             return cachedPosition_;
         }
@@ -159,7 +157,7 @@ public:
             p.origProc = ppi.origProc();
             p.origId = ppi.origId();
 
-            if (os.format() == IOstreamOption::ASCII)
+            if (os.format() == IOstream::ASCII)
             {
                 os  << p.position
                     << token::SPACE << p.celli

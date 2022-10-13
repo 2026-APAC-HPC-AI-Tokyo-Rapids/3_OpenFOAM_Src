@@ -62,17 +62,12 @@ Foam::patchDistMethod::New
 )
 {
     word modelType(defaultPatchDistMethod);
-
-    // The "method" entry - mandatory if no default was provided
     dict.readEntry
     (
         "method",
         modelType,
-        keyType::LITERAL,
-        (
-            modelType.empty()
-          ? IOobjectOption::MUST_READ : IOobjectOption::READ_IF_PRESENT
-        )
+        keyType::REGEX,
+        modelType.empty()  // Mandatory if no default was provided
     );
 
     Info<< "Selecting patchDistMethod " << modelType << endl;

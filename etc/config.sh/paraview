@@ -57,7 +57,7 @@
 #------------------------------------------------------------------------------
 # USER EDITABLE PART: Changes made here may be lost with the next upgrade
 
-ParaView_VERSION=5.11.0
+ParaView_VERSION=5.10.1
 ParaView_QT=qt-system
 
 # END OF (NORMAL) USER EDITABLE PART
@@ -75,12 +75,6 @@ eval \
 eval \
     "$($WM_PROJECT_DIR/bin/foamCleanPath -sh-lib \
     $ParaView_DIR $archDir/ParaView- $archDir/qt-)"
-
-# Darwin
-case "$WM_ARCH" in
-(darwin*)
-    export DYLD_LIBRARY_PATH="${FOAM_LD_LIBRARY_PATH}" ;;
-esac
 
 # Evaluate command-line parameters for ParaView
 for i
@@ -192,12 +186,8 @@ case "$ParaView_VERSION" in
         then
             case "$WM_ARCH" in
             (darwin*)
-                export FOAM_LD_LIBRARY_PATH="${pv_libdirs}:${FOAM_LD_LIBRARY_PATH}"
-                export DYLD_LIBRARY_PATH="${FOAM_LD_LIBRARY_PATH}"
-                ;;
-            (*)
-                export LD_LIBRARY_PATH="${pv_libdirs}:${LD_LIBRARY_PATH}"
-                ;;
+                export DYLD_LIBRARY_PATH="${pv_libdirs}:$DYLD_LIBRARY_PATH" ;;
+            (*) export LD_LIBRARY_PATH="${pv_libdirs}:$LD_LIBRARY_PATH" ;;
             esac
         fi
 

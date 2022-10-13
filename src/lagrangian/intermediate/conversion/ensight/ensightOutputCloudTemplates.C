@@ -69,17 +69,17 @@ Foam::label Foam::ensightOutput::Detail::writeCloudFieldContent
 template<class Type>
 bool Foam::ensightOutput::writeCloudField
 (
-    ensightFile& os,
-    const IOField<Type>& field
+    const IOField<Type>& field,
+    ensightFile& os
 )
 {
-    if (returnReduceAnd(field.empty()))
+    if (returnReduce(field.empty(), andOp<bool>()))
     {
         return false;
     }
 
     // Gather sizes (offsets irrelevant)
-    const globalIndex procAddr(globalIndex::gatherOnly{}, field.size());
+    const globalIndex procAddr(field.size(), globalIndex::gatherOnly{});
 
     if (Pstream::master())
     {
@@ -99,27 +99,21 @@ bool Foam::ensightOutput::writeCloudField
 
         for (const label proci : procAddr.subProcs())
         {
-            const label procSize = procAddr.localSize(proci);
+            recvData.resize_nocopy(procAddr.localSize(proci));
+            UIPstream::read
+            (
+                UPstream::commsTypes::scheduled,
+                proci,
+                recvData.data_bytes(),
+                recvData.size_bytes()
+            );
 
-            if (procSize)
-            {
-                recvData.resize_nocopy(procSize);
-
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData.data_bytes(),
-                    recvData.size_bytes()
-                );
-
-                count = ensightOutput::Detail::writeCloudFieldContent
-                (
-                    os,
-                    recvData,
-                    count
-                );
-            }
+            count = ensightOutput::Detail::writeCloudFieldContent
+            (
+                os,
+                recvData,
+                count
+            );
         }
 
         // Add final newline if required
@@ -130,16 +124,14 @@ bool Foam::ensightOutput::writeCloudField
     }
     else
     {
-        if (field.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                field.cdata_bytes(),
-                field.size_bytes()
-            );
-        }
+        // Send
+        UOPstream::write
+        (
+            UPstream::commsTypes::scheduled,
+            UPstream::masterNo(),
+            field.cdata_bytes(),
+            field.size_bytes()
+        );
     }
 
     return true;
@@ -147,25 +139,25 @@ bool Foam::ensightOutput::writeCloudField
 
 
 template<class Type>
-bool Foam::ensightOutput::readWriteCloudField
+bool Foam::ensightOutput::writeCloudField
 (
-    ensightFile& os,
-    const IOobject& fieldObject,
-    const bool existsAny
+    const IOobject& io,
+    const bool exists,
+    autoPtr<ensightFile>& output
 )
 {
-    if (existsAny)
+    if (exists)
     {
-        // When exists == true, it exists somewhere globally,
+        // When exists == true, it exists globally,
         // but can still be missing on the local processor.
         // Handle this by READ_IF_PRESENT instead.
 
-        IOobject io(fieldObject);
-        io.readOpt(IOobject::READ_IF_PRESENT);
+        IOobject fieldObj(io);
+        fieldObj.readOpt(IOobject::READ_IF_PRESENT);
 
-        IOField<Type> field(io);
+        IOField<Type> field(fieldObj);
 
-        writeCloudField(os, field);
+        writeCloudField(field, output.ref());
     }
 
     return true;

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -132,8 +132,6 @@ void Foam::KinematicCloud<CloudType>::solve
 )
 {
     addProfiling(prof, "cloud::solve");
-
-    log = solution_.log();
 
     if (solution_.steadyState())
     {
@@ -269,7 +267,7 @@ void Foam::KinematicCloud<CloudType>::postEvolve
     const typename parcelType::trackingData& td
 )
 {
-    Log_<< endl;
+    Info<< endl;
 
     if (debug)
     {
@@ -292,7 +290,7 @@ void Foam::KinematicCloud<CloudType>::postEvolve
         (
             IOstreamOption
             (
-                IOstreamOption::ASCII,
+                IOstream::ASCII,
                 this->db().time().writeCompression()
             ),
             true
@@ -459,8 +457,7 @@ Foam::KinematicCloud<CloudType>::KinematicCloud
             mesh_,
             dimensionedScalar(dimMass, Zero)
         )
-    ),
-    log(true)
+    )
 {
     if (solution_.active())
     {
@@ -548,8 +545,7 @@ Foam::KinematicCloud<CloudType>::KinematicCloud
             ),
             c.UCoeff_()
         )
-    ),
-    log(c.log)
+    )
 {}
 
 
@@ -615,8 +611,7 @@ Foam::KinematicCloud<CloudType>::KinematicCloud
 
     UIntegrator_(nullptr),
     UTrans_(nullptr),
-    UCoeff_(nullptr),
-    log(c.log)
+    UCoeff_(nullptr)
 {}
 
 
@@ -748,7 +743,7 @@ void Foam::KinematicCloud<CloudType>::preEvolve
     // with topology change due to lazy evaluation of valid mesh dimensions
     label nGeometricD = mesh_.nGeometricD();
 
-    Log_<< "\nSolving" << nGeometricD << "-D cloud " << this->name() << endl;
+    Info<< "\nSolving" << nGeometricD << "-D cloud " << this->name() << endl;
 
     this->dispersion().cacheFields(true);
     forces_.cacheFields(true);
@@ -886,7 +881,7 @@ void Foam::KinematicCloud<CloudType>::info()
       : 0
     );
 
-    Log_<< "Cloud: " << this->name() << nl
+    Info<< "Cloud: " << this->name() << nl
         << "    Current number of parcels       = " << nTotParcel << nl
         << "    Current mass in system          = "
         << returnReduce(massInSystem(), sumOp<scalar>()) << nl
@@ -895,10 +890,9 @@ void Foam::KinematicCloud<CloudType>::info()
         << "    Linear kinetic energy           = " << linearKineticEnergy << nl
         << "    Average particle per parcel     = " << particlePerParcel << nl;
 
-
-    injectors_.info();
-    this->surfaceFilm().info();
-    this->patchInteraction().info();
+    injectors_.info(Info);
+    this->surfaceFilm().info(Info);
+    this->patchInteraction().info(Info);
 
     if (this->packingModel().active())
     {
@@ -912,8 +906,8 @@ void Foam::KinematicCloud<CloudType>::info()
         const scalar alphaMin = gMin(alpha().primitiveField());
         const scalar alphaMax = gMax(alpha().primitiveField());
 
-        Log_<< "    Min cell volume fraction        = " << alphaMin << nl
-            << "    Max cell volume fraction        = " << alphaMax << endl;
+        Info<< "    Min cell volume fraction        = " << alphaMin << endl;
+        Info<< "    Max cell volume fraction        = " << alphaMax << endl;
 
         if (alphaMax < SMALL)
         {
@@ -939,7 +933,7 @@ void Foam::KinematicCloud<CloudType>::info()
 
         reduce(nMin, minOp<scalar>());
 
-        Log_<< "    Min dense number of parcels     = " << nMin << endl;
+        Info<< "    Min dense number of parcels     = " << nMin << endl;
     }
 }
 

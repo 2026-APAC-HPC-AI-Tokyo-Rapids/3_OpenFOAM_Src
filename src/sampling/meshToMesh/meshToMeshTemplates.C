@@ -140,7 +140,7 @@ void Foam::meshToMesh::mapSrcToTgt
 
     if (singleMeshProc_ == -1)
     {
-        if (returnReduceAnd(tgtToSrcCellVec_.empty()))
+        if (returnReduce(tgtToSrcCellVec_.size(), sumOp<label>()) == 0)
         {
             // No correction vectors calculated. Fall back to first order.
             mapSrcToTgt(srcField, cop, result);
@@ -353,7 +353,7 @@ void Foam::meshToMesh::mapTgtToSrc
 
     if (singleMeshProc_ == -1)
     {
-        if (returnReduceAnd(srcToTgtCellVec_.empty()))
+        if (returnReduce(srcToTgtCellVec_.size(), sumOp<label>()) == 0)
         {
             // No correction vectors calculated. Fall back to first order.
             mapTgtToSrc(tgtField, cop, result);
@@ -478,7 +478,7 @@ void Foam::meshToMesh::mapInternalSrcToTgt
     const bool secondOrder
 ) const
 {
-    if (secondOrder && returnReduceOr(tgtToSrcCellVec_.size()))
+    if (secondOrder && returnReduce(tgtToSrcCellVec_.size(), sumOp<label>()))
     {
         mapSrcToTgt
         (
@@ -711,7 +711,7 @@ void Foam::meshToMesh::mapInternalTgtToSrc
     const bool secondOrder
 ) const
 {
-    if (secondOrder && returnReduceOr(srcToTgtCellVec_.size()))
+    if (secondOrder && returnReduce(srcToTgtCellVec_.size(), sumOp<label>()))
     {
         mapTgtToSrc
         (

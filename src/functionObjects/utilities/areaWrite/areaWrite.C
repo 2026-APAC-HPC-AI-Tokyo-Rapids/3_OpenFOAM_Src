@@ -53,10 +53,6 @@ namespace Foam
 
 Foam::scalar Foam::areaWrite::mergeTol_ = 1e-10;
 
-
-// Implementation
-#include "areaWriteImpl.C"
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::areaWrite::areaWrite
@@ -114,7 +110,7 @@ Foam::areaWrite::areaWrite
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool Foam::areaWrite::verbose(const bool on) noexcept
+bool Foam::areaWrite::verbose(const bool on)
 {
     bool old(verbose_);
     verbose_ = on;
@@ -141,7 +137,7 @@ bool Foam::areaWrite::read(const dictionary& dict)
                 obr_,
                 IOobject::NO_READ,
                 IOobject::NO_WRITE,
-                IOobject::NO_REGISTER
+                false
             )
         )
     );
@@ -185,7 +181,7 @@ bool Foam::areaWrite::read(const dictionary& dict)
 
     const dictionary writerOptions
     (
-        surfaceWriter::formatOptions(dict, writerType)
+        dict.subOrEmptyDict("formatOptions").subOrEmptyDict(writerType)
     );
 
     for (const word& areaName : meshes_.keys())
@@ -271,7 +267,7 @@ bool Foam::areaWrite::write()
         }
 
         // Parallel consistency (no-op in serial)
-        Pstream::mapCombineReduce(selected, HashSetOps::plusEqOp<word>());
+        Pstream::mapCombineAllGather(selected, HashSetOps::plusEqOp<word>());
 
         missed.clear();
 
@@ -303,11 +299,7 @@ bool Foam::areaWrite::write()
             const word& clsName = iter.key();
             const label n = iter.val().size();
 
-            if
-            (
-                fieldTypes::area.found(clsName)
-             || fieldTypes::area_internal.found(clsName)
-            )
+            if (fieldTypes::area.found(clsName))
             {
                 nAreaFields += n;
             }
@@ -326,43 +318,11 @@ bool Foam::areaWrite::write()
 
         // Write fields
 
-        {
-            // Area fields
-            #undef  doLocalCode
-            #define doLocalCode(Type)                                         \
-            performAction                                                     \
-            <                                                                 \
-                GeometricField<Type, Foam::faPatchField, Foam::areaMesh>      \
-            >                                                                 \
-            (                                                                 \
-                outWriter, areaMesh, objects                                  \
-            );                                                                \
-
-            doLocalCode(scalar);
-            doLocalCode(vector);
-            doLocalCode(sphericalTensor);
-            doLocalCode(symmTensor);
-            doLocalCode(tensor);
-
-            // Area internal fields
-            #undef  doLocalCode
-            #define doLocalCode(Type)                                         \
-            performAction                                                     \
-            <                                                                 \
-                DimensionedField<Type, Foam::areaMesh>                        \
-            >                                                                 \
-            (                                                                 \
-                outWriter, areaMesh, objects                                  \
-            );
-
-            doLocalCode(scalar);
-            doLocalCode(vector);
-            doLocalCode(sphericalTensor);
-            doLocalCode(symmTensor);
-            doLocalCode(tensor);
-
-            #undef doLocalCode
-        }
+        performAction<areaScalarField>(outWriter, areaMesh, objects);
+        performAction<areaVectorField>(outWriter, areaMesh, objects);
+        performAction<areaSphericalTensorField>(outWriter, areaMesh, objects);
+        performAction<areaSymmTensorField>(outWriter, areaMesh, objects);
+        performAction<areaTensorField>(outWriter, areaMesh, objects);
 
         // Finish this time step
 
@@ -424,17 +384,17 @@ void Foam::areaWrite::readUpdate(const polyMesh::readUpdateState state)
 }
 
 
-Foam::scalar Foam::areaWrite::mergeTol() noexcept
+Foam::scalar Foam::areaWrite::mergeTol()
 {
     return mergeTol_;
 }
 
 
-Foam::scalar Foam::areaWrite::mergeTol(const scalar tol) noexcept
+Foam::scalar Foam::areaWrite::mergeTol(const scalar tol)
 {
-    scalar old(mergeTol_);
+    const scalar prev(mergeTol_);
     mergeTol_ = tol;
-    return old;
+    return prev;
 }
 
 

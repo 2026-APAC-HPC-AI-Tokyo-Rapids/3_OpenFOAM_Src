@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -115,21 +115,6 @@ inline Foam::scalar Foam::face::mag(const UList<point>& p) const
 }
 
 
-inline Foam::Pair<Foam::point>
-Foam::face::box(const UList<point>& pts) const
-{
-    Pair<point> bb(point::rootMax, point::rootMin);
-
-    for (const label pointi : *this)
-    {
-        bb.first()  = min(bb.first(),  pts[pointi]);
-        bb.second() = max(bb.second(), pts[pointi]);
-    }
-
-    return bb;
-}
-
-
 inline Foam::label Foam::face::nEdges() const noexcept
 {
     // for a closed polygon a number of edges is the same as number of points
@@ -202,47 +187,6 @@ inline Foam::label Foam::face::prevLabel(const label i) const
 inline Foam::label Foam::face::nTriangles() const
 {
     return size() - 2;
-}
-
-
-inline bool Foam::face::connected(const labelUList& other) const
-{
-    for (const label pointi : *this)
-    {
-        if (other.found(pointi))
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-
-template<unsigned N>
-inline bool Foam::face::connected(const FixedList<label, N>& other) const
-{
-    for (const label pointi : *this)
-    {
-        if (other.found(pointi))
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-
-// * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
-
-inline void Foam::face::operator+=(const label vertexOffset)
-{
-    if (vertexOffset)
-    {
-        for (label& vrt : static_cast<labelList&>(*this))
-        {
-            vrt += vertexOffset;
-        }
-    }
 }
 
 

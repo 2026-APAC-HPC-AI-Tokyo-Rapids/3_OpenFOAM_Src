@@ -29,9 +29,40 @@ License
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+inline const Foam::fvMesh&
+Foam::regionModels::regionFaModel::primaryMesh() const
+{
+    return primaryMesh_;
+}
+
+
+inline const Foam::Time& Foam::regionModels::regionFaModel::time() const
+{
+    return time_;
+}
+
+
+inline const Foam::Switch& Foam::regionModels::regionFaModel::active() const
+{
+    return active_;
+}
+
+
+inline const Foam::Switch& Foam::regionModels::regionFaModel::infoOutput() const
+{
+    return infoOutput_;
+}
+
+
+inline const Foam::word& Foam::regionModels::regionFaModel::modelName() const
+{
+    return modelName_;
+}
+
+
 inline const Foam::faMesh& Foam::regionModels::regionFaModel::regionMesh() const
 {
-    auto* regionPtr = time_.getObjectPtr<faMesh>(regionName_);
+    const auto* regionPtr = time_.findObject<faMesh>(regionName_);
 
     if (regionPtr)
     {
@@ -64,6 +95,11 @@ inline Foam::faMesh& Foam::regionModels::regionFaModel::regionMesh()
     return *regionMeshPtr_;
 }
 
+
+inline const Foam::dictionary& Foam::regionModels::regionFaModel::coeffs() const
+{
+    return coeffs_;
+}
 
 inline const Foam::IOdictionary&
 Foam::regionModels::regionFaModel::outputProperties() const
@@ -99,19 +135,9 @@ Foam::regionModels::regionFaModel::solution() const
 }
 
 
-inline const Foam::labelList&
-Foam::regionModels::regionFaModel::primaryPatchIDs() const
+inline Foam::label Foam::regionModels::regionFaModel::patchID() const
 {
-    return regionMesh().whichPolyPatches();
-}
-
-
-inline bool Foam::regionModels::regionFaModel::isRegionPatch
-(
-    const label patchi
-) const
-{
-    return primaryPatchIDs().found(patchi);
+    return patchID_;
 }
 
 

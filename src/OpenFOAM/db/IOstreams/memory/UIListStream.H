@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -61,8 +61,8 @@ See Also
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_UIListStream_H
-#define Foam_UIListStream_H
+#ifndef UIListStream_H
+#define UIListStream_H
 
 #include "UList.H"
 #include "ISstream.H"
@@ -283,10 +283,11 @@ public:
         (
             const char* buffer,
             size_t nbytes,
-            IOstreamOption::streamFormat fmt
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
         )
         :
-            UIListStream(buffer, nbytes, IOstreamOption(fmt))
+            UIListStream(buffer, nbytes, IOstreamOption(fmt, ver))
         {}
 
         //- Construct using data area from a List and number of bytes
@@ -294,10 +295,11 @@ public:
         (
             const UList<char>& buffer,
             size_t nbytes,
-            IOstreamOption::streamFormat fmt
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
         )
         :
-            UIListStream(buffer.cdata(), nbytes, IOstreamOption(fmt))
+            UIListStream(buffer.cdata(), nbytes, IOstreamOption(fmt, ver))
         {}
 
         //- Construct using data area from a List and its inherent storage size
@@ -305,10 +307,11 @@ public:
         UIListStream
         (
             const UList<char>& buf,
-            IOstreamOption::streamFormat fmt
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
         )
         :
-            UIListStream(buf.cdata(), buf.size(), IOstreamOption(fmt))
+            UIListStream(buf.cdata(), buf.size(), IOstreamOption(fmt, ver))
         {}
 
     #endif /* Foam_IOstream_extras */

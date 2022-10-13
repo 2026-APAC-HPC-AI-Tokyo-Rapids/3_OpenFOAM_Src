@@ -29,7 +29,7 @@ License
 #include "polyMesh.H"
 #include "SubField.H"
 #include "Random.H"
-#include "triangle.H"
+#include "triPointRef.H"
 #include "volFields.H"
 #include "polyMeshTetDecomposition.H"
 
@@ -114,7 +114,7 @@ void Foam::patchInjectionBase::updateMesh(const polyMesh& mesh)
     sumTriMagSf_ = Zero;
     sumTriMagSf_[Pstream::myProcNo() + 1] = sum(triMagSf);
 
-    Pstream::listCombineReduce(sumTriMagSf_, maxEqOp<scalar>());
+    Pstream::listCombineAllGather(sumTriMagSf_, maxEqOp<scalar>());
 
     for (label i = 1; i < triMagSf.size(); i++)
     {

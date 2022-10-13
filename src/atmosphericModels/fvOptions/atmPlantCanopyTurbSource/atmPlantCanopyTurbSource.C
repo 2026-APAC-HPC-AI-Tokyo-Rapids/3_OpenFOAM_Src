@@ -43,45 +43,14 @@ namespace fv
 
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
-Foam::volScalarField& Foam::fv::atmPlantCanopyTurbSource::getOrReadField
-(
-    const word& fieldName
-) const
-{
-    auto* ptr = mesh_.getObjectPtr<volScalarField>(fieldName);
-
-    if (!ptr)
-    {
-        ptr = new volScalarField
-        (
-            IOobject
-            (
-                fieldName,
-                mesh_.time().timeName(),
-                mesh_,
-                IOobject::MUST_READ,
-                IOobject::AUTO_WRITE
-            ),
-            mesh_
-        );
-        mesh_.objectRegistry::store(ptr);
-    }
-
-    return *ptr;
-}
-
-
 Foam::tmp<Foam::volScalarField::Internal>
 Foam::fv::atmPlantCanopyTurbSource::calcPlantCanopyTerm
 (
     const volVectorField::Internal& U
 ) const
 {
-    const volScalarField& Cd = getOrReadField(CdName_);
-    const volScalarField& LAD = getOrReadField(LADname_);
-
     // (SP:Eq. 42)
-    return 12.0*Foam::sqrt(Cmu_)*Cd()*LAD()*mag(U);
+    return 12.0*Foam::sqrt(Cmu_)*plantCd_()*leafAreaDensity_()*mag(U);
 }
 
 
@@ -97,14 +66,35 @@ Foam::fv::atmPlantCanopyTurbSource::atmPlantCanopyTurbSource
 :
     fv::cellSetOption(sourceName, modelType, dict, mesh),
     isEpsilon_(true),
+    rhoName_(coeffs_.getOrDefault<word>("rho", "rho")),
     Cmu_(Zero),
     C1_(Zero),
     C2_(Zero),
-    CdName_(),
-    LADname_()
+    plantCd_
+    (
+        IOobject
+        (
+            "plantCd",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::AUTO_WRITE
+        ),
+        mesh
+    ),
+    leafAreaDensity_
+    (
+        IOobject
+        (
+            "leafAreaDensity",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::AUTO_WRITE
+        ),
+        mesh
+    )
 {
-    read(dict);
-
     const auto* turbPtr =
         mesh_.findObject<turbulenceModel>
         (
@@ -220,23 +210,6 @@ void Foam::fv::atmPlantCanopyTurbSource::addSup
     {
         atmPlantCanopyTurbSourceOmega(alpha, rho, eqn, fieldi);
     }
-}
-
-
-bool Foam::fv::atmPlantCanopyTurbSource::read(const dictionary& dict)
-{
-    if (!fv::cellSetOption::read(dict))
-    {
-        return false;
-    }
-
-    CdName_ = dict.getOrDefault<word>("Cd", "Cd");
-    LADname_ = dict.getOrDefault<word>("LAD", "LAD");
-
-    (void) getOrReadField(CdName_);
-    (void) getOrReadField(LADname_);
-
-    return true;
 }
 
 

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,7 +33,7 @@ License
 #include "enrichedPatch.H"
 #include "DynamicList.H"
 #include "pointHit.H"
-#include "triangle.H"
+#include "triPointRef.H"
 #include "plane.H"
 #include "polyTopoChanger.H"
 #include "polyAddPoint.H"
@@ -663,7 +663,7 @@ void Foam::slidingInterface::coupleInterface(polyTopoChange& ref) const
                             const scalar cutOnSlave =
                                 (
                                     (
-                                        slaveCut.point()
+                                        slaveCut.hitPoint()
                                       - curSlaveLine.start()
                                     ) & curSlaveLine.vec()
                                 )/sqr(curSlaveLineMag);
@@ -674,7 +674,7 @@ void Foam::slidingInterface::coupleInterface(polyTopoChange& ref) const
 
                             // Pout<< "cutOnMaster: " << cutOnMaster
                             //     << " masterCutPoint: " << masterCutPoint
-                            //     << " slaveCutPoint: " << slaveCut.point()
+                            //     << " slaveCutPoint: " << slaveCut.hitPoint()
                             //     << " slaveCut.distance(): "
                             //     << slaveCut.distance()
                             //     << " slave length: " << mag(b - a)

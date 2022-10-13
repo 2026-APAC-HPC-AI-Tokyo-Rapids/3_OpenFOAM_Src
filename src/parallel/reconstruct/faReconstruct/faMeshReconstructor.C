@@ -101,7 +101,7 @@ void Foam::faMeshReconstructor::calcAddressing
               ? 0
               : singlePatchFaceLabels_.first()
             );
-            Pstream::broadcast(patchFirstMeshfacei);
+            Pstream::scatter(patchFirstMeshfacei);
 
             for (label& facei : faFaceProcAddr_)
             {
@@ -169,7 +169,7 @@ void Foam::faMeshReconstructor::calcAddressing
     }
 
     // Broadcast the same information everywhere
-    Pstream::broadcast(singlePatchFaceLabels_);
+    Pstream::scatter(singlePatchFaceLabels_);
 
 
     // ------------------
@@ -283,7 +283,7 @@ void Foam::faMeshReconstructor::calcAddressing
                 mpm[mp[i]] = i;
             }
         }
-        Pstream::broadcast(mpm);
+        Pstream::scatter(mpm);
 
         // Rewrite pointToGlobal according to the correct point order
         for (label& pointi : pointToGlobal)
@@ -299,8 +299,8 @@ void Foam::faMeshReconstructor::calcAddressing
     }
 
     // Broadcast the same information everywhere
-    Pstream::broadcast(singlePatchFaces_);
-    Pstream::broadcast(singlePatchPoints_);
+    Pstream::scatter(singlePatchFaces_);
+    Pstream::scatter(singlePatchPoints_);
 
     // Now have enough global information to determine global edge mappings
 
@@ -383,8 +383,13 @@ void Foam::faMeshReconstructor::calcAddressing
         // OR patchEdgeLabels =
         // UIndirectList<label>(faEdgeProcAddr_, fap.edgeLabels());
 
-        // Combine from all processors
-        Pstream::combineReduce(patchEdgeLabels, ListOps::appendEqOp<label>());
+
+        // Collect from all processors
+        Pstream::combineAllGather
+        (
+            patchEdgeLabels,
+            ListOps::appendEqOp<label>()
+        );
 
         // Sorted order will be the original non-decomposed order
         Foam::sort(patchEdgeLabels);
@@ -466,7 +471,7 @@ void Foam::faMeshReconstructor::createMesh()
 
                 IOobject::NO_READ,
                 IOobject::NO_WRITE,
-                IOobject::NO_REGISTER
+                false  // not registered
             ),
             pointField(singlePatchPoints_),  // copy
             faceList(singlePatchFaces_),     // copy
@@ -525,12 +530,10 @@ void Foam::faMeshReconstructor::createMesh()
 
 Foam::faMeshReconstructor::faMeshReconstructor
 (
-    const faMesh& procMesh,
-    IOobjectOption::readOption readVolAddressing
+    const faMesh& procMesh
 )
 :
-    procMesh_(procMesh),
-    errors_(0)
+    procMesh_(procMesh)
 {
     if (!Pstream::parRun())
     {
@@ -539,49 +542,32 @@ Foam::faMeshReconstructor::faMeshReconstructor
             << exit(FatalError);
     }
 
-    IOobject ioAddr
-    (
-        "faceProcAddressing",
-        procMesh_.mesh().facesInstance(),
-
-        // Or search?
-        // procMesh_.time().findInstance
-        // (
-        //     // Search for polyMesh face instance
-        //     // mesh.facesInstance()
-        //     procMesh_.mesh().meshDir(),
-        //     "faceProcAddressing"
-        // ),
-
-        polyMesh::meshSubDir,
-        procMesh_.mesh(),    // The polyMesh db
-
-        readVolAddressing,   // Read option
-        IOobject::NO_WRITE,
-        IOobject::NO_REGISTER
-    );
-
     // Require faceProcAddressing from finiteVolume decomposition
-    labelIOList fvFaceProcAddr(ioAddr);
-
-    // Check if any/all where read.
-    // Use 'headerClassName' for checking
-    bool fileOk
+    labelIOList fvFaceProcAddressing
     (
-        (fvFaceProcAddr.readOpt() != IOobjectOption::NO_READ)
-     && fvFaceProcAddr.isHeaderClass<labelIOList>()
+        IOobject
+        (
+            "faceProcAddressing",
+            procMesh_.mesh().facesInstance(),
+
+            // Or search?
+            // procMesh_.time().findInstance
+            // (
+            //     // Search for polyMesh face instance
+            //     // mesh.facesInstance()
+            //     procMesh_.mesh().meshDir(),
+            //     "faceProcAddressing"
+            // ),
+
+            polyMesh::meshSubDir,
+            procMesh_.mesh(),    // The polyMesh db
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE,
+            false  // not registered
+        )
     );
 
-    Pstream::reduceAnd(fileOk);
-
-    if (fileOk)
-    {
-        calcAddressing(fvFaceProcAddr);
-    }
-    else
-    {
-        errors_ = 1;
-    }
+    calcAddressing(fvFaceProcAddressing);
 }
 
 
@@ -591,8 +577,7 @@ Foam::faMeshReconstructor::faMeshReconstructor
     const labelUList& fvFaceProcAddressing
 )
 :
-    procMesh_(procMesh),
-    errors_(0)
+    procMesh_(procMesh)
 {
     if (!Pstream::parRun())
     {

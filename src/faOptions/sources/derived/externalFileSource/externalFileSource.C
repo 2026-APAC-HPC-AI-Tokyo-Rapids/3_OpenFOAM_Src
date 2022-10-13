@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,10 +50,10 @@ Foam::fa::externalFileSource::externalFileSource
     const word& sourceName,
     const word& modelType,
     const dictionary& dict,
-    const fvMesh& m
+    const fvPatch& p
 )
 :
-    fa::faceSetOption(sourceName, modelType, dict, m),
+    fa::faceSetOption(sourceName, modelType, dict, p),
     fieldName_(dict.get<word>("fieldName")),
     tableName_(dict.get<word>("tableName")),
     pExt_
@@ -64,24 +64,26 @@ Foam::fa::externalFileSource::externalFileSource
             mesh_.time().timeName(),
             mesh_,
             IOobject::NO_READ,
-            IOobject::NO_WRITE,
-            (
-                dict.getOrDefault("store", false)
-              ? IOobject::REGISTER
-              : IOobject::NO_REGISTER
-            )
+            IOobject::NO_WRITE
         ),
         regionMesh(),
-        dimensionedScalar(dimPressure, Zero)
+        dimensionedScalar("pExt", dimPressure, Zero),
+        zeroGradientFaPatchScalarField::typeName
     ),
-    curTimeIndex_(-1),
-    mapping_()
+    value_
+    (
+        new PatchFunction1Types::MappedFile<scalar>
+        (
+            p.patch(),
+            "uniformValue",
+            dict,
+            tableName_,          // field table name
+            true                 // face values
+        )
+    ),
+    curTimeIndex_(-1)
 {
     fieldNames_.resize(1, fieldName_);
-
-    /// FUTURE?
-    /// // Optional entry (mandatory = false)
-    /// pExt_.dimensions().readEntry("dimensions",  dict, false);
 
     fa::option::resetApplied();
 
@@ -91,30 +93,6 @@ Foam::fa::externalFileSource::externalFileSource
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::fa::externalFileSource::updateMapping()
-{
-    // Set up mapped values per patch
-    const scalar t = mesh().time().value();
-
-    PtrList<scalarField> patchValues(mapping_.size());
-
-    forAll(mapping_, patchi)
-    {
-        const auto* map = mapping_.get(patchi);
-
-        if (map)
-        {
-            patchValues.set(patchi, map->value(t));
-        }
-    }
-
-    vsm().mapToSurface<scalar>(patchValues, pExt_.field());
-
-    // Zero pressure for non-mapped faces
-    faceSetOption::subsetFilter(pExt_.field());
-}
-
-
 void Foam::fa::externalFileSource::addSup
 (
     const areaScalarField& solidMass,
@@ -122,18 +100,16 @@ void Foam::fa::externalFileSource::addSup
     const label fieldi
 )
 {
-    if (isActive())
+    const scalar t = mesh().time().value();
+
+    if (isActive() && t > timeStart() && t < (timeStart() + duration()))
     {
-        DebugInfo
-            << name() << ": applying source to "
-            << eqn.psi().name() << endl;
+        DebugInfo<< name() << ": applying source to " << eqn.psi().name()<<endl;
 
         if (curTimeIndex_ != mesh().time().timeIndex())
         {
-            updateMapping();
-
-            eqn += pExt_/solidMass.internalField();
-
+            pExt_.field() = value_->value(t);
+            eqn += pExt_/solidMass;
             curTimeIndex_ = mesh().time().timeIndex();
         }
     }
@@ -144,34 +120,6 @@ bool Foam::fa::externalFileSource::read(const dictionary& dict)
 {
     if (fa::option::read(dict))
     {
-        // Set up mapping (per-patch) for referenced polyPatches (sorted order)
-        // - size is maxPolyPatch+1
-
-        const labelList& patches = regionMesh().whichPolyPatches();
-
-        mapping_.clear();
-        mapping_.resize(patches.empty() ? 0 : (patches.last()+1));
-
-        for (const label patchi : patches)
-        {
-            const polyPatch& p = mesh_.boundaryMesh()[patchi];
-
-            mapping_.set
-            (
-                patchi,
-                (
-                    new PatchFunction1Types::MappedFile<scalar>
-                    (
-                        p,
-                        "uniformValue", // entryName
-                        dict,
-                        tableName_,     // field table name
-                        true            // face values
-                    )
-                )
-            );
-        }
-
         return true;
     }
 

@@ -90,18 +90,19 @@ Usage
             // Cartesian coordinate system specification when
             // evaluating forces and moments, either of the below
 
-            // Define the centre of rotation
-            // with implicit directions e1=(1 0 0) and e3=(0 0 1)
+            // Option-1, i.e. the centre of rotation
+            // by inherently using e3=(0 0 1) and e1=(1 0 0)
             CofR                (0 0 0); // Centre of rotation
 
-            // Define local coordinate system by origin + axes
+            // Option-2, i.e. local coordinate system specification
             origin              (0 0 0);
             e1                  (1 0 0);
             e3                  (0 0 1); // (e1, e2) or (e2, e3) or (e3, e1)
 
-            // General coordinate system specification (always cartesian)
+            // Option-3, i.e. general coordinate system specification
             coordinateSystem
             {
+                type            cartesian;
                 origin          (0 0 0);
                 rotation
                 {
@@ -136,11 +137,11 @@ Usage
       porosity   | Flag to include porosity contributions | bool | no | false
       writeFields | Flag to write force and moment fields | bool | no | false
       useNamePrefix | Flag to include prefix for field names | bool | no | false
-      coordinateSystem | Coordinate system specifier | dictionary | cndtnl | -
       CofR    | Centre of rotation          | vector | cndtnl   | -
       origin  | Origin of coordinate system | vector | cndtnl   | -
       e3      | e3 coordinate axis          | vector | cndtnl   | -
       e1      | e1 coordinate axis          | vector | cndtnl   | -
+      coordinateSystem | Coordinate system specifier | dictionary | cndtnl | -
       fD      | Name of force density field | word   | cndtnl   | -
       p       | Name of pressure field      | word   | cndtnl   | p
       U       | Name of velocity field      | word   | cndtnl   | U
@@ -160,7 +161,6 @@ Note
     value corresponding to the constant freestream density.
   - \c writeControl and \c writeInterval entries of function
     object do control when to output force and moment files and fields.
-  - If a \c coordinateSystem entry exists, it is taken in favour of \c CofR.
 
 SourceFiles
     forces.C

@@ -41,7 +41,6 @@ SourceFiles
 
 #include "label.H"
 #include "uLabel.H"
-#include "stdFoam.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -113,37 +112,37 @@ public:
         //- Construct and add initial item pointer
         explicit UILList(T* item)
         {
-            this->push_front(item);
+            this->prepend(item);
         }
 
         //- Construct as copy
-        UILList(const UILList<LListBase, T>& list);
+        UILList(const UILList<LListBase, T>& lst);
 
 
     // Member Functions
 
         //- The first entry in the list
-        T* front()
+        T* first()
         {
-            return static_cast<T*>(LListBase::front());
+            return static_cast<T*>(LListBase::first());
         }
 
         //- The first entry in the list (const access)
-        const T* front() const
+        const T* first() const
         {
-            return static_cast<const T*>(LListBase::front());
+            return static_cast<const T*>(LListBase::first());
         }
 
         //- The last entry in the list
-        T* back()
+        T* last()
         {
-            return static_cast<T*>(LListBase::back());
+            return static_cast<T*>(LListBase::last());
         }
 
         //- The last entry in the list (const access)
-        const T* back() const
+        const T* last() const
         {
-            return static_cast<const T*>(LListBase::back());
+            return static_cast<const T*>(LListBase::last());
         }
 
 
@@ -166,7 +165,7 @@ public:
         }
 
 
-    // Member Operators
+    // Member operators
 
         //- Copy assignment
         void operator=(const UILList<LListBase, T>& lst);
@@ -447,25 +446,6 @@ public:
         {
             return crend();
         }
-
-
-    // Housekeeping
-
-        //- The first entry in the list
-        //FOAM_DEPRECATED_FOR(2022-10, "front()")
-        T* first() { return front(); }
-
-        //- The first entry in the list (const access)
-        //FOAM_DEPRECATED_FOR(2022-10, "front()")
-        const T* first() const { return front(); }
-
-        //- The last entry in the list
-        //FOAM_DEPRECATED_FOR(2022-10, "back()")
-        T* last() { return back(); }
-
-        //- The last entry in the list (const access)
-        //FOAM_DEPRECATED_FOR(2022-10, "back()")
-        const T* last() const { return back(); }
 };
 
 

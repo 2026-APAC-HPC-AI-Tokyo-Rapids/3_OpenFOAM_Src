@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2020,2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -133,15 +133,16 @@ Foam::LESModels::vanDriestDelta::vanDriestDelta
             "Cdelta",
             0.158
         )
+    ),
+    calcInterval_
+    (
+        dict.optionalSubDict(type() + "Coeffs").getOrDefault<label>
+        (
+            "calcInterval",
+            1
+        )
     )
 {
-    calcInterval_ = 1;
-    const dictionary& coeffsDict(dict.optionalSubDict(type() + "Coeffs"));
-    if (!coeffsDict.readIfPresent("calcInterval", calcInterval_))
-    {
-        coeffsDict.readIfPresent("updateInterval", calcInterval_);
-    }
-
     delta_ = geometricDelta_();
 }
 
@@ -156,11 +157,7 @@ void Foam::LESModels::vanDriestDelta::read(const dictionary& dict)
     dict.readIfPresent<scalar>("kappa", kappa_);
     coeffsDict.readIfPresent<scalar>("Aplus", Aplus_);
     coeffsDict.readIfPresent<scalar>("Cdelta", Cdelta_);
-    calcInterval_ = 1;
-    if (!coeffsDict.readIfPresent<label>("calcInterval", calcInterval_))
-    {
-        coeffsDict.readIfPresent("updateInterval", calcInterval_);
-    }
+    coeffsDict.readIfPresent<label>("calcInterval", calcInterval_);
 
     calcDelta();
 }
@@ -168,7 +165,7 @@ void Foam::LESModels::vanDriestDelta::read(const dictionary& dict)
 
 void Foam::LESModels::vanDriestDelta::correct()
 {
-    if ((turbulenceModel_.mesh().time().timeIndex() % calcInterval_) == 0)
+    if (turbulenceModel_.mesh().time().timeIndex() % calcInterval_ == 0)
     {
         geometricDelta_().correct();
         calcDelta();

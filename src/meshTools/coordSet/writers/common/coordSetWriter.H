@@ -302,26 +302,6 @@ public:
         );
 
 
-    // Helpers
-
-        //- Same as fileFormats::getFormatOptions
-        static dictionary formatOptions
-        (
-            const dictionary& dict,
-            const word& formatName,
-            const word& entryName = "formatOptions"
-        );
-
-        //- Same as fileFormats::getFormatOptions
-        static dictionary formatOptions
-        (
-            const dictionary& dict,
-            const dictionary& setDict,
-            const word& formatName,
-            const word& entryName = "formatOptions"
-        );
-
-
     // Selectors
 
         //- True if New is likely to succeed for this writeType

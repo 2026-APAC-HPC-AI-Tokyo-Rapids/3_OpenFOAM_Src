@@ -93,7 +93,7 @@ public:
 
 
     //- Destructor
-    virtual ~CloudSubModelBase() = default;
+    virtual ~CloudSubModelBase();
 
     //- Type of cloud this model was instantiated for
     typedef CloudType cloudType;
@@ -121,10 +121,7 @@ public:
 
         // I-O
 
-            //- Write to info
-            virtual void info();
-
-            //- Write to os
+            //- Write
             virtual void write(Ostream& os) const;
 };
 

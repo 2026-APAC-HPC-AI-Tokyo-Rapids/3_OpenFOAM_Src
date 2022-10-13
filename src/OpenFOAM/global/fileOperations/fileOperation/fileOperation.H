@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -69,8 +69,6 @@ class Time;
 class fileOperation
 {
 public:
-
-    // Public Data Types
 
         //- Enumeration for the location of an IOobject
         enum pathType : int
@@ -196,9 +194,6 @@ public:
             const bool distributedRoots = false
         );
 
-        //- Clone fileHandler
-        /// virtual autoPtr<fileOperation> clone() const = 0;
-
 
     // Declare run-time constructor selection table
 
@@ -216,8 +211,7 @@ public:
 
     // Selectors
 
-        //- Select fileHandler-type.
-        //- Uses defaultFileHandler if the handlerType is empty.
+        //- Select fileHandler-type
         static autoPtr<fileOperation> New
         (
             const word& handlerType,
@@ -238,12 +232,6 @@ public:
             const fileNameList& dirEntries,
             const word& constantName = "constant"
         );
-
-        //- True if the file names are identical. False on an empty list
-        static bool uniformFile(const fileNameList& names);
-
-        //- True if the file name is identical on all ranks
-        static bool uniformFile(const label comm, const fileName& name);
 
 
     // Member Functions
@@ -286,7 +274,7 @@ public:
             virtual bool exists
             (
                 const fileName&,
-                const bool checkGzip = true,
+                const bool checkGzip=true,
                 const bool followLink = true
             ) const = 0;
 
@@ -302,7 +290,7 @@ public:
             virtual bool isFile
             (
                 const fileName&,
-                const bool checkGzip = true,
+                const bool checkGzip=true,
                 const bool followLink = true
             ) const = 0;
 
@@ -369,15 +357,20 @@ public:
             virtual bool rm(const fileName&) const = 0;
 
             //- Remove a directory and its contents
-            //  \param dir the directory to remove
             //  \param silent do not report missing directory
-            //  \param emptyOnly only remove empty directories (recursive)
             virtual bool rmDir
             (
                 const fileName& dir,
-                const bool silent = false,
-                const bool emptyOnly = false
+                const bool silent = false
             ) const = 0;
+
+//            //- Open a shared library. Return handle to library. Print error
+//            //  message if library cannot be loaded (check = true)
+//            virtual void* dlOpen
+//            (
+//                const fileName& lib,
+//                const bool check = true
+//            ) const = 0;
 
 
         // (reg)IOobject functionality
@@ -460,14 +453,9 @@ public:
 
         // Filename (not IOobject) operations
 
-            //- Search for a file or directory.
-            //- Use IOobject version in preference
-            virtual fileName filePath
-            (
-                const fileName&,
-                const bool checkGzip = true,
-                const bool followLink = true
-            ) const;
+            //- Search for a file or directory. Use IOobject version in
+            //  preference
+            virtual fileName filePath(const fileName&) const;
 
             //- Generate an ISstream that reads a file
             virtual autoPtr<ISstream> NewIFstream(const fileName&) const = 0;
@@ -475,15 +463,6 @@ public:
             //- Generate an OSstream that writes a file
             virtual autoPtr<OSstream> NewOFstream
             (
-                const fileName& pathname,
-                IOstreamOption streamOpt = IOstreamOption(),
-                const bool valid = true
-            ) const = 0;
-
-            //- Generate an OSstream that writes a file
-            virtual autoPtr<OSstream> NewOFstream
-            (
-                IOstreamOption::atomicType atomic,
                 const fileName& pathname,
                 IOstreamOption streamOpt = IOstreamOption(),
                 const bool valid = true
@@ -616,43 +595,15 @@ public:
 };
 
 
-//- Read pathType as an integer value
-inline Istream& operator>>(Istream& is, fileOperation::pathType& b)
-{
-    int val(0);
-    is >> val;
-
-    b = static_cast<fileOperation::pathType>(val);
-    return is;
-}
-
-//- Write pathType as an integer value
-inline Ostream& operator<<(Ostream& os, const fileOperation::pathType b)
-{
-    os << static_cast<int>(b);
-    return os;
-}
-
-
 // * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
 
 // Note: defined in fileOperation.C
 
-//- Return the current file handler.
-//- Will create the default file handler if necessary.
+//- Get current file handler
 const fileOperation& fileHandler();
 
-//- Delete current file handler.
-//  \returns the old handler
-autoPtr<fileOperation> fileHandler(std::nullptr_t);
-
-//- Replace the current file handler.
-//  The following are considered no-ops:
-//  - an empty/invalid newHandler does \b not delete,
-//    use fileHandler(std::nullptr_t) - ie, a literal \c nullptr for that
-//  - if new handler and current handler are identical (same pointer).
-//  .
-//  \returns the old handler (on change), nullptr otherwise
+//- Replace, reset file handler.
+//  \return old handler on change, null otherwise
 autoPtr<fileOperation> fileHandler(autoPtr<fileOperation>&& newHandler);
 
 

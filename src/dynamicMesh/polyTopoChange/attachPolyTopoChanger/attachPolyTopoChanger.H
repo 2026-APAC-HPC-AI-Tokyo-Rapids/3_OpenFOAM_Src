@@ -46,8 +46,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_attachPolyTopoChanger_H
-#define Foam_attachPolyTopoChanger_H
+#ifndef attachPolyTopoChanger_H
+#define attachPolyTopoChanger_H
 
 #include "polyTopoChanger.H"
 
@@ -57,16 +57,16 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                    Class attachPolyTopoChanger Declaration
+                           Class attachPolyTopoChanger Declaration
 \*---------------------------------------------------------------------------*/
 
 class attachPolyTopoChanger
 :
     public polyTopoChanger
 {
-public:
+    // Private data
 
-    // Generated Methods
+    // Private Member Functions
 
         //- No copy construct
         attachPolyTopoChanger(const attachPolyTopoChanger&) = delete;
@@ -74,6 +74,8 @@ public:
         //- No copy assignment
         void operator=(const attachPolyTopoChanger&) = delete;
 
+
+public:
 
     // Constructors
 

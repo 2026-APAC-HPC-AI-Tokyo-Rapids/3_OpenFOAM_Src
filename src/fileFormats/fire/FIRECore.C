@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -87,7 +87,7 @@ Foam::fileName Foam::fileFormats::FIRECore::fireFileName
 
 Foam::label Foam::fileFormats::FIRECore::getFireLabel(ISstream& is)
 {
-    if (is.format() == IOstreamOption::BINARY)
+    if (is.format() == IOstream::BINARY)
     {
         fireInt_t ivalue;
 
@@ -96,7 +96,6 @@ Foam::label Foam::fileFormats::FIRECore::getFireLabel(ISstream& is)
             reinterpret_cast<char *>(&ivalue),
             sizeof(ivalue)
         );
-        is.syncState();
 
         return ivalue;
     }
@@ -111,7 +110,7 @@ Foam::point Foam::fileFormats::FIRECore::getFirePoint(ISstream& is)
 {
     point pt;
 
-    if (is.format() == IOstreamOption::BINARY)
+    if (is.format() == IOstream::BINARY)
     {
         fireReal_t coord[3];
 
@@ -120,7 +119,6 @@ Foam::point Foam::fileFormats::FIRECore::getFirePoint(ISstream& is)
             reinterpret_cast<char *>(&coord),
             sizeof(coord)
         );
-        is.syncState();
 
         pt.x() = coord[0];
         pt.y() = coord[1];
@@ -141,7 +139,7 @@ std::string Foam::fileFormats::FIRECore::getFireString(ISstream& is)
 {
     std::string str;
 
-    if (is.format() == IOstreamOption::BINARY)
+    if (is.format() == IOstream::BINARY)
     {
         long len;
 
@@ -157,8 +155,6 @@ std::string Foam::fileFormats::FIRECore::getFireString(ISstream& is)
         {
             is.stdStream().read(&(str[pos]), sizeof(char));
         }
-
-        is.syncState();
     }
     else
     {
@@ -208,7 +204,7 @@ void Foam::fileFormats::FIRECore::putFireLabel
     const label value
 )
 {
-    if (os.format() == IOstreamOption::BINARY)
+    if (os.format() == IOstream::BINARY)
     {
         fireInt_t ivalue(value);
 
@@ -217,8 +213,6 @@ void Foam::fileFormats::FIRECore::putFireLabel
             reinterpret_cast<char const *>(&ivalue),
             sizeof(ivalue)
         );
-
-        os.syncState();
     }
     else
     {
@@ -233,7 +227,7 @@ void Foam::fileFormats::FIRECore::putFireLabels
     const labelUList& lst
 )
 {
-    if (os.format() == IOstreamOption::BINARY)
+    if (os.format() == IOstream::BINARY)
     {
         fireInt_t ivalue(lst.size());
 
@@ -253,8 +247,6 @@ void Foam::fileFormats::FIRECore::putFireLabels
                 sizeof(ivalue)
             );
         }
-
-        os.syncState();
     }
     else
     {
@@ -275,7 +267,7 @@ void Foam::fileFormats::FIRECore::putFireLabels
     const label start
 )
 {
-    if (os.format() == IOstreamOption::BINARY)
+    if (os.format() == IOstream::BINARY)
     {
         fireInt_t ivalue(count);
 
@@ -294,8 +286,6 @@ void Foam::fileFormats::FIRECore::putFireLabels
                 sizeof(ivalue)
             );
         }
-
-        os.syncState();
     }
     else
     {
@@ -317,7 +307,7 @@ void Foam::fileFormats::FIRECore::putFirePoint
     const point& value
 )
 {
-    if (os.format() == IOstreamOption::BINARY)
+    if (os.format() == IOstream::BINARY)
     {
         fireReal_t fvalue[3];
         fvalue[0] = value.x();
@@ -329,8 +319,6 @@ void Foam::fileFormats::FIRECore::putFirePoint
             reinterpret_cast<char const *>(&fvalue),
             sizeof(fvalue)
         );
-
-        os.syncState();
     }
     else
     {
@@ -348,7 +336,7 @@ void Foam::fileFormats::FIRECore::putFireString
     const std::string& value
 )
 {
-    if (os.format() == IOstreamOption::BINARY)
+    if (os.format() == IOstream::BINARY)
     {
         long len(value.size());
 
@@ -365,8 +353,6 @@ void Foam::fileFormats::FIRECore::putFireString
         // output without surrounding quotes
         os.stdStream() << value << '\n';
     }
-
-    os.syncState();
 }
 
 

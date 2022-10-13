@@ -61,6 +61,22 @@ inline Foam::SphericalTensor2D<Cmpt>::SphericalTensor2D(Istream& is)
 {}
 
 
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+template<class Cmpt>
+inline const Cmpt& Foam::SphericalTensor2D<Cmpt>::ii() const
+{
+    return this->v_[II];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::SphericalTensor2D<Cmpt>::ii()
+{
+    return this->v_[II];
+}
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam

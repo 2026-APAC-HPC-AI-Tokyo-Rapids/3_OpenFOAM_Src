@@ -40,30 +40,20 @@ License
 #include "processorFaPatch.H"
 #include "wedgeFaPatch.H"
 #include "faPatchData.H"
-#include "registerSwitch.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
     defineTypeNameAndDebug(faMesh, 0);
-
-    int faMesh::geometryOrder_
-    (
-        debug::optimisationSwitch("fa:geometryOrder", 2)
-    );
-    registerOptSwitch
-    (
-        "fa:geometryOrder",
-        int,
-        faMesh::geometryOrder_
-    );
 }
 
 
 const Foam::word Foam::faMesh::prefix("finite-area");
 
 Foam::word Foam::faMesh::meshSubDir = "faMesh";
+
+int Foam::faMesh::geometryOrder_ = 1;      // 1: Standard treatment
 
 const int Foam::faMesh::quadricsFit_ = 0;  // Tuning (experimental)
 
@@ -231,14 +221,12 @@ void Foam::faMesh::clearGeomNotAreas() const
 
     clearHalo();
     patchPtr_.reset(nullptr);
-    polyPatchFacesPtr_.reset(nullptr);
-    polyPatchIdsPtr_.reset(nullptr);
     bndConnectPtr_.reset(nullptr);
     deleteDemandDrivenData(SPtr_);
     deleteDemandDrivenData(patchStartsPtr_);
     deleteDemandDrivenData(LePtr_);
     deleteDemandDrivenData(magLePtr_);
-    deleteDemandDrivenData(faceCentresPtr_);
+    deleteDemandDrivenData(centresPtr_);
     deleteDemandDrivenData(edgeCentresPtr_);
     deleteDemandDrivenData(faceAreaNormalsPtr_);
     deleteDemandDrivenData(edgeAreaNormalsPtr_);
@@ -372,8 +360,6 @@ Foam::faMesh::faMesh
     curTimeIndex_(time().timeIndex()),
 
     patchPtr_(nullptr),
-    polyPatchFacesPtr_(nullptr),
-    polyPatchIdsPtr_(nullptr),
     bndConnectPtr_(nullptr),
     lduPtr_(nullptr),
 
@@ -383,7 +369,7 @@ Foam::faMesh::faMesh
     patchStartsPtr_(nullptr),
     LePtr_(nullptr),
     magLePtr_(nullptr),
-    faceCentresPtr_(nullptr),
+    centresPtr_(nullptr),
     edgeCentresPtr_(nullptr),
     faceAreaNormalsPtr_(nullptr),
     edgeAreaNormalsPtr_(nullptr),
@@ -478,8 +464,6 @@ Foam::faMesh::faMesh
     curTimeIndex_(time().timeIndex()),
 
     patchPtr_(nullptr),
-    polyPatchFacesPtr_(nullptr),
-    polyPatchIdsPtr_(nullptr),
     bndConnectPtr_(nullptr),
     lduPtr_(nullptr),
 
@@ -489,7 +473,7 @@ Foam::faMesh::faMesh
     patchStartsPtr_(nullptr),
     LePtr_(nullptr),
     magLePtr_(nullptr),
-    faceCentresPtr_(nullptr),
+    centresPtr_(nullptr),
     edgeCentresPtr_(nullptr),
     faceAreaNormalsPtr_(nullptr),
     edgeAreaNormalsPtr_(nullptr),
@@ -559,8 +543,6 @@ Foam::faMesh::faMesh
     curTimeIndex_(time().timeIndex()),
 
     patchPtr_(nullptr),
-    polyPatchFacesPtr_(nullptr),
-    polyPatchIdsPtr_(nullptr),
     bndConnectPtr_(nullptr),
     lduPtr_(nullptr),
 
@@ -570,7 +552,7 @@ Foam::faMesh::faMesh
     patchStartsPtr_(nullptr),
     LePtr_(nullptr),
     magLePtr_(nullptr),
-    faceCentresPtr_(nullptr),
+    centresPtr_(nullptr),
     edgeCentresPtr_(nullptr),
     faceAreaNormalsPtr_(nullptr),
     edgeAreaNormalsPtr_(nullptr),
@@ -724,22 +706,6 @@ const Foam::word& Foam::faMesh::regionName() const
 }
 
 
-Foam::labelList Foam::faMesh::faceCells() const
-{
-    const labelList& faceOwner = this->mesh().faceOwner();
-
-    labelList list(faceLabels_);
-
-    for (label& val : list)
-    {
-        // Transcribe from faceId to cellId (owner)
-        val = faceOwner[val];
-    }
-
-    return list;
-}
-
-
 void Foam::faMesh::removeFiles(const fileName& instanceDir) const
 {
     fileName meshFilesPath = thisDb().time().path()/instanceDir/meshDir();
@@ -790,12 +756,12 @@ const Foam::edgeScalarField& Foam::faMesh::magLe() const
 
 const Foam::areaVectorField& Foam::faMesh::areaCentres() const
 {
-    if (!faceCentresPtr_)
+    if (!centresPtr_)
     {
-        calcFaceCentres();
+        calcAreaCentres();
     }
 
-    return *faceCentresPtr_;
+    return *centresPtr_;
 }
 
 
@@ -978,7 +944,7 @@ bool Foam::faMesh::movePoints()
                     mesh(),
                     IOobject::NO_READ,
                     IOobject::NO_WRITE,
-                    IOobject::NO_REGISTER
+                    false
                 ),
                 S()
             );
@@ -1009,11 +975,14 @@ bool Foam::faMesh::movePoints()
 
 bool Foam::faMesh::correctPatchPointNormals(const label patchID) const
 {
-    if
-    (
-        bool(correctPatchPointNormalsPtr_)
-     && patchID >= 0 && patchID < boundary().size()
-    )
+    if ((patchID < 0) || (patchID >= boundary().size()))
+    {
+        FatalErrorInFunction
+            << "patchID is not in the valid range"
+            << abort(FatalError);
+    }
+
+    if (correctPatchPointNormalsPtr_)
     {
         return (*correctPatchPointNormalsPtr_)[patchID];
     }

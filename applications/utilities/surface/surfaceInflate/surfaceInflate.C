@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -856,10 +856,12 @@ int main(int argc, char *argv[])
     if (debug)
     {
         OBJstream str(runTime.path()/"isScaledPoint.obj");
-
-        for (const label pointi : isScaledPoint)
+        forAll(isScaledPoint, pointI)
         {
-            str.write(initialPoints[meshPoints[pointi]]);
+            if (isScaledPoint[pointI])
+            {
+                str.write(initialPoints[meshPoints[pointI]]);
+            }
         }
     }
 

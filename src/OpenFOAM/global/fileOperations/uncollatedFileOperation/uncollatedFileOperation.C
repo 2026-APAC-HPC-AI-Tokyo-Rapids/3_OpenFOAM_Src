@@ -176,37 +176,17 @@ Foam::fileOperations::uncollatedFileOperation::lookupProcessorsPath
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-void Foam::fileOperations::uncollatedFileOperation::init(bool verbose)
-{
-    verbose = (verbose && Foam::infoDetailLevel > 0);
-
-    if (verbose)
-    {
-        DetailInfo
-            << "I/O    : " << typeName << endl;
-    }
-}
-
-
 Foam::fileOperations::uncollatedFileOperation::uncollatedFileOperation
 (
     bool verbose
 )
 :
-    fileOperation(UPstream::worldComm),
-    managedComm_(-1)  // worldComm is externally managed
+    fileOperation(Pstream::worldComm)
 {
-    init(verbose);
-}
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::fileOperations::uncollatedFileOperation::~uncollatedFileOperation()
-{
-    if (UPstream::isUserComm(managedComm_))
+    if (verbose)
     {
-        UPstream::freeCommunicator(managedComm_);
+        DetailInfo
+            << "I/O    : " << typeName << endl;
     }
 }
 
@@ -337,11 +317,10 @@ bool Foam::fileOperations::uncollatedFileOperation::rm
 bool Foam::fileOperations::uncollatedFileOperation::rmDir
 (
     const fileName& dir,
-    const bool silent,
-    const bool emptyOnly
+    const bool silent
 ) const
 {
-    return Foam::rmDir(dir, silent, emptyOnly);
+    return Foam::rmDir(dir, silent);
 }
 
 
@@ -722,19 +701,6 @@ Foam::fileOperations::uncollatedFileOperation::NewOFstream
 ) const
 {
     return autoPtr<OSstream>(new OFstream(pathName, streamOpt));
-}
-
-
-Foam::autoPtr<Foam::OSstream>
-Foam::fileOperations::uncollatedFileOperation::NewOFstream
-(
-    IOstreamOption::atomicType atomic,
-    const fileName& pathName,
-    IOstreamOption streamOpt,
-    const bool valid
-) const
-{
-    return autoPtr<OSstream>(new OFstream(atomic, pathName, streamOpt));
 }
 
 

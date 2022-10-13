@@ -260,7 +260,7 @@ Foam::surfaceInterpolationScheme<Type>::dotInterpolate
 
     Field<RetType>& sfi = sf.primitiveFieldRef();
 
-    const typename SFType::Internal& Sfi = Sf.internalField();
+    const typename SFType::Internal& Sfi = Sf();
 
     for (label fi=0; fi<P.size(); fi++)
     {

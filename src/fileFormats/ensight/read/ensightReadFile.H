@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,14 +27,13 @@ Class
     Foam::ensightReadFile
 
 Description
-    A variant of IFstream with specialised read() for
-    strings, integers and floats.
+    Ensight output with specialized read() for strings, integers and floats.
     Correctly handles binary read as well.
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_ensightReadFile_H
-#define Foam_ensightReadFile_H
+#ifndef ensightReadFile_H
+#define ensightReadFile_H
 
 #include "IFstream.H"
 #include "IOstream.H"
@@ -52,9 +51,7 @@ class ensightReadFile
 :
     public IFstream
 {
-public:
-
-    // Generated Methods
+    // Private Member Functions
 
         //- No copy construct
         ensightReadFile(const ensightReadFile&) = delete;
@@ -63,16 +60,15 @@ public:
         void operator=(const ensightReadFile&) = delete;
 
 
+public:
+
     // Constructors
 
-        //- Construct from pathname, auto-detect the format
-        explicit ensightReadFile(const fileName& pathname);
-
-        //- Construct from pathname, use the specified (ascii/binary) format
-        ensightReadFile
+        //- Construct from pathname. Default format is binary.
+        explicit ensightReadFile
         (
             const fileName& pathname,
-            IOstreamOption::streamFormat fmt
+            IOstreamOption::streamFormat fmt = IOstreamOption::BINARY
         );
 
 
@@ -80,17 +76,7 @@ public:
     ~ensightReadFile() = default;
 
 
-    // Static Functions
-
-        //- Detect if the file is \em binary by testing for initial
-        //- "(C|Fortran) Binary"
-        static IOstreamOption::streamFormat detectBinaryHeader
-        (
-            const fileName& pathname
-        );
-
-
-    // Read Functions
+    // Output
 
         //- Inherit read from Istream
         using Istream::read;
@@ -99,16 +85,13 @@ public:
         virtual Istream& read(char* buf, std::streamsize count);
 
         //- Read string as "%80s" or as binary
-        virtual Istream& read(string& value);
+        Istream& read(string& value);
 
         //- Read integer as "%10d" or as binary
-        virtual Istream& read(label& value);
+        Istream& read(label& value);
 
-        //- Read floating-point as "%12.5e" or as binary
-        virtual Istream& read(float& value);
-
-        //- Read floating-point as "%12.5e" or as a binary (narrowed) float
-        virtual Istream& read(double& value);
+        //- Read float as "%12.5e" or as binary
+        Istream& read(scalar& value);
 
         //- Read element keyword
         virtual Istream& readKeyword(string& key);

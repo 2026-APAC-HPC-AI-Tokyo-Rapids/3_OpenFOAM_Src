@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,12 +35,11 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_pointToPointPlanarInterpolation_H
-#define Foam_pointToPointPlanarInterpolation_H
+#ifndef pointToPointPlanarInterpolation_H
+#define pointToPointPlanarInterpolation_H
 
 #include "FixedList.H"
 #include "instantList.H"
-#include "Pair.H"
 #include "cartesianCS.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -55,13 +53,13 @@ namespace Foam
 
 class pointToPointPlanarInterpolation
 {
-    // Private Data
+    // Private data
 
         //- Perturbation factor
-        scalar perturb_;
+        const scalar perturb_;
 
-        //- Use nearest point only (avoids triangulation, projection)
-        bool nearestOnly_;
+        //- Whether to use nearest point only (avoids triangulation, projection)
+        const bool nearestOnly_;
 
         //- Cartesian reference coordinate system
         coordSystem::cartesian referenceCS_;
@@ -69,17 +67,19 @@ class pointToPointPlanarInterpolation
         //- Number of source points (for checking)
         label nPoints_;
 
-        //- Interpolation addressing to face centres of underlying patch
+        //- Current interpolation addressing to face centres of underlying
+        //  patch
         List<FixedList<label, 3>> nearestVertex_;
 
-        //- Interpolation factors to face centres of underlying patch
+        //- Current interpolation factors to face centres of underlying
+        //  patch
         List<FixedList<scalar, 3>> nearestVertexWeight_;
 
 
     // Private Member Functions
 
         //- Calculate a local coordinate system from set of points
-        static coordSystem::cartesian calcCoordinateSystem(const pointField&);
+        coordSystem::cartesian calcCoordinateSystem(const pointField&) const;
 
         //- Calculate addressing and weights
         void calcWeights
@@ -95,25 +95,9 @@ public:
     ClassName("pointToPointPlanarInterpolation");
 
 
-    // Generated Methods
-
-        //- Copy construct
-        pointToPointPlanarInterpolation
-        (
-            const pointToPointPlanarInterpolation&
-        ) = default;
-
-        //- Copy assignment
-        pointToPointPlanarInterpolation& operator=
-        (
-            const pointToPointPlanarInterpolation&
-        ) = default;
-
-
     // Constructors
 
-        //- Construct from 3D locations.
-        //  Determines local coordinate system
+        //- Construct from 3D locations. Determines local coordinate system
         //  from sourcePoints and maps onto that. If nearestOnly skips any
         //  local coordinate system and triangulation and uses nearest vertex
         //  only
@@ -141,71 +125,69 @@ public:
             const bool nearestOnly,
             const coordinateSystem& referenceCS,
             const label sourceSize,
-            List<FixedList<label, 3>>&& nearestVertex,
-            List<FixedList<scalar, 3>>&& nearestVertexWeight
+            const List<FixedList<label, 3>>& nearestVertex,
+            const List<FixedList<scalar, 3>>& nearestVertexWeight
         );
 
         //- Construct and return a clone
-        autoPtr<pointToPointPlanarInterpolation> clone() const
-        {
-            return autoPtr<pointToPointPlanarInterpolation>::New(*this);
-        }
+        autoPtr<pointToPointPlanarInterpolation> clone() const;
 
 
     // Member Functions
 
         //- Perturbation factor (for triangulation)
-        scalar perturb() const noexcept
+        scalar perturb() const
         {
             return perturb_;
         }
 
         //- Whether to use nearest point only (avoids triangulation, projection)
-        bool nearestOnly() const noexcept
+        bool nearestOnly() const
         {
             return nearestOnly_;
         }
 
         //- Return the Cartesian reference coordinate system
-        const coordSystem::cartesian& referenceCS() const noexcept
+        const coordSystem::cartesian& referenceCS() const
         {
             return referenceCS_;
         }
 
         //- Number of source points
-        label sourceSize() const noexcept
+        label sourceSize() const
         {
             return nPoints_;
         }
 
-        //- Number of target points
-        label targetSize() const noexcept
-        {
-            return nearestVertex_.size();
-        }
-
-        //- Interpolation addressing to face centres of underlying patch
-        const List<FixedList<label, 3>>& nearestVertex() const noexcept
+        //  patch
+        const List<FixedList<label, 3>>& nearestVertex() const
         {
             return nearestVertex_;
         }
 
-        //- Interpolation factors to face centres of underlying patch
-        const List<FixedList<scalar, 3>>& nearestVertexWeight() const noexcept
+        //- Current interpolation factors to face centres of underlying
+        //  patch
+        const List<FixedList<scalar, 3>>& nearestVertexWeight() const
         {
             return nearestVertexWeight_;
         }
 
         //- Helper: extract words of times
-        static wordList timeNames(const instantList& times);
+        static wordList timeNames(const instantList&);
+
+        //- Helper: find time. Return true if successful.
+        static bool findTime
+        (
+            const instantList& times,
+            const label startSampleTime,
+            const scalar timeVal,
+            label& lo,
+            label& hi
+        );
 
         //- Interpolate from field on source points to dest points
         template<class Type>
         tmp<Field<Type>> interpolate(const Field<Type>& sourceFld) const;
-
-        //- Interpolate from field on source points to dest points
-        template<class Type>
-        tmp<Field<Type>> interpolate(const tmp<Field<Type>>& tsource) const;
 };
 
 

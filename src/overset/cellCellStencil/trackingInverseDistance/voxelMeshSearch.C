@@ -171,7 +171,7 @@ void Foam::voxelMeshSearch::writeGrid
             {
                 point p1(bb.min()+point((i-1)*s[0], j*s[1], k*s[2]));
                 point p2(bb.min()+point(i*s[0], j*s[1], k*s[2]));
-                os.writeLine(p1, p2);
+                os.write(linePointRef(p1, p2));
             }
         }
     }
@@ -183,7 +183,7 @@ void Foam::voxelMeshSearch::writeGrid
             {
                 point p1(bb.min()+point(i*s[0], (j-1)*s[1], k*s[2]));
                 point p2(bb.min()+point(i*s[0], j*s[1], k*s[2]));
-                os.writeLine(p1, p2);
+                os.write(linePointRef(p1, p2));
             }
         }
     }
@@ -195,7 +195,7 @@ void Foam::voxelMeshSearch::writeGrid
             {
                 point p1(bb.min()+point(i*s[0], j*s[1], (k-1)*s[2]));
                 point p2(bb.min()+point(i*s[0], j*s[1], k*s[2]));
-                os.writeLine(p1, p2);
+                os.write(linePointRef(p1, p2));
             }
         }
     }
@@ -496,6 +496,8 @@ Foam::autoPtr<Foam::fvMesh> Foam::voxelMeshSearch::makeMesh
     const IOobject& io
 ) const
 {
+    const cellModel& hex = cellModel::ref(cellModel::HEX);
+
     cellShapeList cellShapes;
     faceListList boundary;
     pointField points;
@@ -504,7 +506,7 @@ Foam::autoPtr<Foam::fvMesh> Foam::voxelMeshSearch::makeMesh
 
         block b
         (
-            cellShape(cellModel::HEX, identity(8)),
+            cellShape(hex, identity(8)),
             localBb_.points(),
             blockEdgeList(),
             blockFaceList(),

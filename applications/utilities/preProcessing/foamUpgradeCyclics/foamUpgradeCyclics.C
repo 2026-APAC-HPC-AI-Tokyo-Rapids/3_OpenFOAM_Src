@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -238,7 +238,7 @@ void rewriteBoundary
 
     patches.reorder(oldToNew);
 
-    if (returnReduceOr(nOldCyclics))
+    if (returnReduce(nOldCyclics, sumOp<label>()) > 0)
     {
         if (dryrun)
         {
@@ -299,7 +299,7 @@ void rewriteField
 
     dictionary& boundaryField = fieldDict.subDict("boundaryField");
 
-    bool hasChange = false;
+    label nChanged = 0;
 
     forAllConstIters(thisNames, iter)
     {
@@ -337,13 +337,13 @@ void rewriteField
             );
             Info<< "    Adding entry " << nbrNames[patchName] << endl;
 
-            hasChange = true;
+            nChanged++;
         }
     }
 
     //Info<< "New boundaryField:" << boundaryField << endl;
 
-    if (returnReduceOr(hasChange))
+    if (returnReduce(nChanged, sumOp<label>()) > 0)
     {
         if (dryrun)
         {

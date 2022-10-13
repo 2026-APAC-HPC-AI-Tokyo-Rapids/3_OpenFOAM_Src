@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2015 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,8 +35,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_ensightPTraits_H
-#define Foam_ensightPTraits_H
+#ifndef ensightPTraits_H
+#define ensightPTraits_H
 
 #include "fieldTypes.H"
 #include "direction.H"
@@ -47,7 +47,7 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                       Class ensightPTraits Declaration
+                         Class ensightPTraits Declaration
 \*---------------------------------------------------------------------------*/
 
 template<class Type>
@@ -57,35 +57,49 @@ struct ensightPTraits
     static const char* const typeName;
 
     //- Ordering table: return OpenFOAM component given Ensight component
-    //  Primarily used for remapping of symmTensor.
-    //  OpenFOAM uses (XX, XY, XZ, YY, YZ, ZZ) order,
-    //  Ensight uses (XX, YY, ZZ, XY, YZ, XZ) order (like VTK).
+    //  This is used for the symmTensor ordering: Ensight requires
+    //  xx yy zz xy xz yz
     static const direction componentOrder[];
 };
 
 
 // Specializations
 
-template<> const char* const ensightPTraits<label>::typeName;
-template<> const direction ensightPTraits<label>::componentOrder[];
+template<>
+const char* const ensightPTraits<label>::typeName;
 
-template<> const char* const ensightPTraits<float>::typeName;
-template<> const direction ensightPTraits<float>::componentOrder[];
+template<>
+const direction ensightPTraits<label>::componentOrder[];
 
-template<> const char* const ensightPTraits<double>::typeName;
-template<> const direction ensightPTraits<double>::componentOrder[];
+template<>
+const char* const ensightPTraits<scalar>::typeName;
 
-template<> const char* const ensightPTraits<vector>::typeName;
-template<> const direction ensightPTraits<vector>::componentOrder[];
+template<>
+const direction ensightPTraits<scalar>::componentOrder[];
 
-template<> const char* const ensightPTraits<sphericalTensor>::typeName;
-template<> const direction ensightPTraits<sphericalTensor>::componentOrder[];
+template<>
+const char* const ensightPTraits<vector>::typeName;
 
-template<> const char* const ensightPTraits<symmTensor>::typeName;
-template<> const direction ensightPTraits<symmTensor>::componentOrder[];
+template<>
+const direction ensightPTraits<vector>::componentOrder[];
 
-template<> const char* const ensightPTraits<tensor>::typeName;
-template<> const direction ensightPTraits<tensor>::componentOrder[];
+template<>
+const char* const ensightPTraits<sphericalTensor>::typeName;
+
+template<>
+const direction ensightPTraits<sphericalTensor>::componentOrder[];
+
+template<>
+const char* const ensightPTraits<symmTensor>::typeName;
+
+template<>
+const direction ensightPTraits<symmTensor>::componentOrder[];
+
+template<>
+const char* const ensightPTraits<tensor>::typeName;
+
+template<>
+const direction ensightPTraits<tensor>::componentOrder[];
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

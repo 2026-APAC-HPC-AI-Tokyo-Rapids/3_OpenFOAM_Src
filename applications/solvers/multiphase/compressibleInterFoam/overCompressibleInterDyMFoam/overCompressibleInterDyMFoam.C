@@ -80,6 +80,9 @@ int main(int argc, char *argv[])
     #include "setRootCaseLists.H"
     #include "createTime.H"
     #include "createDynamicFvMesh.H"
+    pimpleControl pimple(mesh);
+
+    #include "createTimeControls.H"
     #include "createDyMControls.H"
     #include "createFields.H"
 
@@ -106,7 +109,7 @@ int main(int argc, char *argv[])
 
     while (runTime.run())
     {
-        #include "readDyMControls.H"
+        #include "readControls.H"
 
         if (LTS)
         {
@@ -151,9 +154,39 @@ int main(int argc, char *argv[])
                     // Update cellMask field for blocking out hole cells
                     #include "setCellMask.H"
                     #include "setInterpolatedCells.H"
-                    #include "correctPhiFaceMask.H"
+
+                    faceMask =
+                        localMin<scalar>(mesh).interpolate(cellMask.oldTime());
+
+                    // Zero Uf on old faceMask (H-I)
+                    Uf *= faceMask;
+
+                    const surfaceVectorField Uint(fvc::interpolate(U));
+                    // Update Uf and phi on new C-I faces
+                    Uf += (1-faceMask)*Uint;
+
+                    // Update Uf boundary
+                    forAll(Uf.boundaryField(), patchI)
+                    {
+                        Uf.boundaryFieldRef()[patchI] =
+                            Uint.boundaryField()[patchI];
+                    }
+
+                    phi = mesh.Sf() & Uf;
+
+                    // Correct phi on individual regions
+                    if (correctPhi)
+                    {
+                         #include "correctPhi.H"
+                    }
 
                     mixture.correct();
+
+                    // Zero phi on current H-I
+                    faceMask = localMin<scalar>(mesh).interpolate(cellMask);
+
+                    phi *= faceMask;
+                    U *= cellMask;
 
                     // Make the flux relative to the mesh motion
                     fvc::makeRelative(phi, U);
@@ -169,6 +202,10 @@ int main(int argc, char *argv[])
             #include "alphaControls.H"
             #include "compressibleAlphaEqnSubCycle.H"
 
+            const surfaceScalarField faceMask
+            (
+                localMin<scalar>(mesh).interpolate(cellMask)
+            );
             rhoPhi *= faceMask;
 
             turbulence.correctPhasePhi();

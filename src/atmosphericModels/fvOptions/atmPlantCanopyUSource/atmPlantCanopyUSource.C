@@ -42,36 +42,6 @@ namespace fv
 }
 
 
-// * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
-
-Foam::volScalarField& Foam::fv::atmPlantCanopyUSource::getOrReadField
-(
-    const word& fieldName
-) const
-{
-    auto* ptr = mesh_.getObjectPtr<volScalarField>(fieldName);
-
-    if (!ptr)
-    {
-        ptr = new volScalarField
-        (
-            IOobject
-            (
-                fieldName,
-                mesh_.time().timeName(),
-                mesh_,
-                IOobject::MUST_READ,
-                IOobject::AUTO_WRITE
-            ),
-            mesh_
-        );
-        mesh_.objectRegistry::store(ptr);
-    }
-
-    return *ptr;
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::fv::atmPlantCanopyUSource::atmPlantCanopyUSource
@@ -83,11 +53,32 @@ Foam::fv::atmPlantCanopyUSource::atmPlantCanopyUSource
 )
 :
     fv::cellSetOption(sourceName, modelType, dict, mesh),
-    CdName_(),
-    LADname_()
+    rhoName_(coeffs_.getOrDefault<word>("rho", "rho")),
+    plantCd_
+    (
+        IOobject
+        (
+            "plantCd",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::AUTO_WRITE
+        ),
+        mesh
+    ),
+    leafAreaDensity_
+    (
+        IOobject
+        (
+            "leafAreaDensity",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::AUTO_WRITE
+        ),
+        mesh
+    )
 {
-    read(dict);
-
     fieldNames_.resize(1, "U");
 
     fv::option::resetApplied();
@@ -104,17 +95,13 @@ void Foam::fv::atmPlantCanopyUSource::addSup
     const label fieldi
 )
 {
-    if (V_ < VSMALL)
-    {
-        return;
-    }
-
     const volVectorField& U = eqn.psi();
-    const volScalarField& Cd = getOrReadField(CdName_);
-    const volScalarField& LAD = getOrReadField(LADname_);
 
-    // (SP:Eq. 42), (BSG:Eq. 7)
-    eqn -= fvm::Sp(Cd*LAD*mag(U), U);
+    if (V_ > VSMALL)
+    {
+        // (SP:Eq. 42)
+        eqn -= fvm::Sp(plantCd_*leafAreaDensity_*mag(U), U);
+    }
 }
 
 
@@ -125,16 +112,12 @@ void Foam::fv::atmPlantCanopyUSource::addSup
     const label fieldi
 )
 {
-    if (V_ < VSMALL)
-    {
-        return;
-    }
-
     const volVectorField& U = eqn.psi();
-    const volScalarField& Cd = getOrReadField(CdName_);
-    const volScalarField& LAD = getOrReadField(LADname_);
 
-    eqn -= fvm::Sp(rho*Cd*LAD*mag(U), U);
+    if (V_ > VSMALL)
+    {
+        eqn -= fvm::Sp(rho*plantCd_*leafAreaDensity_*mag(U), U);
+    }
 }
 
 
@@ -146,33 +129,12 @@ void Foam::fv::atmPlantCanopyUSource::addSup
     const label fieldi
 )
 {
-    if (V_ < VSMALL)
-    {
-        return;
-    }
-
     const volVectorField& U = eqn.psi();
-    const volScalarField& Cd = getOrReadField(CdName_);
-    const volScalarField& LAD = getOrReadField(LADname_);
 
-    eqn -= fvm::Sp(alpha*rho*Cd*LAD*mag(U), U);
-}
-
-
-bool Foam::fv::atmPlantCanopyUSource::read(const dictionary& dict)
-{
-    if (!fv::cellSetOption::read(dict))
+    if (V_ > VSMALL)
     {
-        return false;
+        eqn -= fvm::Sp(alpha*rho*plantCd_*leafAreaDensity_*mag(U), U);
     }
-
-    CdName_ = dict.getOrDefault<word>("Cd", "Cd");
-    LADname_ = dict.getOrDefault<word>("LAD", "LAD");
-
-    (void) getOrReadField(CdName_);
-    (void) getOrReadField(LADname_);
-
-    return true;
 }
 
 

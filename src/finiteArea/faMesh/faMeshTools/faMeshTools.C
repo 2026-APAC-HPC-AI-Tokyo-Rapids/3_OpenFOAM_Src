@@ -109,7 +109,7 @@ Foam::autoPtr<Foam::faMesh> Foam::faMeshTools::newMesh
                 io.db(),
                 IOobject::MUST_READ,
                 IOobject::NO_WRITE,
-                IOobject::NO_REGISTER
+                false
             )
         );
 
@@ -187,7 +187,7 @@ Foam::autoPtr<Foam::faMesh> Foam::faMeshTools::newMesh
 
     // Some processors without patches? - add patches
 
-    if (returnReduceOr(mesh.boundary().empty()))
+    if (returnReduce(mesh.boundary().empty(), orOp<bool>()))
     {
         // Use patchEntries, which were read on master and broadcast
 
@@ -282,7 +282,7 @@ Foam::autoPtr<Foam::faMesh> Foam::faMeshTools::loadOrCreateMesh
                 io.db(),
                 IOobject::MUST_READ,
                 IOobject::NO_WRITE,
-                IOobject::NO_REGISTER
+                false
             )
         );
 

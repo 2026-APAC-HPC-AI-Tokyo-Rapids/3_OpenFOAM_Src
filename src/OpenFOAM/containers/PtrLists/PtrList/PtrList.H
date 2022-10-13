@@ -48,6 +48,8 @@ SourceFiles
 
 #include "UPtrList.H"
 #include "SLPtrListFwd.H"
+#include <memory>
+#include <utility>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -118,7 +120,7 @@ public:
         PtrList(Istream& is);
 
 
-    //- Destructor. Frees all pointers
+    //- Destructor
     ~PtrList();
 
 
@@ -132,9 +134,9 @@ public:
     // Access
 
         //- Return const pointer to element (can be nullptr),
-        //- or nullptr for out-of-range access (ie, \em with bounds checking).
+        //- without bounds checking - same as get().
         //  The return value can be tested as a bool.
-        const T* set(const label i) const { return UPtrList<T>::set(i); }
+        const T* set(const label i) const { return this->get(i); }
 
 
     // Edit
@@ -151,25 +153,28 @@ public:
 
         //- Construct and append an element to the end of the list
         template<class... Args>
-        inline void emplace_back(Args&&... args);
+        inline void emplace_append(Args&&... args);
 
         //- Append an element to the end of the list
-        inline void push_back(T* ptr);
+        inline void append(T* ptr);
 
         //- Move append an element to the end of the list
-        inline void push_back(std::unique_ptr<T>&& ptr);
+        inline void append(autoPtr<T>& ptr);
 
         //- Move append an element to the end of the list
-        inline void push_back(autoPtr<T>&& ptr);
+        inline void append(autoPtr<T>&& ptr);
+
+        //- Move append an element to the end of the list
+        inline void append(std::unique_ptr<T>&& ptr);
 
         //- Move or clone append a refPtr to the end of the list
-        inline void push_back(const refPtr<T>& ptr);
+        inline void append(const refPtr<T>& ptr);
 
         //- Move or clone append a tmp to the end of the list
-        inline void push_back(const tmp<T>& ptr);
+        inline void append(const tmp<T>& ptr);
 
         //- Move append another list to the end of this list.
-        inline void push_back(PtrList<T>&& other);
+        inline void append(PtrList<T>&& other);
 
         //- Construct and set an element
         template<class... Args>
@@ -179,11 +184,14 @@ public:
         //  No-op if the new pointer value is identical to the current content.
         inline autoPtr<T> set(const label i, T* ptr);
 
-        //- Set element to given unique_ptr and return old element
-        inline autoPtr<T> set(const label i, std::unique_ptr<T>&& ptr);
+        //- Set element to given autoPtr and return old element
+        inline autoPtr<T> set(const label i, autoPtr<T>& ptr);
 
         //- Set element to given autoPtr and return old element
         inline autoPtr<T> set(const label i, autoPtr<T>&& ptr);
+
+        //- Set element to given unique_ptr and return old element
+        inline autoPtr<T> set(const label i, std::unique_ptr<T>&& ptr);
 
         //- Set element to given refPtr and return old element
         inline autoPtr<T> set(const label i, const refPtr<T>& ptr);
@@ -214,45 +222,6 @@ public:
 
         //- Read from Istream, discarding contents of existing list
         friend Istream& operator>> <T>(Istream& is, PtrList<T>& list);
-
-
-    // Housekeeping
-
-        //- Set element to given autoPtr and return old element
-        autoPtr<T> set(const label i, autoPtr<T>& ptr)
-        {
-            return this->set(i, std::move(ptr));
-        }
-
-        //- Move append an element to the end of the list
-        void append(autoPtr<T>& ptr) { this->push_back(std::move(ptr)); }
-
-        //- Append an element to the end of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(T* ptr) { this->push_back(ptr); }
-
-        //- Move append an element to the end of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(std::unique_ptr<T>&& ptr)
-        {
-            this->push_back(std::move(ptr));
-        }
-
-        //- Move append an element to the end of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(autoPtr<T>&& ptr) { this->push_back(std::move(ptr)); }
-
-        //- Move or clone append a tmp to the end of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(const refPtr<T>& ptr) { this->push_back(ptr); }
-
-        //- Move or clone append a tmp to the end of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(const tmp<T>& ptr) { this->push_back(ptr); }
-
-        //- Move append another list to the end of this list.
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(PtrList<T>&& other) { this->push_back(std::move(other)); }
 };
 
 

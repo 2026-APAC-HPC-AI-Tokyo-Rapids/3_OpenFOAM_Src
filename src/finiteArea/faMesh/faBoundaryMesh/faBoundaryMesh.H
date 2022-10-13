@@ -42,12 +42,11 @@ Author
 #ifndef Foam_faBoundaryMesh_H
 #define Foam_faBoundaryMesh_H
 
-#include "regIOobject.H"
 #include "faPatch.H"
-#include "labelPair.H"
 #include "lduInterfacePtrsList.H"
 #include "wordList.H"
 #include "pointField.H"
+#include "regIOobject.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -160,9 +159,6 @@ public:
 
         //- Return a list of patch ranges
         List<labelRange> patchRanges() const;
-
-        //- A list of the group names (if any)
-        wordList groupNames() const;
 
         //- The start label of the edges in the faMesh edges list
         //  Same as mesh.nInternalEdges()

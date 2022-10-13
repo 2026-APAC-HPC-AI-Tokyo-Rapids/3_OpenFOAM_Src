@@ -28,6 +28,11 @@ License
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class Cmpt>
+inline Foam::CompactSpatialTensorT<Cmpt>::CompactSpatialTensorT()
+{}
+
+
+template<class Cmpt>
 inline Foam::CompactSpatialTensorT<Cmpt>::CompactSpatialTensorT
 (
     const Foam::zero

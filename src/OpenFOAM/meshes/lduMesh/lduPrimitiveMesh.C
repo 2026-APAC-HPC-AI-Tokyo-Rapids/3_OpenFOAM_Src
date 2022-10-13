@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2017 OpenFOAM Foundation
-    Copyright (C) 2019,2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,6 +37,25 @@ License
 namespace Foam
 {
     defineTypeNameAndDebug(lduPrimitiveMesh, 0);
+
+    //- Less operator for pairs of \<processor\>\<index\>
+    class procLess
+    {
+        const labelPairList& list_;
+
+    public:
+
+        procLess(const labelPairList& list)
+        :
+            list_(list)
+        {}
+
+        bool operator()(const label a, const label b)
+        {
+            return list_[a].first() < list_[b].first();
+        }
+    };
+
 }
 
 
@@ -129,8 +148,10 @@ Foam::labelListList Foam::lduPrimitiveMesh::globalCellCells
             }
         }
 
-        // Wait for all
-        UPstream::waitRequests();
+        if (Pstream::parRun())
+        {
+            Pstream::waitRequests();
+        }
 
         forAll(interfaces, inti)
         {
@@ -322,31 +343,7 @@ Foam::lduPrimitiveMesh::lduPrimitiveMesh
     lowerAddr_(l, reuse),
     upperAddr_(u, reuse),
     comm_(comm)
-{
-    if (debug && lowerAddr_.size())
-    {
-        if (max(lowerAddr_) >= nCells || min(lowerAddr_) < 0)
-        {
-            FatalErrorInFunction << "Illegal lower addressing."
-                << " nCells:" << nCells
-                << " max(lower):" << max(lowerAddr_)
-                << " min(lower):" << min(lowerAddr_)
-                << exit(FatalError);
-        }
-    }
-    if (debug && upperAddr_.size())
-    {
-        if (max(upperAddr_) >= nCells || min(upperAddr_) < 0)
-        {
-            FatalErrorInFunction << "Illegal upper addressing."
-                << " nCells:" << nCells
-                << " max(upper):" << max(upperAddr_)
-                << " min(upper):" << min(upperAddr_)
-                << exit(FatalError);
-        }
-    }
-}
-
+{}
 
 void Foam::lduPrimitiveMesh::addInterfaces
 (
@@ -396,30 +393,6 @@ Foam::lduPrimitiveMesh::lduPrimitiveMesh
     patchSchedule_(ps),
     comm_(comm)
 {
-    if (debug && lowerAddr_.size())
-    {
-        if (max(lowerAddr_) >= nCells || min(lowerAddr_) < 0)
-        {
-            FatalErrorInFunction << "Illegal lower addressing."
-                << " nCells:" << nCells
-                << " max(lower):" << max(lowerAddr_)
-                << " min(lower):" << min(lowerAddr_)
-                << exit(FatalError);
-        }
-    }
-    if (debug && upperAddr_.size())
-    {
-        if (max(upperAddr_) >= nCells || min(upperAddr_) < 0)
-        {
-            FatalErrorInFunction << "Illegal upper addressing."
-                << " nCells:" << nCells
-                << " max(upper):" << max(upperAddr_)
-                << " min(upper):" << min(upperAddr_)
-                << exit(FatalError);
-        }
-    }
-
-
     primitiveInterfaces_.transfer(primitiveInterfaces);
 
     // Create interfaces
@@ -1119,15 +1092,15 @@ void Foam::lduPrimitiveMesh::gather
 
     if (Pstream::myProcNo(comm) == procIDs[0])
     {
-        // Master.
         otherMeshes.setSize(procIDs.size()-1);
 
+        // Slave meshes
         for (label i = 1; i < procIDs.size(); ++i)
         {
             //Pout<< "on master :"
-            //    << " receiving from proc " << procIDs[i] << endl;
+            //    << " receiving from slave " << procIDs[i] << endl;
 
-            IPstream fromProc
+            IPstream fromSlave
             (
                 Pstream::commsTypes::scheduled,
                 procIDs[i],
@@ -1136,10 +1109,10 @@ void Foam::lduPrimitiveMesh::gather
                 comm
             );
 
-            label nCells = readLabel(fromProc);
-            labelList lowerAddr(fromProc);
-            labelList upperAddr(fromProc);
-            boolList validInterface(fromProc);
+            label nCells = readLabel(fromSlave);
+            labelList lowerAddr(fromSlave);
+            labelList upperAddr(fromSlave);
+            boolList validInterface(fromSlave);
 
 
             // Construct mesh without interfaces
@@ -1162,7 +1135,7 @@ void Foam::lduPrimitiveMesh::gather
             {
                 if (validInterface[intI])
                 {
-                    word coupleType(fromProc);
+                    word coupleType(fromSlave);
 
                     newInterfaces.set
                     (
@@ -1172,7 +1145,7 @@ void Foam::lduPrimitiveMesh::gather
                             coupleType,
                             intI,
                             otherMeshes[i-1].rawInterfaces(),
-                            fromProc
+                            fromSlave
                         ).ptr()
                     );
                 }

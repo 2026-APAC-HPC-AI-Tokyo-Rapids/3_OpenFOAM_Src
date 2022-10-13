@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -50,16 +50,12 @@ Foam::liquidMixtureProperties::liquidMixtureProperties
 
     forAll(components_, i)
     {
-        // Handle sub-dictionary or primitive entry
-
-        const dictionary* subDictPtr = dict.findDict(components_[i]);
-
-        if (subDictPtr)
+        if (dict.isDict(components_[i]))
         {
             properties_.set
             (
                 i,
-                liquidProperties::New(*subDictPtr)
+                liquidProperties::New(dict.subDict(components_[i]))
             );
         }
         else
@@ -80,8 +76,13 @@ Foam::liquidMixtureProperties::liquidMixtureProperties
 )
 :
     components_(lm.components_),
-    properties_(lm.properties_.clone())
-{}
+    properties_(lm.properties_.size())
+{
+    forAll(properties_, i)
+    {
+        properties_.set(i, lm.properties_(i)->clone());
+    }
+}
 
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //

@@ -1,56 +1,30 @@
-/*---------------------------------------------------------------------------*\
-  =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     |
-    \\  /    A nd           | www.openfoam.com
-     \\/     M anipulation  |
--------------------------------------------------------------------------------
-    Copyright (C) 2009 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
--------------------------------------------------------------------------------
-License
-    This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
-
-Description
-    Handle merging of patch pairs
-
-\*---------------------------------------------------------------------------*/
-
+// Handle merging of patch pairs
 {
     wordPairList mergePatchPairs;
 
-    // Read in a list of merge patch pairs
+    // Read in a list of dictionaries for the merge patch pairs
     if
     (
         meshDict.readIfPresent("mergePatchPairs", mergePatchPairs)
      && mergePatchPairs.size()
     )
     {
-        Info<< "Merging " << mergePatchPairs.size() << " patch pairs" << nl;
+        Info<< "Creating merge patch pairs" << nl << endl;
 
-        // Cleanup
-        wordHashSet cleanupPatches(4*mergePatchPairs.size());
-        wordHashSet cleanupPointZones(2*mergePatchPairs.size());
-        wordHashSet cleanupFaceZones(2*mergePatchPairs.size());
-
-        Info<< "    Adding point and face zones" << endl;
+        Info<< "Adding point and face zones" << endl;
         {
-            const auto& pbm = mesh.boundaryMesh();
-
-            auto& pzs = mesh.pointZones(); pzs.clearAddressing();
-            auto& fzs = mesh.faceZones();  fzs.clearAddressing();
+            auto& pzs = mesh.pointZones();
+            pzs.clearAddressing();
+            auto& fzs = mesh.faceZones();
+            fzs.clearAddressing();
 
             forAll(mergePatchPairs, pairi)
             {
-                // Patch pairs
-                const polyPatch& patch0 = pbm[mergePatchPairs[pairi].first()];
-                const polyPatch& patch1 = pbm[mergePatchPairs[pairi].second()];
-
                 const word mergeName
                 (
                     mergePatchPairs[pairi].first()
                   + mergePatchPairs[pairi].second()
-                  + Foam::name(pairi)
+                  + name(pairi)
                 );
 
                 // An empty zone for cut points
@@ -63,35 +37,40 @@ Description
                         pzs
                     )
                 );
-                cleanupPointZones.insert(pzs.last().name());
 
-                // Coupling side 0 (master)
+                // Master patch
+                const word masterPatchName(mergePatchPairs[pairi].first());
+                const polyPatch& masterPatch =
+                    mesh.boundaryMesh()[masterPatchName];
+
                 fzs.append
                 (
                     new faceZone
                     (
-                        mergeName + "Side0Zone",
-                        identity(patch0.range()),
+                        mergeName + "MasterZone",
+                        identity(masterPatch.range()),
                         false, // none are flipped
                         fzs.size(),
                         fzs
                     )
                 );
-                cleanupFaceZones.insert(fzs.last().name());
 
-                // Coupling side 1 (slave)
+                // Slave patch
+                const word slavePatchName(mergePatchPairs[pairi].second());
+                const polyPatch& slavePatch =
+                    mesh.boundaryMesh()[slavePatchName];
+
                 fzs.append
                 (
                     new faceZone
                     (
-                        mergeName + "Side1Zone",
-                        identity(patch1.range()),
+                        mergeName + "SlaveZone",
+                        identity(slavePatch.range()),
                         false, // none are flipped
                         fzs.size(),
                         fzs
                     )
                 );
-                cleanupFaceZones.insert(fzs.last().name());
 
                 // An empty zone for cut faces
                 fzs.append
@@ -103,38 +82,35 @@ Description
                         fzs
                     )
                 );
-                cleanupFaceZones.insert(fzs.last().name());
-            }
+            }  // end of all merge pairs
         }
 
 
-        Info<< "    Merging with attachPolyTopoChanger" << endl;
+
+        Info<< "Creating attachPolyTopoChanger" << endl;
         attachPolyTopoChanger polyMeshAttacher(mesh);
-        polyMeshAttacher.resize(1);
+        polyMeshAttacher.setSize(mergePatchPairs.size());
 
         forAll(mergePatchPairs, pairi)
         {
-            cleanupPatches.insert(mergePatchPairs[pairi].first());
-            cleanupPatches.insert(mergePatchPairs[pairi].second());
-
             const word mergeName
             (
                 mergePatchPairs[pairi].first()
               + mergePatchPairs[pairi].second()
-              + Foam::name(pairi)
+              + name(pairi)
             );
 
             // Add the sliding interface mesh modifier
             polyMeshAttacher.set
             (
-                0,
+                pairi,
                 new slidingInterface
                 (
-                    "couple" + Foam::name(pairi),
+                    "couple" + name(pairi),
                     pairi,
                     polyMeshAttacher,
-                    mergeName + "Side0Zone",
-                    mergeName + "Side1Zone",
+                    mergeName + "MasterZone",
+                    mergeName + "SlaveZone",
                     mergeName + "CutPointZone",
                     mergeName + "CutFaceZone",
                     mergePatchPairs[pairi].first(),
@@ -144,135 +120,12 @@ Description
                     intersection::VISIBLE
                 )
             );
-
-            polyMeshAttacher.attach(false);  // Do not yet remove empty patches
         }
 
-        // Re-do the boundary patches, removing empty merge patches
-        // but keeping any other empty patches
-        {
-            const polyBoundaryMesh& oldPatches = mesh.boundaryMesh();
-
-            polyPatchList newPatches(oldPatches.size());
-            label nNewPatches = 0;
-
-            wordHashSet removedPatches(cleanupPatches.capacity());
-
-            forAll(oldPatches, patchi)
-            {
-                const word& patchName = oldPatches[patchi].name();
-
-                if
-                (
-                    !cleanupPatches.found(patchName)
-                 || returnReduceOr(oldPatches[patchi].size())
-                )
-                {
-                    newPatches.set
-                    (
-                        nNewPatches,
-                        oldPatches[patchi].clone
-                        (
-                            mesh.boundaryMesh(),
-                            nNewPatches,
-                            oldPatches[patchi].size(),
-                            oldPatches[patchi].start()
-                        )
-                    );
-
-                    ++nNewPatches;
-                }
-                else
-                {
-                    removedPatches.insert(patchName);
-                }
-            }
-
-            newPatches.resize(nNewPatches);
-
-            mesh.removeBoundary();
-            mesh.addPatches(newPatches);
-
-            Info<< "Removed " << removedPatches.size()
-                << " empty merged patches:" << nl
-                << "    " << flatOutput(removedPatches.sortedToc()) << endl;
-        }
-
-        // Cleanup empty merged point zones
-        {
-            PtrList<pointZone>& zones = mesh.pointZones();
-            mesh.pointZones().clearAddressing();
-
-            wordHashSet removedZones(2*zones.size());
-
-            label nZones = 0;
-            forAll(zones, zonei)
-            {
-                if
-                (
-                    !cleanupPointZones.found(zones[zonei].name())
-                 || returnReduceOr(zones[zonei].size())
-                )
-                {
-                    zones.set(nZones, zones.release(zonei));
-                    zones[nZones].index() = nZones;  // re-index
-                    ++nZones;
-                }
-                else
-                {
-                    removedZones.insert(zones[zonei].name());
-                }
-            }
-            zones.resize(nZones);
-
-            if (removedZones.size())
-            {
-                Info<< "Removed " << removedZones.size()
-                    << " empty point zones:" << nl
-                    << "    " << flatOutput(removedZones.sortedToc()) << endl;
-            }
-        }
-
-        // Cleanup empty merged face zones
-        {
-            PtrList<faceZone>& zones = mesh.faceZones();
-            mesh.faceZones().clearAddressing();
-
-            wordHashSet removedZones(2*zones.size());
-
-            label nZones = 0;
-            forAll(zones, zonei)
-            {
-                if
-                (
-                    !cleanupFaceZones.found(zones[zonei].name())
-                 || returnReduceOr(zones[zonei].size())
-                )
-                {
-                    zones.set(nZones, zones.release(zonei));
-                    zones[nZones].index() = nZones;  // re-index
-                    ++nZones;
-                }
-                else
-                {
-                    removedZones.insert(zones[zonei].name());
-                }
-            }
-            zones.resize(nZones);
-
-            if (removedZones.size())
-            {
-                Info<< "Removed " << removedZones.size()
-                    << " empty merged face zones:" << nl
-                    << "    " << flatOutput(removedZones.sortedToc()) << endl;
-            }
-        }
+        polyMeshAttacher.attach(true);
     }
     else
     {
-        Info<< "No patch pairs to merge" << endl;
+        Info<< nl << "There are no merge patch pairs" << endl;
     }
 }
-
-
-// ************************************************************************* //

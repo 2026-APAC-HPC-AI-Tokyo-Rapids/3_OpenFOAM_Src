@@ -113,6 +113,7 @@ int main(int argc, char *argv[])
         label coarseSize = max(addr)+1;
 
         Info<< "Level : " << level << endl
+            << returnReduce(addr.size(), sumOp<label>()) << endl
             << "    current size      : "
             << returnReduce(addr.size(), sumOp<label>()) << endl
             << "    agglomerated size : "

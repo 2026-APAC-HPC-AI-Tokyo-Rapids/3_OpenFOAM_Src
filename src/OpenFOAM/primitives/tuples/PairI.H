@@ -103,7 +103,7 @@ inline Foam::Pair<T>::Pair(const T& f, const T& s, const bool doSort)
 template<class T>
 inline Foam::Pair<T>::Pair(const FixedList<T, 2>& list, const bool doSort)
 :
-    Pair<T>(list.template get<0>(), list.template get<1>(), doSort)
+    Pair<T>(list.first(), list.last(), doSort)
 {}
 
 
@@ -117,7 +117,21 @@ inline Foam::Pair<T>::Pair(Istream& is)
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class T>
-inline const T& Foam::Pair<T>::other(const T& val) const
+inline const T& Foam::Pair<T>::second() const noexcept
+{
+    return last();
+}
+
+
+template<class T>
+inline T& Foam::Pair<T>::second() noexcept
+{
+    return last();
+}
+
+
+template<class T>
+inline const T& Foam::Pair<T>::other(const T& a) const
 {
     if (first() == second())
     {
@@ -125,15 +139,15 @@ inline const T& Foam::Pair<T>::other(const T& val) const
             << "Call to other only valid for Pair with differing elements:"
             << *this << abort(FatalError);
     }
-    else if (val == first())
+    else if (a == first())
     {
         return second();
     }
-    else if (val != second())
+    else if (a != second())
     {
         FatalErrorInFunction
             << "Pair " << *this
-            << " does not contain " << val << abort(FatalError);
+            << " does not contain " << a << abort(FatalError);
     }
 
     return first();

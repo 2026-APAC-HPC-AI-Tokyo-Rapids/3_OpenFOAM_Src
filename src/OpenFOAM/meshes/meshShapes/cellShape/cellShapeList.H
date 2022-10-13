@@ -31,8 +31,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_cellShapeList_H
-#define Foam_cellShapeList_H
+#ifndef cellShapeList_H
+#define cellShapeList_H
 
 #include "cellShape.H"
 #include "List.H"

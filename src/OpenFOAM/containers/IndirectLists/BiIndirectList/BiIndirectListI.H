@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,6 +26,22 @@ License
 
 \*---------------------------------------------------------------------------*/
 
+// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
+
+template<class T>
+inline Foam::label Foam::BiIndirectList<T>::posIndex(const label i)
+{
+    return i;
+}
+
+
+template<class T>
+inline Foam::label Foam::BiIndirectList<T>::negIndex(const label i)
+{
+    return -i-1;
+}
+
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class T>
@@ -38,7 +54,7 @@ inline Foam::BiIndirectList<T>::BiIndirectList
 :
     posList_(const_cast<UList<T>&>(posList)),
     negList_(const_cast<UList<T>&>(negList)),
-    addr_(addr)
+    addressing_(addr)
 {}
 
 
@@ -52,28 +68,72 @@ inline Foam::BiIndirectList<T>::BiIndirectList
 :
     posList_(const_cast<UList<T>&>(posList)),
     negList_(const_cast<UList<T>&>(negList)),
-    addr_(std::move(addr))
+    addressing_(std::move(addr))
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class T>
-inline void Foam::BiIndirectList<T>::resetAddressing(const labelUList& addr)
+inline Foam::label Foam::BiIndirectList<T>::size() const noexcept
 {
-    addr_ = addr;
+    return addressing_.size();
 }
 
 
 template<class T>
-inline void Foam::BiIndirectList<T>::resetAddressing(labelList&& addr)
+inline bool Foam::BiIndirectList<T>::empty() const noexcept
 {
-    addr_.transfer(addr);
+    return addressing_.empty();
 }
 
 
 template<class T>
-inline Foam::List<T> Foam::BiIndirectList<T>::list() const
+inline const Foam::UList<T>& Foam::BiIndirectList<T>::posList() const noexcept
+{
+    return posList_;
+}
+
+
+template<class T>
+inline const Foam::UList<T>& Foam::BiIndirectList<T>::negList() const noexcept
+{
+    return negList_;
+}
+
+
+template<class T>
+inline const Foam::labelList&
+Foam::BiIndirectList<T>::addressing() const noexcept
+{
+    return addressing_;
+}
+
+
+template<class T>
+inline void Foam::BiIndirectList<T>::resetAddressing
+(
+    const labelUList& addr
+)
+{
+    addressing_ = addr;
+}
+
+
+template<class T>
+inline void Foam::BiIndirectList<T>::resetAddressing
+(
+    labelList&& addr
+)
+{
+    addressing_.transfer(addr);
+}
+
+
+// * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
+
+template<class T>
+inline Foam::List<T> Foam::BiIndirectList<T>::operator()() const
 {
     List<T> result(size());
 
@@ -86,39 +146,51 @@ inline Foam::List<T> Foam::BiIndirectList<T>::list() const
 }
 
 
-// * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
-
 template<class T>
 inline T& Foam::BiIndirectList<T>::operator[](const label i)
 {
-    const label index = addr_[i];
+    const label index = addressing_[i];
 
-    return (index >= 0 ? posList_[index] : negList_[-index-1]);
+    if (index >= 0)
+    {
+        return posList_[index];
+    }
+    else
+    {
+        return negList_[-index-1];
+    }
 }
 
 
 template<class T>
 inline const T& Foam::BiIndirectList<T>::operator[](const label i) const
 {
-    const label index = addr_[i];
+    const label index = addressing_[i];
 
-    return (index >= 0 ? posList_[index] : negList_[-index-1]);
+    if (index >= 0)
+    {
+        return posList_[index];
+    }
+    else
+    {
+        return negList_[-index-1];
+    }
 }
 
 
 template<class T>
 inline void Foam::BiIndirectList<T>::operator=(const UList<T>& ae)
 {
-    if (addr_.size() != ae.size())
+    if (addressing_.size() != ae.size())
     {
         FatalErrorInFunction
             << "Addressing and list of addressed elements "
                "have different sizes: "
-            << addr_.size() << " " << ae.size()
+            << addressing_.size() << " " << ae.size()
             << abort(FatalError);
     }
 
-    forAll(addr_, i)
+    forAll(addressing_, i)
     {
         operator[](i) = ae[i];
     }
@@ -128,7 +200,7 @@ inline void Foam::BiIndirectList<T>::operator=(const UList<T>& ae)
 template<class T>
 inline void Foam::BiIndirectList<T>::operator=(const T& val)
 {
-    forAll(addr_, i)
+    forAll(addressing_, i)
     {
         operator[](i) = val;
     }

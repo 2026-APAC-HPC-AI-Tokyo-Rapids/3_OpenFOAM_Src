@@ -43,8 +43,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_Hasher_H
-#define Foam_Hasher_H
+#ifndef Hasher_H
+#define Hasher_H
 
 #include <cstddef>
 

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,8 +49,8 @@ int main(int argc, char *argv[])
     #include "setRootCase.H"
     #include "createTime.H"
 
-    IOstreamOption streamOpt(IOstreamOption::BINARY);
-    // IOstreamOption streamOpt(IOstreamOption::ASCII);
+    IOstream::streamFormat format = IOstream::BINARY;
+    // IOstream::streamFormat format = IOstream::ASCII;
 
     const label size = 20000000;
 
@@ -85,7 +85,11 @@ int main(int argc, char *argv[])
             << runTime.cpuTimeIncrement() << " s" << nl << endl;
 
 
-        faces2.writeObject(streamOpt, true);
+        faces2.writeObject
+        (
+            IOstreamOption(format),
+            true
+        );
 
         Info<< "Written old format faceList in = "
             << runTime.cpuTimeIncrement() << " s" << nl << endl;
@@ -141,7 +145,11 @@ int main(int argc, char *argv[])
             << runTime.cpuTimeIncrement() << " s" << nl << endl;
 
 
-        faces2.writeObject(streamOpt, true);
+        faces2.writeObject
+        (
+            IOstreamOption(format),
+            true
+        );
 
         Info<< "Written new format faceList in = "
             << runTime.cpuTimeIncrement() << " s" << nl << endl;

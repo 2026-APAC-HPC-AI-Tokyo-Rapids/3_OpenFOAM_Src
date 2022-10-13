@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -57,30 +57,49 @@ void inv(Field<tensor>& tf, const UList<tensor>& tf1)
         return;
     }
 
-    // Attempting to identify 2-D cases
-    const scalar minThreshold = SMALL*magSqr(tf1[0]);
-    const Vector<bool> removeCmpts
+    scalar scale = magSqr(tf1[0]);
+    Vector<bool> removeCmpts
     (
-        magSqr(tf1[0].xx()) < minThreshold,
-        magSqr(tf1[0].yy()) < minThreshold,
-        magSqr(tf1[0].zz()) < minThreshold
+        magSqr(tf1[0].xx())/scale < SMALL,
+        magSqr(tf1[0].yy())/scale < SMALL,
+        magSqr(tf1[0].zz())/scale < SMALL
     );
 
     if (removeCmpts.x() || removeCmpts.y() || removeCmpts.z())
     {
-        tensor adjust(Zero);
-
-        if (removeCmpts.x()) adjust.xx() = 1;
-        if (removeCmpts.y()) adjust.yy() = 1;
-        if (removeCmpts.z()) adjust.zz() = 1;
-
         tensorField tf1Plus(tf1);
 
-        tf1Plus += adjust;
+        if (removeCmpts.x())
+        {
+            tf1Plus += tensor(1,0,0,0,0,0,0,0,0);
+        }
+
+        if (removeCmpts.y())
+        {
+            tf1Plus += tensor(0,0,0,0,1,0,0,0,0);
+        }
+
+        if (removeCmpts.z())
+        {
+            tf1Plus += tensor(0,0,0,0,0,0,0,0,1);
+        }
 
         TFOR_ALL_F_OP_FUNC_F(tensor, tf, =, inv, tensor, tf1Plus)
 
-        tf -= adjust;
+        if (removeCmpts.x())
+        {
+            tf -= tensor(1,0,0,0,0,0,0,0,0);
+        }
+
+        if (removeCmpts.y())
+        {
+            tf -= tensor(0,0,0,0,1,0,0,0,0);
+        }
+
+        if (removeCmpts.z())
+        {
+            tf -= tensor(0,0,0,0,0,0,0,0,1);
+        }
     }
     else
     {
@@ -102,8 +121,6 @@ tmp<tensorField> inv(const tmp<tensorField>& tf)
     tf.clear();
     return tres;
 }
-
-UNARY_FUNCTION(tensor, tensor, pinv)
 
 UNARY_FUNCTION(vector, symmTensor, eigenValues)
 UNARY_FUNCTION(tensor, symmTensor, eigenVectors)

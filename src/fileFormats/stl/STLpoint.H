@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -59,25 +59,25 @@ public:
         STLpoint() = default;
 
         //- Construct from single-precision point
-        STLpoint(const Vector<float>& p)
+        inline STLpoint(const Vector<float>& p)
         :
             Vector<float>(p)
         {}
 
         //- Construct from double-precision point
-        STLpoint(const Vector<double>& p)
+        inline STLpoint(const Vector<double>& p)
         :
             Vector<float>(float(p.x()), float(p.y()), float(p.z()))
         {}
 
         //- Construct from single-precision components
-        STLpoint(float x, float y, float z)
+        inline STLpoint(float x, float y, float z)
         :
             Vector<float>(x, y, z)
         {}
 
         //- Construct from double-precision components
-        STLpoint(double x, double y, double z)
+        inline STLpoint(double x, double y, double z)
         :
             Vector<float>(float(x), float(y), float(z))
         {}
@@ -87,7 +87,7 @@ public:
 
         #ifdef WM_DP
         //- Conversion to double-precision point
-        operator point() const
+        inline operator point() const
         {
             return point(x(), y(), z());
         }

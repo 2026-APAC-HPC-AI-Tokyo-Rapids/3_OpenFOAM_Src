@@ -127,16 +127,10 @@ class velocityFilmShellFvPatchVectorField
 :
     public mixedFvPatchField<vector>
 {
-    // Typedefs
-
-        //- The finite-area region model
-        typedef regionModels::areaSurfaceFilmModels::liquidFilmBase baffleType;
-
-
     // Private Data
 
-        //- The liquid film
-        autoPtr<baffleType> baffle_;
+        //- Thermal baffle
+        autoPtr<regionModels::areaSurfaceFilmModels::liquidFilmBase> baffle_;
 
         //- Dictionary
         mutable dictionary dict_;

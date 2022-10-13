@@ -96,13 +96,11 @@ bool Foam::MeshedSurface<Face>::canRead
     bool verbose
 )
 {
-    const word ext =
-    (
-        name.has_ext("gz")
-      ? name.stem().ext()
-      : name.ext()
-    );
-
+    word ext(name.ext());
+    if (ext == "gz")
+    {
+        ext = name.lessExt().ext();
+    }
     return canReadType(ext, verbose);
 }
 

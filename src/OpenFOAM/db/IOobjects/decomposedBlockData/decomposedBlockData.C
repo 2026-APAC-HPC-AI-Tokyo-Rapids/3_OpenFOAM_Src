@@ -86,7 +86,7 @@ Foam::decomposedBlockData::decomposedBlockData
     contentData_()
 {
     // Temporary warning
-    if (readOpt() == IOobject::MUST_READ_IF_MODIFIED)
+    if (io.readOpt() == IOobject::MUST_READ_IF_MODIFIED)
     {
         WarningInFunction
             << "decomposedBlockData " << name()
@@ -94,7 +94,14 @@ Foam::decomposedBlockData::decomposedBlockData
             " but decomposedBlockData does not support automatic rereading."
             << endl;
     }
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        (
+            io.readOpt() == IOobject::MUST_READ
+         || io.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || (io.readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         read();
     }
@@ -782,7 +789,7 @@ bool Foam::decomposedBlockData::writeBlocks
             for (label proci = 1; proci < nProcs; ++proci)
             {
                 elems.resize(recvSizes[proci]);
-                UIPstream::read
+                IPstream::read
                 (
                     UPstream::commsTypes::scheduled,
                     proci,

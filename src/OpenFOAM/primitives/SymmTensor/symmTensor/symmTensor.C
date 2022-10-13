@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,7 +29,6 @@ License
 #include "symmTensor.H"
 #include "cubicEqn.H"
 #include "mathematicalConstants.H"
-#include "SVD.H"
 
 using namespace Foam::constant::mathematical;
 
@@ -335,33 +334,6 @@ Foam::tensor Foam::eigenVectors(const symmTensor& T)
     const vector eVals(eigenValues(T));
 
     return eigenVectors(T, eVals);
-}
-
-
-Foam::symmTensor Foam::pinv(const symmTensor& st)
-{
-    const scalar dt = det(st);
-
-    if (dt < ROOTVSMALL)
-    {
-        // Fall back to pseudo inverse
-        scalarRectangularMatrix mat(3, 3);
-
-        mat(0,0) = st.xx(); mat(0,1) = st.xy(); mat(0,2) = st.xz();
-        mat(1,0) = st.yx(); mat(1,1) = st.yy(); mat(1,2) = st.yz();
-        mat(2,0) = st.zx(); mat(2,1) = st.zy(); mat(2,2) = st.zz();
-
-        mat = SVDinv(mat);
-
-        return symmTensor
-        (
-            mat(0,0), mat(0,1), mat(0,2),
-                      mat(1,1), mat(1,2),
-                                mat(2,2)
-        );
-    }
-
-    return inv(st, dt);
 }
 
 

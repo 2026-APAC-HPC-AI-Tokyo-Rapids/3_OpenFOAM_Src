@@ -71,10 +71,6 @@ class cloudSolution
         //  NOTE: Steady operation only
         label calcFrequency_;
 
-        //- Output log frequency - carrier steps per cloud step
-        //  Default = 1
-        label logFrequency_;
-
         //- Maximum particle Courant number
         //  Max fraction of current cell that can be traversed in a single
         //  step
@@ -214,11 +210,8 @@ public:
         bool solveThisStep() const;
 
         //- Returns true if possible to evolve the cloud and sets timestep
-        //- parameters
+        //  parameters
         bool canEvolve();
-
-        //- Returns true if possible to log this step
-        bool log() const;
 
         //- Returns true if writing this step
         bool output() const;

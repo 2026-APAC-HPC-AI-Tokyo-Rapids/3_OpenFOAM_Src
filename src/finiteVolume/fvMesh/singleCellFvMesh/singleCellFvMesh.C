@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -53,15 +53,6 @@ void Foam::singleCellFvMesh::agglomerateMesh
         const polyPatch& pp = oldPatches[patchi];
         if (pp.size() > 0)
         {
-            if (agglom[patchi].size() != pp.size())
-            {
-                FatalErrorInFunction
-                    << "agglomeration on patch " << patchi
-                    << " (size " << pp.size()
-                    << ") is of size " << agglom[patchi].size()
-                    << exit(FatalError);
-            }
-
             nAgglom[patchi] = max(agglom[patchi])+1;
 
             forAll(pp, i)
@@ -238,7 +229,6 @@ void Foam::singleCellFvMesh::agglomerateMesh
         patchSizes[patchi] = coarseI-patchStarts[patchi];
     }
 
-    //patchFaces.setSize(coarseI);
     //Pout<< "patchStarts:" << patchStarts << endl;
     //Pout<< "patchSizes:" << patchSizes << endl;
 
@@ -268,20 +258,16 @@ void Foam::singleCellFvMesh::agglomerateMesh
     pointField boundaryPoints(mesh.points(), pointMap_);
 
     // Add patches (on still zero sized mesh)
-    polyPatchList newPatches(oldPatches.size());
+    List<polyPatch*> newPatches(oldPatches.size());
     forAll(oldPatches, patchi)
     {
-        newPatches.set
+        newPatches[patchi] = oldPatches[patchi].clone
         (
+            boundaryMesh(),
             patchi,
-            oldPatches[patchi].clone
-            (
-                boundaryMesh(),
-                patchi,
-                0,
-                0
-            )
-        );
+            0,
+            0
+        ).ptr();
     }
     addFvPatches(newPatches);
 
@@ -408,8 +394,7 @@ void Foam::singleCellFvMesh::agglomerateMesh
 Foam::singleCellFvMesh::singleCellFvMesh
 (
     const IOobject& io,
-    const fvMesh& mesh,
-    const bool doInit
+    const fvMesh& mesh
 )
 :
     fvMesh(io, Zero, false),
@@ -489,12 +474,6 @@ Foam::singleCellFvMesh::singleCellFvMesh
     }
 
     agglomerateMesh(mesh, agglom);
-
-    // initialise all (lower levels and current)
-    if (doInit)
-    {
-        fvMesh::init(true); // initialise fvMesh and underlying levels
-    }
 }
 
 
@@ -502,8 +481,7 @@ Foam::singleCellFvMesh::singleCellFvMesh
 (
     const IOobject& io,
     const fvMesh& mesh,
-    const labelListList& patchFaceAgglomeration,
-    const bool doInit
+    const labelListList& patchFaceAgglomeration
 )
 :
     fvMesh(io, Zero, false),
@@ -574,17 +552,12 @@ Foam::singleCellFvMesh::singleCellFvMesh
     )
 {
     agglomerateMesh(mesh, patchFaceAgglomeration);
-    // initialise all (lower levels and current)
-    if (doInit)
-    {
-        fvMesh::init(true); // initialise fvMesh and underlying levels
-    }
 }
 
 
-Foam::singleCellFvMesh::singleCellFvMesh(const IOobject& io, const bool doInit)
+Foam::singleCellFvMesh::singleCellFvMesh(const IOobject& io)
 :
-    fvMesh(io, doInit),
+    fvMesh(io),
     patchFaceAgglomeration_
     (
         IOobject

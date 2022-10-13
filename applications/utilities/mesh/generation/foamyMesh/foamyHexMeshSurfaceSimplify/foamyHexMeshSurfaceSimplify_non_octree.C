@@ -122,7 +122,11 @@ int main(int argc, char *argv[])
 
     // Extend
     treeBoundBox bb = geometryToConformTo.globalBounds();
-    bb.grow(0.1*bb.span());
+    {
+        const vector smallVec = 0.1*bb.span();
+        bb.min() -= smallVec;
+        bb.max() += smallVec;
+    }
 
     Info<< "Meshing to bounding box " << bb << nl << endl;
 

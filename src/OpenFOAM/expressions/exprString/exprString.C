@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,7 +28,6 @@ License
 #include "exprString.H"
 #include "stringOps.H"
 #include "expressionEntry.H"
-#include "error.H"
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
@@ -45,6 +44,36 @@ void Foam::expressions::exprString::inplaceExpand
     }
 
     exprTools::expressionEntry::inplaceExpand(str, dict);
+}
+
+
+Foam::expressions::exprString
+Foam::expressions::exprString::getEntry
+(
+    const word& key,
+    const dictionary& dict,
+    const bool stripComments
+)
+{
+    exprString expr;
+    expr.readEntry(key, dict, true, stripComments);  // mandatory
+
+    return expr;
+}
+
+
+Foam::expressions::exprString
+Foam::expressions::exprString::getOptional
+(
+    const word& key,
+    const dictionary& dict,
+    const bool stripComments
+)
+{
+    exprString expr;
+    expr.readEntry(key, dict, false, stripComments);  // optional
+
+    return expr;
 }
 
 
@@ -74,14 +103,15 @@ bool Foam::expressions::exprString::readEntry
 (
     const word& keyword,
     const dictionary& dict,
-    IOobjectOption::readOption readOpt
+    bool mandatory,
+    const bool stripComments
 )
 {
-    const bool ok = dict.readEntry(keyword, *this, keyType::LITERAL, readOpt);
+    const bool ok = dict.readEntry(keyword, *this, keyType::LITERAL, mandatory);
 
     if (ok && !empty())
     {
-        this->expand(dict, true);  // strip comments
+        this->expand(dict, stripComments);  // strip comments
     }
     else
     {

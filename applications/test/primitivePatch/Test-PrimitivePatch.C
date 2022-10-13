@@ -232,7 +232,6 @@ int main(int argc, char *argv[])
         const labelListList& edgeFaces = pp.edgeFaces();
         const labelListList& faceEdges = pp.faceEdges();
 
-        Pout<< "box: " << pp.box() << endl;
 
         checkFaceEdges(localFaces, edges, faceEdges);
 

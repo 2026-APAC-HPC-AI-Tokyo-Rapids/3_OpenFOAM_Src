@@ -42,28 +42,28 @@ Foam::autoPtr<Foam::pointPatchField<Type>> Foam::pointPatchField<Type>::New
         << " [" << actualPatchType
         << "] : " << p.type() << " name = " << p.name() << endl;
 
-    auto* ctorPtr = patchConstructorTable(patchFieldType);
+    auto* ctorPtr = pointPatchConstructorTable(patchFieldType);
 
     if (!ctorPtr)
     {
         FatalErrorInLookup
         (
-            "patchField",
+            "patchFieldType",
             patchFieldType,
-            *patchConstructorTablePtr_
+            *pointPatchConstructorTablePtr_
         ) << exit(FatalError);
     }
 
-    autoPtr<pointPatchField<Type>> tpfld(ctorPtr(p, iF));
+    autoPtr<pointPatchField<Type>> pfPtr(ctorPtr(p, iF));
 
     if (actualPatchType.empty() || actualPatchType != p.type())
     {
-        if (tpfld().constraintType() != p.constraintType())
+        if (pfPtr().constraintType() != p.constraintType())
         {
             // Incompatible (constraint-wise) with the patch type
             // - use default constraint type
 
-            auto* patchTypeCtor = patchConstructorTable(p.type());
+            auto* patchTypeCtor = pointPatchConstructorTable(p.type());
 
             if (!patchTypeCtor)
             {
@@ -79,13 +79,13 @@ Foam::autoPtr<Foam::pointPatchField<Type>> Foam::pointPatchField<Type>::New
     }
     else
     {
-        if (patchConstructorTablePtr_->found(p.type()))
+        if (pointPatchConstructorTablePtr_->found(p.type()))
         {
-            tpfld.ref().patchType() = actualPatchType;
+            pfPtr().patchType() = actualPatchType;
         }
     }
 
-    return tpfld;
+    return pfPtr;
 }
 
 
@@ -123,7 +123,7 @@ Foam::autoPtr<Foam::pointPatchField<Type>> Foam::pointPatchField<Type>::New
 
     if (!ctorPtr)
     {
-        if (!pointPatchFieldBase::disallowGenericPatchField)
+        if (!disallowGenericPointPatchField)
         {
             ctorPtr = dictionaryConstructorTable("generic");
         }
@@ -140,11 +140,11 @@ Foam::autoPtr<Foam::pointPatchField<Type>> Foam::pointPatchField<Type>::New
     }
 
     // Construct (but not necessarily returned)
-    autoPtr<pointPatchField<Type>> tpfld(ctorPtr(p, iF, dict));
+    autoPtr<pointPatchField<Type>> pfPtr(ctorPtr(p, iF, dict));
 
     if (actualPatchType.empty() || actualPatchType != p.type())
     {
-        if (tpfld().constraintType() != p.constraintType())
+        if (pfPtr().constraintType() != p.constraintType())
         {
             // Incompatible (constraint-wise) with the patch type
             // - use default constraint type
@@ -164,7 +164,7 @@ Foam::autoPtr<Foam::pointPatchField<Type>> Foam::pointPatchField<Type>::New
         }
     }
 
-    return tpfld;
+    return pfPtr;
 }
 
 

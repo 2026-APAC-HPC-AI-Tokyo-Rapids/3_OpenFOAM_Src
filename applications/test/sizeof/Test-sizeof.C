@@ -135,7 +135,6 @@ int main(int argc, char *argv[])
         cout<<"string:" << sizeof(Foam::string) << nl;
     }
 
-    cout<<"IOobjectOption:" << sizeof(Foam::IOobjectOption) << nl;
     cout<<"IOobject:" << sizeof(Foam::IOobject) << nl;
     cout<<"IOstream:" << sizeof(Foam::IOstream) << nl;
     cout<<"PstreamBuffers:" << sizeof(Foam::PstreamBuffers) << nl;

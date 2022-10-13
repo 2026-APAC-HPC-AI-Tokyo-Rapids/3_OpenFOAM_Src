@@ -107,23 +107,27 @@ Usage
             // Cartesian coordinate system specification when evaluating
             // force and moment coefficients, either of the below
 
-            // Define the centre of rotation
-            // with implicit directions e1=(1 0 0) and e3=(0 0 1)
-            CofR            (0 0 0); // Centre of rotation
+            // Option-1, i.e. the centre of rotation
+            // by inherently using e3=(0 0 1) and e1=(1 0 0)
+            CofR                (0 0 0); // Centre of rotation
+            dragDir             (1 0 0);
+            liftDir             (0 0 1);
 
-            // Define local coordinate system by origin + axes
-            origin          (0 0 0);
-            e1              (1 0 0);
-            e3              (0 0 1); // (e1, e2) or (e2, e3) or (e3, e1)
+            // Option-2, i.e. local coordinate system specification
+            origin              (0 0 0);
+            e1                  (1 0 0);
+            e3                  (0 0 1); // (e1, e2) or (e2, e3) or (e3, e1)
 
-            // General coordinate system specification (always cartesian)
+            // Option-3, i.e. general coordinate system specification
             coordinateSystem
             {
-                origin      (0 0 0);
+                type            cartesian;
+                origin          (0 0 0);
                 rotation
                 {
-                    type    ...;
-                    ...
+                    type        axes;
+                    e3          (0 0 1);
+                    e1          (1 0 0); // (e1, e2) or (e2, e3) or (e3, e1)
                 }
             }
 
@@ -181,12 +185,12 @@ Usage
       CmRoll  | Roll-moment coefficient
       CmPitch | Pitch-moment coefficient
       CmYaw   | Yaw-moment coefficient
-      Cd(f)   | Front-axle drag coefficient
-      Cs(f)   | Front-axle side-force coefficient
-      Cl(f)   | Front-axle lift coefficient
-      Cd(r)   | Rear-axle drag coefficient
-      Cs(r)   | Rear-axle side-force coefficient
-      Cl(r)   | Rear-axle lift coefficient
+      Cdf     | Front-axle drag coefficient
+      Csf     | Front-axle side-force coefficient
+      Clf     | Front-axle lift coefficient
+      Cdr     | Rear-axle drag coefficient
+      Csr     | Rear-axle side-force coefficient
+      Clr     | Rear-axle lift coefficient
     \endverbatim
 
     The inherited entries are elaborated in:
@@ -216,8 +220,6 @@ Note
       pitchAxis    | Pitch axis            | e2    | (0 1 0)
       yawAxis      | Yaw axis              | e3    | (0 0 1)
     \endtable
-
-  - If a \c coordinateSystem entry exists, it is taken in favour of \c CofR.
 
 SourceFiles
     forceCoeffs.C

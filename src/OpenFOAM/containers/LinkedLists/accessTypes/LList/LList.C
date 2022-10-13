@@ -37,7 +37,7 @@ Foam::LList<LListBase, T>::LList(const LList<LListBase, T>& lst)
 {
     for (const T& val : lst)
     {
-        this->push_back(val);
+        this->append(val);
     }
 }
 
@@ -58,7 +58,7 @@ Foam::LList<LListBase, T>::LList(std::initializer_list<T> lst)
 {
     for (const T& val : lst)
     {
-        this->push_back(val);
+        this->append(val);
     }
 }
 
@@ -75,26 +75,15 @@ Foam::LList<LListBase, T>::~LList()
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class LListBase, class T>
-void Foam::LList<LListBase, T>::pop_front(label n)
-{
-    if (n > this->size())
-    {
-        n = this->size();
-    }
-
-    while (n > 0)
-    {
-        link* p = static_cast<link*>(LListBase::removeHead());
-        delete p;
-        --n;
-    }
-}
-
-
-template<class LListBase, class T>
 void Foam::LList<LListBase, T>::clear()
 {
-    this->pop_front(this->size());
+    label len = this->size();
+
+    while (len--)
+    {
+        this->eraseHead();
+    }
+
     LListBase::clear();
 }
 
@@ -116,7 +105,7 @@ void Foam::LList<LListBase, T>::operator=(const LList<LListBase, T>& lst)
 
     for (const T& val : lst)
     {
-        this->push_back(val);
+        this->append(val);
     }
 }
 
@@ -137,7 +126,7 @@ void Foam::LList<LListBase, T>::operator=(std::initializer_list<T> lst)
 
     for (const T& val : lst)
     {
-        this->push_back(val);
+        this->append(val);
     }
 }
 

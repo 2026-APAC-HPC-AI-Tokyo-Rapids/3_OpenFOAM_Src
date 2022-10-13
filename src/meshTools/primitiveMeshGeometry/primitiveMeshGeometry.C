@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,9 +27,9 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "primitiveMeshGeometry.H"
-#include "pyramid.H"
+#include "pyramidPointFaceRef.H"
 #include "unitConversion.H"
-#include "triangle.H"
+#include "triPointRef.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -58,11 +58,8 @@ void Foam::primitiveMeshGeometry::updateFaceCentresAndAreas
         // and to avoid round-off error-related problems
         if (nPoints == 3)
         {
-            faceCentres_[facei] =
-                triPointRef::centre(p[f[0]], p[f[1]], p[f[2]]);
-
-            faceAreas_[facei] =
-                triPointRef::areaNormal(p[f[0]], p[f[1]], p[f[2]]);
+            faceCentres_[facei] = (1.0/3.0)*(p[f[0]] + p[f[1]] + p[f[2]]);
+            faceAreas_[facei] = 0.5*((p[f[1]] - p[f[0]])^(p[f[2]] - p[f[0]]));
         }
         else
         {
@@ -341,7 +338,8 @@ bool Foam::primitiveMeshGeometry::checkFaceDotProduct
     reduce(severeNonOrth, sumOp<label>());
     reduce(errorNonOrth, sumOp<label>());
 
-    const label neiSize = returnReduce(nei.size(), sumOp<label>());
+    label neiSize = nei.size();
+    reduce(neiSize, sumOp<label>());
 
     // Only report if there are some internal faces
     if (neiSize > 0)
@@ -1006,12 +1004,12 @@ bool Foam::primitiveMeshGeometry::checkFaceTwist
             {
                 const vector triArea
                 (
-                    triPointRef::areaNormal
+                    triPointRef
                     (
                         p[f[fpI]],
                         p[f.nextLabel(fpI)],
                         fc
-                    )
+                    ).areaNormal()
                 );
 
                 const scalar magTri = mag(triArea);

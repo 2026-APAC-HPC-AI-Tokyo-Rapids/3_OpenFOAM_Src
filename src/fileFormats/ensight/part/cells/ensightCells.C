@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -99,7 +99,7 @@ Foam::FixedList<Foam::label, 5> Foam::ensightCells::sizes() const
 {
     FixedList<label, 5> count;
 
-    for (int typei = 0; typei < nTypes; ++typei)
+    forAll(count, typei)
     {
         count[typei] = size(elemType(typei));
     }
@@ -108,14 +108,14 @@ Foam::FixedList<Foam::label, 5> Foam::ensightCells::sizes() const
 }
 
 
-Foam::label Foam::ensightCells::totalSize() const noexcept
+Foam::label Foam::ensightCells::total() const
 {
-    label count = 0;
-    for (label n : sizes_)
+    label nTotal = 0;
+    forAll(sizes_, typei)
     {
-        count += n;
+        nTotal += sizes_[typei];
     }
-    return count;
+    return nTotal;
 }
 
 
@@ -137,10 +137,11 @@ void Foam::ensightCells::clearOut()
 
 void Foam::ensightCells::reduce()
 {
-    for (int typei = 0; typei < nTypes; ++typei)
+    forAll(sizes_, typei)
     {
         sizes_[typei] = size(elemType(typei));
     }
+    // Can reduce FixedList with sumOp<label> in a single operation
     Foam::reduce(sizes_, sumOp<label>());
 }
 
@@ -185,22 +186,22 @@ void Foam::ensightCells::classifyImpl
     {
         const cellModel& model = shapes[id].model();
 
-        elemType etype(elemType::NFACED);
+        elemType etype(NFACED);
         if (model == tet)
         {
-            etype = elemType::TETRA4;
+            etype = TETRA4;
         }
         else if (model == pyr)
         {
-            etype = elemType::PYRAMID5;
+            etype = PYRAMID5;
         }
         else if (model == prism)
         {
-            etype = elemType::PENTA6;
+            etype = PENTA6;
         }
         else if (model == hex)
         {
-            etype = elemType::HEXA8;
+            etype = HEXA8;
         }
 
         ++sizes_[etype];
@@ -216,22 +217,22 @@ void Foam::ensightCells::classifyImpl
     {
         const cellModel& model = shapes[id].model();
 
-        elemType etype(elemType::NFACED);
+        elemType etype(NFACED);
         if (model == tet)
         {
-            etype = elemType::TETRA4;
+            etype = TETRA4;
         }
         else if (model == pyr)
         {
-            etype = elemType::PYRAMID5;
+            etype = PYRAMID5;
         }
         else if (model == prism)
         {
-            etype = elemType::PENTA6;
+            etype = PENTA6;
         }
         else if (model == hex)
         {
-            etype = elemType::HEXA8;
+            etype = HEXA8;
         }
 
         add(etype, id);

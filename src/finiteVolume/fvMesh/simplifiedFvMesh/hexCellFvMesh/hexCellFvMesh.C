@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,7 +26,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "hexCellFvMesh.H"
-#include "hexCell.H"
 #include "emptyPolyPatch.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -66,26 +65,34 @@ Foam::simplifiedMeshes::hexCellFvMesh::hexCellFvMesh
             IOobject::READ_IF_PRESENT,
             IOobject::NO_WRITE
         ),
-        pointField(boundBox(point::zero, point::uniform(d)).hexCorners()),
-        faceList(boundBox::hexFaces()),
-        labelList(6, Zero),  // Owner
-        labelList()          // Neighbour
+        pointField
+        (
+            {
+                point(0, 0, 0),
+                point(d, 0, 0),
+                point(d, d, 0),
+                point(0, d, 0),
+                point(0, 0, d),
+                point(d, 0, d),
+                point(d, d, d),
+                point(0, d, d)
+            }
+        ),
+        faceList(cellModel::ref(cellModel::HEX).modelFaces()),
+        labelList(6, Zero),
+        labelList()
     )
 {
-    polyPatchList patches(1);
+    List<polyPatch*> patches(1);
 
-    patches.set
+    patches[0] = new emptyPolyPatch
     (
+        "boundary",
+        6,
         0,
-        new emptyPolyPatch
-        (
-            "boundary",
-            6,
-            0,
-            0,
-            boundaryMesh(),
-            emptyPolyPatch::typeName
-        )
+        0,
+        boundaryMesh(),
+        emptyPolyPatch::typeName
     );
 
     addFvPatches(patches);

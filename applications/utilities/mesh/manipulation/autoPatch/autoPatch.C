@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
     const PtrList<boundaryPatch>& patches = bMesh.patches();
 
     // Create new list of patches with old ones first
-    polyPatchList newPatches(patches.size());
+    List<polyPatch*> newPatchPtrList(patches.size());
 
     newPatchi = 0;
 
@@ -200,41 +200,34 @@ int main(int argc, char *argv[])
     {
         const polyPatch& patch = mesh.boundaryMesh()[patchi];
 
-        newPatches.set
-        (
-            newPatchi,
+        newPatchPtrList[newPatchi] =
             patch.clone
             (
                 mesh.boundaryMesh(),
                 newPatchi,
                 patch.size(),
                 patch.start()
-            )
-        );
+            ).ptr();
 
-        ++newPatchi;
+        newPatchi++;
     }
 
     // Add new ones with empty size.
     for (label patchi = newPatchi; patchi < patches.size(); patchi++)
     {
-        const word& patchName = patches[patchi].name();
+        const boundaryPatch& bp = patches[patchi];
 
-        newPatches.set
+        newPatchPtrList[newPatchi] = polyPatch::New
         (
+            polyPatch::typeName,
+            bp.name(),
+            0,
+            mesh.nFaces(),
             newPatchi,
-            polyPatch::New
-            (
-                polyPatch::typeName,
-                patchName,
-                0,
-                mesh.nFaces(),
-                newPatchi,
-                mesh.boundaryMesh()
-            )
-        );
+            mesh.boundaryMesh()
+        ).ptr();
 
-        ++newPatchi;
+        newPatchi++;
     }
 
     if (!overwrite)
@@ -245,7 +238,7 @@ int main(int argc, char *argv[])
 
     // Change patches
     repatchPolyTopoChanger polyMeshRepatcher(mesh);
-    polyMeshRepatcher.changePatches(newPatches);
+    polyMeshRepatcher.changePatches(newPatchPtrList);
 
 
     // Change face ordering

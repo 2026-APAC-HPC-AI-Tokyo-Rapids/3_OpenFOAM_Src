@@ -124,6 +124,3 @@ dimensionedScalar initialMass("initialMass", fvc::domainIntegrate(rho));
 
 // Mask field for zeroing out contributions on hole cells
 #include "createCellMask.H"
-
-// Create bool field with interpolated cells
-#include "createInterpolatedCells.H"

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,8 +56,8 @@ Foam::topoSet::New
     const word& setType,
     const polyMesh& mesh,
     const word& name,
-    IOobjectOption::readOption rOpt,
-    IOobjectOption::writeOption wOpt
+    readOption r,
+    writeOption w
 )
 {
     auto* ctorPtr = wordConstructorTable(setType);
@@ -72,7 +72,7 @@ Foam::topoSet::New
         ) << exit(FatalError);
     }
 
-    return autoPtr<topoSet>(ctorPtr(mesh, name, rOpt, wOpt));
+    return autoPtr<topoSet>(ctorPtr(mesh, name, r, w));
 }
 
 
@@ -83,7 +83,7 @@ Foam::topoSet::New
     const polyMesh& mesh,
     const word& name,
     const label size,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 {
     auto* ctorPtr = sizeConstructorTable(setType);
@@ -98,7 +98,7 @@ Foam::topoSet::New
         ) << exit(FatalError);
     }
 
-    return autoPtr<topoSet>(ctorPtr(mesh, name, size, wOpt));
+    return autoPtr<topoSet>(ctorPtr(mesh, name, size, w));
 }
 
 
@@ -109,7 +109,7 @@ Foam::topoSet::New
     const polyMesh& mesh,
     const word& name,
     const topoSet& set,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 {
     auto* ctorPtr = setConstructorTable(setType);
@@ -124,7 +124,7 @@ Foam::topoSet::New
         ) << exit(FatalError);
     }
 
-    return autoPtr<topoSet>(ctorPtr(mesh, name, set, wOpt));
+    return autoPtr<topoSet>(ctorPtr(mesh, name, set, w));
 }
 
 
@@ -318,8 +318,8 @@ Foam::IOobject Foam::topoSet::findIOobject
 (
     const polyMesh& mesh,
     const word& name,
-    IOobjectOption::readOption rOpt,
-    IOobjectOption::writeOption wOpt
+    readOption r,
+    writeOption w
 )
 {
     IOobject io
@@ -334,8 +334,8 @@ Foam::IOobject Foam::topoSet::findIOobject
         ),
         polyMesh::meshSubDir/"sets",
         mesh,
-        rOpt,
-        wOpt
+        r,
+        w
     );
 
     if (!io.typeHeaderOk<topoSet>(false) && disallowGenericSets != 0)
@@ -352,8 +352,8 @@ Foam::IOobject Foam::topoSet::findIOobject
 (
     const Time& runTime,
     const word& name,
-    IOobjectOption::readOption rOpt,
-    IOobjectOption::writeOption wOpt
+    readOption r,
+    writeOption w
 )
 {
     return IOobject
@@ -373,19 +373,24 @@ Foam::IOobject Foam::topoSet::findIOobject
         ),
         polyMesh::meshSubDir/"sets",
         runTime,
-        rOpt,
-        wOpt
+        r,
+        w
     );
 }
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::topoSet::topoSet(const IOobject& io, const word& wantedType)
+Foam::topoSet::topoSet(const IOobject& obj, const word& wantedType)
 :
-    regIOobject(io)
+    regIOobject(obj)
 {
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        readOpt() == IOobject::MUST_READ
+     || readOpt() == IOobject::MUST_READ_IF_MODIFIED
+     || (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         if (readStream(wantedType).good())
         {
@@ -402,13 +407,18 @@ Foam::topoSet::topoSet
     const polyMesh& mesh,
     const word& wantedType,
     const word& name,
-    IOobjectOption::readOption rOpt,
-    IOobjectOption::writeOption wOpt
+    readOption r,
+    writeOption w
 )
 :
-    regIOobject(findIOobject(mesh, name, rOpt, wOpt))
+    regIOobject(findIOobject(mesh, name, r, w))
 {
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        readOpt() == IOobject::MUST_READ
+     || readOpt() == IOobject::MUST_READ_IF_MODIFIED
+     || (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         if (readStream(wantedType).good())
         {
@@ -425,10 +435,10 @@ Foam::topoSet::topoSet
     const polyMesh& mesh,
     const word& name,
     const label size,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 :
-    regIOobject(findIOobject(mesh, name, IOobject::NO_READ, wOpt)),
+    regIOobject(findIOobject(mesh, name, IOobject::NO_READ, w)),
     labelHashSet(size)
 {}
 
@@ -438,10 +448,10 @@ Foam::topoSet::topoSet
     const polyMesh& mesh,
     const word& name,
     const labelHashSet& labels,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 :
-    regIOobject(findIOobject(mesh, name, IOobject::NO_READ, wOpt)),
+    regIOobject(findIOobject(mesh, name, IOobject::NO_READ, w)),
     labelHashSet(labels)
 {}
 
@@ -451,10 +461,10 @@ Foam::topoSet::topoSet
     const polyMesh& mesh,
     const word& name,
     labelHashSet&& labels,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 :
-    regIOobject(findIOobject(mesh, name, IOobject::NO_READ, wOpt)),
+    regIOobject(findIOobject(mesh, name, IOobject::NO_READ, w)),
     labelHashSet(std::move(labels))
 {}
 
@@ -464,10 +474,10 @@ Foam::topoSet::topoSet
     const polyMesh& mesh,
     const word& name,
     const labelUList& labels,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 :
-    regIOobject(findIOobject(mesh, name, IOobject::NO_READ, wOpt)),
+    regIOobject(findIOobject(mesh, name, IOobject::NO_READ, w)),
     labelHashSet(labels)
 {}
 

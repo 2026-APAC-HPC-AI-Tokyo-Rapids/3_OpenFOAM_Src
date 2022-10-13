@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,7 +31,7 @@ Group
 
 Description
     Applies sources on a specified field within a specified region
-    by using an external table file.
+    by using an external table file for compressible flows.
 
 Usage
     Minimal example by using \c constant/faOptions:
@@ -54,7 +54,6 @@ Usage
       type      | Type name: externalFileSource  | word  | yes  | -
       fieldName | Name of operand field          | word  | yes  | -
       tableName | Name of operand table file     | word  | yes  | -
-      store     | Register external field 'pExt' | bool  | no   | false
     \endtable
 
     The inherited entries are elaborated in:
@@ -69,8 +68,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_fa_externalFileSource_H
-#define Foam_fa_externalFileSource_H
+#ifndef fa_externalFileSource_H
+#define fa_externalFileSource_H
 
 #include "faOption.H"
 #include "areaFields.H"
@@ -101,19 +100,13 @@ class externalFileSource
         word tableName_;
 
         //- External pressure field
-        DimensionedField<scalar, areaMesh> pExt_;
+        areaScalarField pExt_;
+
+        //- Mapped data from file
+        autoPtr<PatchFunction1Types::MappedFile<scalar>> value_;
 
         //- Current time index (used for updating)
         label curTimeIndex_;
-
-        //- Mapped data from file
-        PtrList<PatchFunction1Types::MappedFile<scalar>> mapping_;
-
-
-    // Private Member Functions
-
-        //- Update the pExt_ mapping
-        void updateMapping();
 
 
 public:
@@ -130,7 +123,7 @@ public:
             const word& sourceName,
             const word& modelType,
             const dictionary& dict,
-            const fvMesh& mesh
+            const fvPatch& patch
         );
 
         //- No copy construct

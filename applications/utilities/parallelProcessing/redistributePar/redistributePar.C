@@ -132,7 +132,7 @@ void createTimeDirs(const fileName& path)
         //Pstream::parRun(oldParRun);  // Restore parallel state
         masterTimeDirs = localTimeDirs;
     }
-    Pstream::broadcast(masterTimeDirs);
+    Pstream::scatter(masterTimeDirs);
     //DebugVar(masterTimeDirs);
     //DebugVar(localTimeDirs);
 
@@ -1168,7 +1168,7 @@ int main(int argc, char *argv[])
     bool nfs = true;
     {
         List<fileName> roots(1, args.rootPath());
-        Pstream::combineReduce(roots, ListOps::uniqueEqOp<fileName>());
+        Pstream::combineAllGather(roots, ListOps::uniqueEqOp<fileName>());
         nfs = (roots.size() == 1);
     }
 
@@ -1187,8 +1187,7 @@ int main(int argc, char *argv[])
     {
         if (decompose)
         {
-            Info<< "Removing existing processor directory:"
-                << args.relativePath(procDir) << endl;
+            Info<< "Removing existing processor directory" << procDir << endl;
             fileHandler().rmDir(procDir);
         }
     }
@@ -1203,7 +1202,7 @@ int main(int argc, char *argv[])
         }
     }
     // If master changed to decompose mode make sure all nodes know about it
-    Pstream::broadcast(decompose);
+    Pstream::scatter(decompose);
 
 
     // If running distributed we have problem of new processors not finding
@@ -1288,7 +1287,7 @@ int main(int argc, char *argv[])
         // use the times list from the master processor
         // and select a subset based on the command-line options
         instantList timeDirs = timeSelector::select(runTime.times(), args);
-        Pstream::broadcast(timeDirs);
+        Pstream::scatter(timeDirs);
 
         if (timeDirs.empty())
         {
@@ -1547,7 +1546,7 @@ int main(int argc, char *argv[])
                 if
                 (
                     !volMeshHaveUndecomposed
-                 || !returnReduceAnd(haveVolAddressing)
+                 || !returnReduce(haveVolAddressing, andOp<bool>())
                 )
                 {
                     Info<< "No undecomposed mesh. Creating from: "
@@ -1615,7 +1614,7 @@ int main(int argc, char *argv[])
                  &&
                     (
                         !areaMeshHaveUndecomposed
-                     || !returnReduceAnd(haveAreaAddressing)
+                     || !returnReduce(haveAreaAddressing, andOp<bool>())
                     )
                 )
                 {
@@ -2067,7 +2066,7 @@ int main(int argc, char *argv[])
                 args
             )[0].value();
         }
-        Pstream::broadcast(masterTime);
+        Pstream::scatter(masterTime);
         Info<< "Setting time to that of master or undecomposed case : "
             << masterTime << endl;
         runTime.setTime(masterTime, 0);
@@ -2349,8 +2348,6 @@ int main(int argc, char *argv[])
                 // Remove any left-over empty processor directories created
                 // by loadOrCreateMesh to get around the collated start-up
                 // problems
-                Info<< "Removing left-over empty processor directories" << nl;
-
                 if (Pstream::master())  //fileHandler().comm()))
                 {
                     const auto myProci = UPstream::myProcNo();  //comm()
@@ -2367,7 +2364,9 @@ int main(int argc, char *argv[])
                          && volMeshDir[proci] != volMeshDir[myProci]
                         )
                         {
-                            Foam::rmDir(volMeshDir[proci], true); // silent
+                            Info<< "Deleting mesh dir:"
+                                << volMeshDir[proci] << endl;
+                            Foam::rmDir(volMeshDir[proci]);
                         }
 
                         if
@@ -2376,18 +2375,9 @@ int main(int argc, char *argv[])
                          && areaMeshDir[proci] != areaMeshDir[myProci]
                         )
                         {
-                            Foam::rmDir(areaMeshDir[proci], true); // silent
-                        }
-
-                        // Remove empty processor directories
-                        // Eg, <path-name>/processorN/constant/polyMesh
-                        // to  <path-name>/processorN
-                        if (proci != myProci)
-                        {
-                            removeEmptyDir
-                            (
-                                volMeshDir[proci].path().path()
-                            );
+                            Info<< "Deleting mesh dir:"
+                                << areaMeshDir[proci] << endl;
+                            Foam::rmDir(areaMeshDir[proci]);
                         }
                     }
 
@@ -2451,8 +2441,7 @@ int main(int argc, char *argv[])
                         // Remove dummy mesh created by loadOrCreateMesh
                         const bool oldParRun = Pstream::parRun(false);
                         mesh.removeFiles();
-                        // Silent rmdir
-                        Foam::rmDir(mesh.objectRegistry::objectPath(), true);
+                        Foam::rmDir(mesh.objectRegistry::objectPath());
                         Pstream::parRun(oldParRun);  // Restore parallel state
                     }
                 }

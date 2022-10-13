@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2014 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -53,48 +52,8 @@ Foam::masterCoarsestGAMGProcAgglomeration::masterCoarsestGAMGProcAgglomeration
     const dictionary& controlDict
 )
 :
-    GAMGProcAgglomeration(agglom, controlDict),
-    nProcessorsPerMaster_
-    (
-        controlDict.getOrDefault<label>
-        (
-            "nProcessorsPerMaster",
-            0,
-            keyType::LITERAL
-        )
-    )
-{
-    const auto* ePtr = controlDict.findEntry("nMasters", keyType::LITERAL);
-    if (ePtr)
-    {
-        if (nProcessorsPerMaster_ > 0)
-        {
-            FatalIOErrorInFunction(controlDict)
-                << "Cannot specify both \"nMasters\" and"
-                << " \"nProcessorsPerMaster\"" << exit(FatalIOError);
-        }
-
-        const label nMasters(readLabel(ePtr->stream()));
-
-        if (nMasters <= 0)
-        {
-            FatalIOErrorInFunction(controlDict)
-                << "Illegal value \"nMasters\" "
-                << nMasters << exit(FatalIOError);
-        }
-
-        nProcessorsPerMaster_ =
-            (Pstream::nProcs(agglom.mesh().comm())+nMasters-1)
-          / nMasters;
-    }
-
-    if (nProcessorsPerMaster_ < 0)
-    {
-        FatalIOErrorInFunction(controlDict)
-            << "Illegal value \"nProcessorsPerMaster\" "
-            << nProcessorsPerMaster_ << exit(FatalIOError);
-    }
-}
+    GAMGProcAgglomeration(agglom, controlDict)
+{}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
@@ -116,7 +75,7 @@ Foam::masterCoarsestGAMGProcAgglomeration::
 
 bool Foam::masterCoarsestGAMGProcAgglomeration::agglomerate()
 {
-    if (debug & 2)
+    if (debug)
     {
         Pout<< nl << "Starting mesh overview" << endl;
         printStats(Pout, agglom_);
@@ -138,23 +97,7 @@ bool Foam::masterCoarsestGAMGProcAgglomeration::agglomerate()
             if (nProcs > 1)
             {
                 // Processor restriction map: per processor the coarse processor
-                labelList procAgglomMap(nProcs);
-
-                if (nProcessorsPerMaster_ > 0)
-                {
-                    forAll(procAgglomMap, fineProci)
-                    {
-                        procAgglomMap[fineProci] =
-                        (
-                            fineProci
-                          / nProcessorsPerMaster_
-                        );
-                    }
-                }
-                else
-                {
-                    procAgglomMap = Zero;
-                }
+                labelList procAgglomMap(nProcs, Zero);
 
                 // Master processor
                 labelList masterProcs;
@@ -168,32 +111,6 @@ bool Foam::masterCoarsestGAMGProcAgglomeration::agglomerate()
                     masterProcs,
                     agglomProcIDs
                 );
-
-                if (debug)
-                {
-                    if (masterProcs.size())
-                    {
-                        labelListList masterToProcs
-                        (
-                            invertOneToMany
-                            (
-                                masterProcs.size(),
-                                procAgglomMap
-                            )
-                        );
-                        Info<< typeName << " : agglomerating" << nl
-                            << "\tmaster\tnProcs\tprocIDs" << endl;
-                        for (const auto& p : masterToProcs)
-                        {
-                            Info<< '\t' << p[0]
-                                << '\t' << p.size()
-                                << '\t'
-                                << flatOutput(SubList<label>(p, p.size()-1, 1))
-                                << endl;
-                        }
-                    }
-                }
-
 
                 // Allocate a communicator for the processor-agglomerated matrix
                 comms_.append
@@ -222,7 +139,7 @@ bool Foam::masterCoarsestGAMGProcAgglomeration::agglomerate()
     }
 
     // Print a bit
-    if (debug & 2)
+    if (debug)
     {
         Pout<< nl << "Agglomerated mesh overview" << endl;
         printStats(Pout, agglom_);

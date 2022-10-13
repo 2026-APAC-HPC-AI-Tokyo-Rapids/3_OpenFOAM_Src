@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -206,10 +206,10 @@ void Foam::searchableCone::findNearestAndNormal
     // cone)
 
     FixedList<scalar, 4> dist;
-    dist[0] = sample.distSqr(nearCone);
-    dist[1] = sample.distSqr(disk1Point);
-    dist[2] = sample.distSqr(disk2Point);
-    dist[3] = sample.distSqr(iCnearCone);
+    dist[0] = magSqr(nearCone-sample);
+    dist[1] = magSqr(disk1Point-sample);
+    dist[2] = magSqr(disk2Point-sample);
+    dist[3] = magSqr(iCnearCone-sample);
 
     const label minI = findMin(dist);
 
@@ -301,7 +301,7 @@ void Foam::searchableCone::findNearestAndNormal
     }
 
 
-    if (info.point().distSqr(sample) < nearestDistSqr)
+    if (magSqr(sample - info.rawPoint()) < nearestDistSqr)
     {
         info.setHit();
         info.setIndex(0);
@@ -589,17 +589,20 @@ void Foam::searchableCone::findLineAll
     // Check tNear, tFar
     if (tNear>=0 && tNear <= magV)
     {
-        near.hitPoint(start+tNear*V);
+        near.setPoint(start+tNear*V);
+        near.setHit();
         near.setIndex(0);
         if (tFar <= magV)
         {
-            far.hitPoint(start+tFar*V);
+            far.setPoint(start+tFar*V);
+            far.setHit();
             far.setIndex(0);
         }
     }
     else if (tFar>=0 && tFar <= magV)
     {
-        near.hitPoint(start+tFar*V);
+        near.setPoint(start+tFar*V);
+        near.setHit();
         near.setIndex(0);
     }
 }
@@ -615,11 +618,11 @@ void Foam::searchableCone::insertHit
 {
     scalar smallDistSqr = SMALL*magSqr(end-start);
 
-    scalar hitMagSqr = hit.hitPoint().distSqr(start);
+    scalar hitMagSqr = magSqr(hit.hitPoint()-start);
 
     forAll(info, i)
     {
-        scalar d2 = info[i].hitPoint().distSqr(start);
+        scalar d2 = magSqr(info[i].hitPoint()-start);
 
         if (d2 > hitMagSqr+smallDistSqr)
         {
@@ -827,7 +830,7 @@ void Foam::searchableCone::findLine
             point newEnd;
             if (info[i].hit())
             {
-                newEnd = info[i].point();
+                newEnd = info[i].hitPoint();
             }
             else
             {
@@ -1048,7 +1051,7 @@ void Foam::searchableCone::getNormal
             pointIndexHit nearInfo;
             findNearestAndNormal
             (
-                info[i].point(),
+                info[i].hitPoint(),
                 Foam::sqr(GREAT),
                 nearInfo,
                 normal[i]

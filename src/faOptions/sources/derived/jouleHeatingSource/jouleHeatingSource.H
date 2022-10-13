@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -135,8 +135,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_fa_jouleHeatingSource_H
-#define Foam_fa_jouleHeatingSource_H
+#ifndef fa_jouleHeatingSource_H
+#define fa_jouleHeatingSource_H
 
 #include "faOption.H"
 #include "Function1.H"
@@ -212,7 +212,7 @@ public:
             const word& sourceName,
             const word& modelType,
             const dictionary& dict,
-            const fvMesh& mesh
+            const fvPatch& patch
         );
 
         //- No copy construct

@@ -124,7 +124,7 @@ Foam::engineValve::engineValve
     engineDB_(refCast<const engineTime>(mesh_.time())),
     csysPtr_
     (
-        coordinateSystem::New(mesh_, dict, coordinateSystem::typeName)
+        coordinateSystem::New(mesh_, dict, coordinateSystem::typeName_())
     ),
     bottomPatch_
     (

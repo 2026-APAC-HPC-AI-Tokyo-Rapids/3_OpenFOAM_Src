@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,24 +28,9 @@ License
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
 template<class Addr>
-bool Foam::ensightFile::hasUndef(const IndirectListBase<float, Addr>& field)
+bool Foam::ensightFile::isUndef(const IndirectListBase<scalar, Addr>& field)
 {
-    for (const float val : field)
-    {
-        if (std::isnan(val))
-        {
-            return true;
-        }
-    }
-
-    return true;
-}
-
-
-template<class Addr>
-bool Foam::ensightFile::hasUndef(const IndirectListBase<double, Addr>& field)
-{
-    for (const double val : field)
+    for (const scalar val : field)
     {
         if (std::isnan(val))
         {
@@ -62,7 +47,7 @@ bool Foam::ensightFile::hasUndef(const IndirectListBase<double, Addr>& field)
 template<class Addr>
 void Foam::ensightFile::writeLabels(const IndirectListBase<label, Addr>& list)
 {
-    for (const label val : list)
+    for (const scalar val : list)
     {
         write(val);
         newline();
@@ -71,27 +56,9 @@ void Foam::ensightFile::writeLabels(const IndirectListBase<label, Addr>& list)
 
 
 template<class Addr>
-void Foam::ensightFile::writeList(const IndirectListBase<float, Addr>& field)
+void Foam::ensightFile::writeList(const IndirectListBase<scalar, Addr>& field)
 {
-    for (const float val : field)
-    {
-        if (std::isnan(val))
-        {
-            writeUndef();
-        }
-        else
-        {
-            write(val);
-        }
-        newline();
-    }
-}
-
-
-template<class Addr>
-void Foam::ensightFile::writeList(const IndirectListBase<double, Addr>& field)
-{
-    for (const double val : field)
+    for (const scalar val : field)
     {
         if (std::isnan(val))
         {

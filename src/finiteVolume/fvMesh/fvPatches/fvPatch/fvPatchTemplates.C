@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,31 +31,12 @@ License
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::fvPatch::patchInternalField
-(
-    const UList<Type>& f,
-    const labelUList& faceCells,
-    Field<Type>& pfld
-) const
-{
-    pfld.resize(size());
-
-    forAll(pfld, i)
-    {
-        pfld[i] = f[faceCells[i]];
-    }
-}
-
-
-template<class Type>
 Foam::tmp<Foam::Field<Type>> Foam::fvPatch::patchInternalField
 (
     const UList<Type>& f
 ) const
 {
-    auto tpfld = tmp<Field<Type>>::New(size());
-    patchInternalField(f, this->faceCells(), tpfld.ref());
-    return tpfld;
+    return patchInternalField(f, this->faceCells());
 }
 
 
@@ -66,9 +47,15 @@ Foam::tmp<Foam::Field<Type>> Foam::fvPatch::patchInternalField
     const labelUList& faceCells
 ) const
 {
-    auto tpfld = tmp<Field<Type>>::New(size());
-    patchInternalField(f, faceCells, tpfld.ref());
-    return tpfld;
+    auto tpif = tmp<Field<Type>>::New(size());
+    auto& pif = tpif.ref();
+
+    forAll(pif, facei)
+    {
+        pif[facei] = f[faceCells[facei]];
+    }
+
+    return tpif;
 }
 
 
@@ -76,20 +63,27 @@ template<class Type>
 void Foam::fvPatch::patchInternalField
 (
     const UList<Type>& f,
-    Field<Type>& pfld
+    Field<Type>& pif
 ) const
 {
-    patchInternalField(f, this->faceCells(), pfld);
+    pif.resize(size());
+
+    const labelUList& faceCells = this->faceCells();
+
+    forAll(pif, facei)
+    {
+        pif[facei] = f[faceCells[facei]];
+    }
 }
 
 
-template<class GeometricField, class AnyType>
+template<class GeometricField, class Type>
 const typename GeometricField::Patch& Foam::fvPatch::patchField
 (
     const GeometricField& gf
 ) const
 {
-    return gf.boundaryField()[this->index()];
+    return gf.boundaryField()[index()];
 }
 
 

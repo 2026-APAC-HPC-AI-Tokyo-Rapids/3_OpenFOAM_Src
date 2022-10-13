@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2017 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -75,9 +75,8 @@ Usage
     \endtable
 
     The inherited entries are elaborated in:
-      - \link fvOption.H \endlink
-      - \link cellSetOption.H \endlink
-      - \link writeFile.H \endlink
+     - \link fvOption.H \endlink
+     - \link cellSetOption.H \endlink
 
 See also
   - Foam::fv::fixedTemperatureConstraint
@@ -87,11 +86,10 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef fv_limitTemperature_H
-#define fv_limitTemperature_H
+#ifndef limitTemperature_H
+#define limitTemperature_H
 
 #include "cellSetOption.H"
-#include "writeFile.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -101,13 +99,12 @@ namespace fv
 {
 
 /*---------------------------------------------------------------------------*\
-                    Class limitTemperature Declaration
+                 Class limitTemperature Declaration
 \*---------------------------------------------------------------------------*/
 
 class limitTemperature
 :
-    public fv::cellSetOption,
-    public functionObjects::writeFile
+    public fv::cellSetOption
 {
 protected:
 
@@ -119,14 +116,8 @@ protected:
         //- Maximum temperature limit [K]
         scalar Tmax_;
 
-        //- Optional phase name
+        //- Optional phase name [K]
         word phase_;
-
-
-    // Protected Member Functions
-
-        //- Write file header information
-        void writeFileHeader(Ostream& os);
 
 
 public:

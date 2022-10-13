@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2017 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -106,15 +105,22 @@ Foam::InjectionModelList<CloudType>::InjectionModelList
 {}
 
 
+// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
+
+template<class CloudType>
+Foam::InjectionModelList<CloudType>::~InjectionModelList()
+{}
+
+
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class CloudType>
 Foam::scalar Foam::InjectionModelList<CloudType>::timeStart() const
 {
     scalar minTime = GREAT;
-    for (const auto& model : *this)
+    forAll(*this, i)
     {
-        minTime = min(minTime, model.timeStart());
+        minTime = min(minTime, this->operator[](i).timeStart());
     }
 
     return minTime;
@@ -125,9 +131,9 @@ template<class CloudType>
 Foam::scalar Foam::InjectionModelList<CloudType>::timeEnd() const
 {
     scalar maxTime = -GREAT;
-    for (const auto& model : *this)
+    forAll(*this, i)
     {
-        maxTime = max(maxTime, model.timeEnd());
+        maxTime = max(maxTime, this->operator[](i).timeEnd());
     }
 
     return maxTime;
@@ -142,9 +148,9 @@ Foam::scalar Foam::InjectionModelList<CloudType>::volumeToInject
 )
 {
     scalar vol = 0.0;
-    for (auto& model : *this)
+    forAll(*this, i)
     {
-        vol += model.volumeToInject(time0, time1);
+        vol += this->operator[](i).volumeToInject(time0, time1);
     }
 
     return vol;
@@ -156,10 +162,10 @@ Foam::scalar Foam::InjectionModelList<CloudType>::averageParcelMass()
 {
     scalar mass = 0.0;
     scalar massTotal = 0.0;
-    for (auto& model : *this)
+    forAll(*this, i)
     {
-        scalar mt = model.massTotal();
-        mass += mt*model.averageParcelMass();
+        scalar mt = this->operator[](i).massTotal();
+        mass += mt*this->operator[](i).averageParcelMass();
         massTotal += mt;
     }
 
@@ -170,9 +176,9 @@ Foam::scalar Foam::InjectionModelList<CloudType>::averageParcelMass()
 template<class CloudType>
 void Foam::InjectionModelList<CloudType>::updateMesh()
 {
-    for (auto& model : *this)
+    forAll(*this, i)
     {
-        model.updateMesh();
+        this->operator[](i).updateMesh();
     }
 }
 
@@ -185,9 +191,9 @@ void Foam::InjectionModelList<CloudType>::inject
     typename CloudType::parcelType::trackingData& td
 )
 {
-    for (auto& model : *this)
+    forAll(*this, i)
     {
-        model.inject(cloud, td);
+        this->operator[](i).inject(cloud, td);
     }
 }
 
@@ -201,19 +207,19 @@ void Foam::InjectionModelList<CloudType>::injectSteadyState
     const scalar trackTime
 )
 {
-    for (auto& model : *this)
+    forAll(*this, i)
     {
-        model.injectSteadyState(cloud, td, trackTime);
+        this->operator[](i).injectSteadyState(cloud, td, trackTime);
     }
 }
 
 
 template<class CloudType>
-void Foam::InjectionModelList<CloudType>::info()
+void Foam::InjectionModelList<CloudType>::info(Ostream& os)
 {
-    for (auto& model : *this)
+    forAll(*this, i)
     {
-        model.info();
+        this->operator[](i).info(os);
     }
 }
 

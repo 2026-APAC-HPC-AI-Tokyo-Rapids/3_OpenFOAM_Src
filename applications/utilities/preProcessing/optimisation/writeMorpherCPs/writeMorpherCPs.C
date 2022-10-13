@@ -60,16 +60,18 @@ int main(int argc, char *argv[])
             )
         ).subDict("volumetricBSplinesMotionSolverCoeffs")
     );
+    // Read box names and allocate size
+    wordList controlBoxes(NURBSdict.toc());
 
-    for (const entry& dEntry : NURBSdict)
+    for (const word& boxName : controlBoxes)
     {
-        if (dEntry.isDict())
+        if (NURBSdict.isDict(boxName))
         {
             // Creating an object writes the control points in the
             // constructor
-            (void) NURBS3DVolume::New
+            NURBS3DVolume::New
             (
-                dEntry.dict(),
+                NURBSdict.subDict(boxName),
                 mesh,
                 false // do not compute parametric coordinates
             );

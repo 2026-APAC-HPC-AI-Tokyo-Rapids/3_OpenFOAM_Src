@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,40 +39,19 @@ Foam::UniformDimensionedField<Type>::UniformDimensionedField
     regIOobject(io),
     dimensioned<Type>(dt)
 {
-    if (dimensioned<Type>::name().empty())
-    {
-        dimensioned<Type>::name() = regIOobject::name();
-    }
-
     // Read value
-    readHeaderOk(IOstreamOption::BINARY, typeName);
+    readHeaderOk(IOstream::BINARY, typeName);
 }
 
 
 template<class Type>
 Foam::UniformDimensionedField<Type>::UniformDimensionedField
 (
-    const IOobject& io,
-    const dimensionSet& dims,
-    const Type& val
+    const UniformDimensionedField<Type>& rdt
 )
 :
-    regIOobject(io),
-    dimensioned<Type>(regIOobject::name(), dims, val)
-{
-    // Read value
-    readHeaderOk(IOstreamOption::BINARY, typeName);
-}
-
-
-template<class Type>
-Foam::UniformDimensionedField<Type>::UniformDimensionedField
-(
-    const UniformDimensionedField<Type>& rhs
-)
-:
-    regIOobject(rhs),
-    dimensioned<Type>(rhs)
+    regIOobject(rdt),
+    dimensioned<Type>(rdt)
 {}
 
 
@@ -90,8 +68,15 @@ Foam::UniformDimensionedField<Type>::UniformDimensionedField
     addWatch();
 
     // Read unless NO_READ
-    readHeaderOk(IOstreamOption::BINARY, typeName);
+    readHeaderOk(IOstream::BINARY, typeName);
 }
+
+
+// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
+
+template<class Type>
+Foam::UniformDimensionedField<Type>::~UniformDimensionedField()
+{}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -100,8 +85,6 @@ template<class Type>
 bool Foam::UniformDimensionedField<Type>::readData(Istream& is)
 {
     dictionary dict(is);
-
-    // The dimensions
     scalar multiplier(1);
     this->dimensions().read
     (
@@ -109,8 +92,7 @@ bool Foam::UniformDimensionedField<Type>::readData(Istream& is)
         multiplier
     );
 
-    // The value
-    dict.readEntry("value", this->value(), keyType::LITERAL);
+    dict.readEntry("value", this->value());
     this->value() *= multiplier;
 
     return is.good();
@@ -120,12 +102,9 @@ bool Foam::UniformDimensionedField<Type>::readData(Istream& is)
 template<class Type>
 bool Foam::UniformDimensionedField<Type>::writeData(Ostream& os) const
 {
-    // The dimensions
     scalar multiplier(1);
     os.writeKeyword("dimensions");
     this->dimensions().write(os, multiplier) << token::END_STATEMENT << nl;
-
-    // The value
     os.writeEntry("value", this->value()/multiplier) << nl;
 
     return os.good();

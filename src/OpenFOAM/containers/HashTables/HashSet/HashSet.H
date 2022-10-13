@@ -62,8 +62,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_HashSet_H
-#define Foam_HashSet_H
+#ifndef HashSet_H
+#define HashSet_H
 
 #include "HashTable.H"
 #include "IndirectList.H"
@@ -178,9 +178,9 @@ public:
 
         //- Same as found() - return true if key exists in the set.
         //  Method name compatibility with bitSet and boolList.
-        bool test(const Key& key) const
+        bool test(const Key& key) const noexcept
         {
-            return this->found(key);
+            return found(key);
         }
 
 

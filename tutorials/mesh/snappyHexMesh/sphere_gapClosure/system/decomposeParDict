@@ -10,17 +10,20 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
+    note        "mesh decomposition control dictionary";
     object      decomposeParDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+//- The total number of domains (mandatory)
 numberOfSubdomains  8;
 
-method  hierarchical;
+//- The decomposition method (mandatory)
+method          hierarchical;
 
-coeffs
+hierarchicalCoeffs
 {
-    n   (2 2 2);
+    n       (2 2 2);
 }
 
 // ************************************************************************* //

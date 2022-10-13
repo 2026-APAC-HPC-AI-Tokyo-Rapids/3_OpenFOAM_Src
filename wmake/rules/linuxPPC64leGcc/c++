@@ -1,11 +1,9 @@
 #------------------------------------------------------------------------------
 include $(GENERAL_RULES)/Gcc/c++
 
-c++ARCH    := -m64 -mcpu=power8
+c++ARCH     = -m64 -mcpu=power8
 
-ifneq (,$(strip $(WM_COMPILE_OPTION)))
-    sinclude $(DEFAULT_RULES)/c++$(WM_COMPILE_OPTION)
-endif
+include $(DEFAULT_RULES)/c++$(WM_COMPILE_OPTION)
 
 c++FLAGS    = \
     $(c++ARCH) $(GFLAGS) $(c++WARN) $(c++OPT) $(c++DBUG) $(ptFLAGS) \

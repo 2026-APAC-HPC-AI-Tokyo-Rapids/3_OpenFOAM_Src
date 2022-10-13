@@ -72,13 +72,13 @@ public:
     // Member Functions
 
         //- Is empty
-        bool empty() const noexcept
+        bool empty() const
         {
             return bits_.empty() && bools_.empty();
         }
 
         //- Size
-        label size() const noexcept
+        label size() const
         {
             return bits_.size() + bools_.size();
         }
@@ -93,7 +93,7 @@ public:
         bool operator()(const label i) const
         {
             // Can also use test(i) etc...
-            return bits_.test(i) || bools_.test(i);
+            return bits_(i) || bools_(i);
         }
 };
 

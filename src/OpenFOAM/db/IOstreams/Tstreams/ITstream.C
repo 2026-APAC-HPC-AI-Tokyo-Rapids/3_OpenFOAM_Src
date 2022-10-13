@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,6 +35,23 @@ License
 
 namespace Foam
 {
+
+// Failsafe read-access.
+// Return the token at location, or undefinedToken.
+inline static const token& peekTokenAt
+(
+    const UList<token>& list,
+    const label i
+)
+{
+    return
+    (
+        i >= 0 && i < list.size()
+      ? list[i]
+      : token::undefinedToken
+    );
+}
+
 
 // Convert input sequence into a list of tokens.
 // Return the number of tokens in the resulting list.
@@ -170,7 +187,7 @@ Foam::ITstream::ITstream
     const string& name
 )
 :
-    Istream(IOstreamOption(streamOpt.format(), streamOpt.version())),
+    Istream(streamOpt.format(), streamOpt.version()),
     tokenList(),
     name_(name),
     tokenIndex_(0)
@@ -193,12 +210,12 @@ Foam::ITstream::ITstream
 
 Foam::ITstream::ITstream
 (
+    const string& name,
     const UList<token>& tokens,
-    IOstreamOption streamOpt,
-    const string& name
+    IOstreamOption streamOpt
 )
 :
-    Istream(IOstreamOption(streamOpt.format(), streamOpt.version())),
+    Istream(streamOpt.format(), streamOpt.version()),
     tokenList(tokens),
     name_(name),
     tokenIndex_(0)
@@ -210,12 +227,12 @@ Foam::ITstream::ITstream
 
 Foam::ITstream::ITstream
 (
+    const string& name,
     List<token>&& tokens,
-    IOstreamOption streamOpt,
-    const string& name
+    IOstreamOption streamOpt
 )
 :
-    Istream(IOstreamOption(streamOpt.format(), streamOpt.version())),
+    Istream(streamOpt.format(), streamOpt.version()),
     tokenList(std::move(tokens)),
     name_(name),
     tokenIndex_(0)
@@ -320,6 +337,18 @@ std::string Foam::ITstream::toString() const
 }
 
 
+const Foam::token& Foam::ITstream::peekFirst() const
+{
+    return peekTokenAt(*this, 0);
+}
+
+
+const Foam::token& Foam::ITstream::peekLast() const
+{
+    return peekTokenAt(*this, tokenList::size()-1);
+}
+
+
 const Foam::token& Foam::ITstream::peek() const
 {
     // Use putback token if it exists
@@ -328,7 +357,7 @@ const Foam::token& Foam::ITstream::peek() const
         return Istream::peekBack();
     }
 
-    return peekAt(tokenIndex_);
+    return peekTokenAt(*this, tokenIndex_);
 }
 
 
@@ -501,14 +530,14 @@ Foam::Istream& Foam::ITstream::read(label&)
 }
 
 
-Foam::Istream& Foam::ITstream::read(float&)
+Foam::Istream& Foam::ITstream::read(floatScalar&)
 {
     NotImplemented;
     return *this;
 }
 
 
-Foam::Istream& Foam::ITstream::read(double&)
+Foam::Istream& Foam::ITstream::read(doubleScalar&)
 {
     NotImplemented;
     return *this;
@@ -535,7 +564,7 @@ void Foam::ITstream::rewind()
 }
 
 
-void Foam::ITstream::push_back(const token& t, const bool lazy)
+void Foam::ITstream::append(const token& t, const bool lazy)
 {
     reserveCapacity(tokenIndex_ + 1, lazy);
     tokenList& toks = *this;
@@ -545,7 +574,7 @@ void Foam::ITstream::push_back(const token& t, const bool lazy)
 }
 
 
-void Foam::ITstream::push_back(token&& t, const bool lazy)
+void Foam::ITstream::append(token&& t, const bool lazy)
 {
     reserveCapacity(tokenIndex_ + 1, lazy);
     tokenList& toks = *this;
@@ -555,7 +584,7 @@ void Foam::ITstream::push_back(token&& t, const bool lazy)
 }
 
 
-void Foam::ITstream::push_back(const UList<token>& newTokens, const bool lazy)
+void Foam::ITstream::append(const UList<token>& newTokens, const bool lazy)
 {
     reserveCapacity(tokenIndex_ + newTokens.size(), lazy);
     tokenList& toks = *this;
@@ -568,7 +597,7 @@ void Foam::ITstream::push_back(const UList<token>& newTokens, const bool lazy)
 }
 
 
-void Foam::ITstream::push_back(List<token>&& newTokens, const bool lazy)
+void Foam::ITstream::append(List<token>&& newTokens, const bool lazy)
 {
     reserveCapacity(tokenIndex_ + newTokens.size(), lazy);
     tokenList& toks = *this;

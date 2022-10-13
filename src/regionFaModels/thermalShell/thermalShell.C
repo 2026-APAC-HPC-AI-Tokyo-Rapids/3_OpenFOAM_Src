@@ -75,13 +75,15 @@ tmp<areaScalarField> thermalShell::qr()
             dimensionedScalar(dimPower/dimArea, Zero)
         );
 
-    if (!qrName_.empty() && qrName_ != "none")
+    if (qrName_ != "none")
     {
-        vsm().mapToSurface<scalar>
-        (
-            primaryMesh().lookupObject<volScalarField>(qrName_),
-            taqr.ref().primitiveFieldRef()
-        );
+        auto& aqr = taqr.ref();
+
+        const auto qr = primaryMesh().lookupObject<volScalarField>(qrName_);
+
+        const volScalarField::Boundary& vqr = qr.boundaryField();
+
+        aqr.primitiveFieldRef() = vsm().mapToSurface<scalar>(vqr);
     }
 
     return taqr;
@@ -124,11 +126,11 @@ void thermalShell::solveEnergy()
 thermalShell::thermalShell
 (
     const word& modelType,
-    const fvMesh& mesh,
+    const fvPatch& patch,
     const dictionary& dict
 )
 :
-    thermalShellModel(modelType, mesh, dict),
+    thermalShellModel(modelType, patch, dict),
     nNonOrthCorr_(1),
     thermo_(dict.subDict("thermo")),
     qs_
@@ -178,7 +180,7 @@ void thermalShell::evolveRegion()
         solveEnergy();
     }
 
-    Info<< T_.name() << " min/max   = " << gMinMax(T_) << endl;
+    Info<< "T min/max   = " << min(T_) << ", " << max(T_) << endl;
 }
 
 

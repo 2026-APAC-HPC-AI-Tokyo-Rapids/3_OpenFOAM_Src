@@ -144,7 +144,7 @@ public:
         inline tmp<surfaceScalarField> phi() const;
 
         //- Is combustion active?
-        inline Switch active() const noexcept;
+        inline const Switch& active() const;
 
         //- Return const dictionary of the model
         inline const dictionary& coeffs() const;

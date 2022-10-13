@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019,2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -155,12 +155,7 @@ public:
     // Constructors
 
         //- Construct from fvMesh and no agglomeration
-        singleCellFvMesh
-        (
-            const IOobject& io,
-            const fvMesh&,
-            const bool doInit=true
-        );
+        singleCellFvMesh(const IOobject& io, const fvMesh&);
 
         //- Construct from fvMesh and agglomeration of boundary faces.
         //  Agglomeration is per patch, per patch face index the agglomeration
@@ -169,13 +164,11 @@ public:
         (
             const IOobject& io,
             const fvMesh&,
-            const labelListList& patchFaceAgglomeration,
-            const bool doInit=true
+            const labelListList& patchFaceAgglomeration
         );
 
         //- Read from IOobject
-        singleCellFvMesh(const IOobject& io, const bool doInit=true);
-
+        singleCellFvMesh(const IOobject& io);
 
     // Member Functions
 

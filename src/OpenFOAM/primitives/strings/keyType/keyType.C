@@ -30,7 +30,7 @@ License
 #include "regExp.H"
 #include "token.H"
 #include "IOstreams.H"
-#include <utility>  // For std::swap
+#include <algorithm>  // For swap
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 

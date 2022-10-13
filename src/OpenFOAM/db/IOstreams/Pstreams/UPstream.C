@@ -24,9 +24,6 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
-Note
-    Included by global/globals.C
-
 \*---------------------------------------------------------------------------*/
 
 #include "UPstream.H"
@@ -58,78 +55,43 @@ Foam::UPstream::commsTypeNames
 
 void Foam::UPstream::setParRun(const label nProcs, const bool haveThreads)
 {
-    parRun_ = (nProcs > 0);
-    haveThreads_ = haveThreads;
-
-    label comm = -1;
-
-    if (!parRun_)
+    if (nProcs == 0)
     {
-        // These are already correct from the static initialisation,
-        // but just in case of future changes
+        parRun_ = false;
+        haveThreads_ = haveThreads;
 
-        // Using (world, self) ordering
-        freeCommunicator(UPstream::selfComm);
-        freeCommunicator(UPstream::globalComm);
-
-        // 0: worldComm
-        comm = allocateCommunicator(-1, Foam::labelList(Foam::one{}, 0), false);
-        if (comm != UPstream::globalComm)
+        freeCommunicator(UPstream::worldComm);
+        label comm = allocateCommunicator(-1, labelList(Foam::one{}, 0), false);
+        if (comm != UPstream::worldComm)
         {
-            // Failed sanity check
             FatalErrorInFunction
                 << "problem : comm:" << comm
-                << "  UPstream::globalComm:" << UPstream::globalComm
+                << "  UPstream::worldComm:" << UPstream::worldComm
                 << Foam::exit(FatalError);
         }
 
-        // 1: selfComm
-        comm = allocateCommunicator(-2, Foam::labelList(Foam::one{}, 0), false);
-        if (comm != UPstream::selfComm)
-        {
-            // Failed sanity check
-            FatalErrorInFunction
-                << "problem : comm:" << comm
-                << "  UPstream::selfComm:" << UPstream::selfComm
-                << Foam::exit(FatalError);
-        }
-
-        Pout.prefix().clear();
-        Perr.prefix().clear();
+        Pout.prefix() = "";
+        Perr.prefix() = "";
     }
     else
     {
-        // Redo communicators that were created during static initialisation
-        // but this time with Pstream components
+        parRun_ = true;
+        haveThreads_ = haveThreads;
 
-        // Using (world, self) ordering
-        freeCommunicator(UPstream::selfComm);
-        freeCommunicator(UPstream::globalComm);
-
-        // 0: worldComm
-        comm = allocateCommunicator(-1, identity(nProcs), true);
-        if (comm != UPstream::globalComm)
+        // Redo worldComm communicator (this has been created at static
+        // initialisation time)
+        freeCommunicator(UPstream::worldComm);
+        label comm = allocateCommunicator(-1, identity(nProcs), true);
+        if (comm != UPstream::worldComm)
         {
-            // Failed sanity check
             FatalErrorInFunction
                 << "problem : comm:" << comm
-                << "  UPstream::globalComm:" << UPstream::globalComm
+                << "  UPstream::worldComm:" << UPstream::worldComm
                 << Foam::exit(FatalError);
         }
 
-        Pout.prefix() = '[' +  Foam::name(myProcNo(comm)) + "] ";
-        Perr.prefix() = Pout.prefix();
-
-        // 1: selfComm
-        comm = allocateCommunicator(-2, Foam::labelList(Foam::one{}, 0), true);
-        if (comm != UPstream::selfComm)
-        {
-            // Failed sanity check
-            FatalErrorInFunction
-                << "problem : comm:" << comm
-                << "  UPstream::selfComm:" << UPstream::selfComm
-                << Foam::exit(FatalError);
-        }
+        Pout.prefix() = '[' +  name(myProcNo(comm)) + "] ";
+        Perr.prefix() = '[' +  name(myProcNo(comm)) + "] ";
     }
 
     if (debug)
@@ -145,25 +107,23 @@ void Foam::UPstream::setParRun(const label nProcs, const bool haveThreads)
 Foam::label Foam::UPstream::allocateCommunicator
 (
     const label parentIndex,
-    const labelUList& subRanks,
+    const labelList& subRanks,
     const bool doPstream
 )
 {
     label index;
     if (!freeComms_.empty())
     {
-        // LIFO pop
-        index = freeComms_.back();
-        freeComms_.pop_back();
+        index = freeComms_.remove();  // LIFO pop
     }
     else
     {
         // Extend storage
-        index = parentComm_.size();
+        index = parentCommunicator_.size();
 
         myProcNo_.append(-1);
         procIDs_.append(List<int>());
-        parentComm_.append(-1);
+        parentCommunicator_.append(-1);
         linearCommunication_.append(List<commsStruct>());
         treeCommunication_.append(List<commsStruct>());
     }
@@ -179,63 +139,31 @@ Foam::label Foam::UPstream::allocateCommunicator
     // Initialise; overwritten by allocatePstreamCommunicator
     myProcNo_[index] = 0;
 
-    // The selected sub-ranks.
-    // - transcribe from label to int. Treat negative values as 'ignore'
-    // - enforce incremental order (so index is rank in next communicator)
-
-    auto& procIds = procIDs_[index];
-    procIds.resize_nocopy(subRanks.size());
-
-    label numSubRanks = 0;
-    bool monotonicOrder = true;
-    for (const label subRanki : subRanks)
+    // Convert from label to int
+    procIDs_[index].setSize(subRanks.size());
+    forAll(procIDs_[index], i)
     {
-        if (subRanki < 0)
+        procIDs_[index][i] = subRanks[i];
+
+        // Enforce incremental order (so index is rank in next communicator)
+        if (i >= 1 && subRanks[i] <= subRanks[i-1])
         {
-            continue;
+            FatalErrorInFunction
+                << "subranks not sorted : " << subRanks
+                << " when allocating subcommunicator from parent "
+                << parentIndex
+                << Foam::abort(FatalError);
         }
-        if (monotonicOrder && numSubRanks)
-        {
-            monotonicOrder = (procIds[numSubRanks-1] < subRanki);
-        }
-
-        procIds[numSubRanks] = subRanki;
-        ++numSubRanks;
     }
-
-    if (!monotonicOrder)
-    {
-        auto last = procIds.begin() + numSubRanks;
-        std::sort(procIds.begin(), last);
-        last = std::unique(procIds.begin(), last);
-        numSubRanks = label(last - procIds.begin());
-    }
-
-    procIds.resize(numSubRanks);
-
-    parentComm_[index] = parentIndex;
+    parentCommunicator_[index] = parentIndex;
 
     // Size but do not fill structure - this is done on-the-fly
-    linearCommunication_[index] = List<commsStruct>(numSubRanks);
-    treeCommunication_[index] = List<commsStruct>(numSubRanks);
+    linearCommunication_[index] = List<commsStruct>(procIDs_[index].size());
+    treeCommunication_[index] = List<commsStruct>(procIDs_[index].size());
 
     if (doPstream && parRun())
     {
         allocatePstreamCommunicator(parentIndex, index);
-
-        // Could 'remember' locations of uninvolved ranks
-        /// if (myProcNo_[index] < 0 && parentIndex >= 0)
-        /// {
-        ///     // As global rank
-        ///     myProcNo_[index] = -(myProcNo_[worldComm]+1);
-        ///
-        /// OR:
-        ///     // As parent rank number
-        ///     if (myProcNo_[parentIndex] >= 0)
-        ///     {
-        ///         myProcNo_[index] = -(myProcNo_[parentIndex]+1);
-        ///     }
-        /// }
     }
 
     return index;
@@ -248,17 +176,11 @@ void Foam::UPstream::freeCommunicator
     const bool doPstream
 )
 {
-    // Filter out any placeholders
-    if (communicator < 0)
-    {
-        return;
-    }
-
     if (debug)
     {
-        Pout<< "Communicators : Freeing communicator " << communicator
-            << " parent: " << parentComm_[communicator]
-            << " myProcNo: " << myProcNo_[communicator]
+        Pout<< "Communicators : Freeing communicator " << communicator << endl
+            << "    parent   : " << parentCommunicator_[communicator] << endl
+            << "    myProcNo : " << myProcNo_[communicator] << endl
             << endl;
     }
 
@@ -266,15 +188,13 @@ void Foam::UPstream::freeCommunicator
     {
         freePstreamCommunicator(communicator);
     }
-
     myProcNo_[communicator] = -1;
     //procIDs_[communicator].clear();
-    parentComm_[communicator] = -1;
+    parentCommunicator_[communicator] = -1;
     linearCommunication_[communicator].clear();
     treeCommunication_[communicator].clear();
 
-    // LIFO push
-    freeComms_.push_back(communicator);
+    freeComms_.append(communicator);  // LIFO push
 }
 
 
@@ -282,7 +202,7 @@ void Foam::UPstream::freeCommunicators(const bool doPstream)
 {
     forAll(myProcNo_, communicator)
     {
-        if (myProcNo_[communicator] >= 0)
+        if (myProcNo_[communicator] != -1)
         {
             freeCommunicator(communicator, doPstream);
         }
@@ -290,44 +210,48 @@ void Foam::UPstream::freeCommunicators(const bool doPstream)
 }
 
 
-int Foam::UPstream::baseProcNo(label comm, int procID)
+int Foam::UPstream::baseProcNo(const label myComm, const int myProcID)
 {
-    while (parent(comm) >= 0 && procID >= 0)
+    int procID = myProcID;
+    label comm = myComm;
+
+    while (parent(comm) != -1)
     {
-        const auto& parentRanks = UPstream::procID(comm);
+        const List<int>& parentRanks = UPstream::procID(comm);
         procID = parentRanks[procID];
-        comm = parent(comm);
+        comm = UPstream::parent(comm);
     }
 
     return procID;
 }
 
 
-Foam::label Foam::UPstream::procNo(const label comm, const int baseProcID)
+Foam::label Foam::UPstream::procNo(const label myComm, const int baseProcID)
 {
-    const auto& parentRanks = procID(comm);
-    label parentComm = parent(comm);
+    const List<int>& parentRanks = procID(myComm);
+    label parentComm = parent(myComm);
 
-    int procID = baseProcID;
-
-    if (parentComm >= 0)
+    if (parentComm == -1)
     {
-        procID = procNo(parentComm, baseProcID);
+        return parentRanks.find(baseProcID);
     }
-
-    return parentRanks.find(procID);
+    else
+    {
+        const label parentRank = procNo(parentComm, baseProcID);
+        return parentRanks.find(parentRank);
+    }
 }
 
 
 Foam::label Foam::UPstream::procNo
 (
-    const label comm,
+    const label myComm,
     const label currentComm,
     const int currentProcID
 )
 {
     label physProcID = UPstream::baseProcNo(currentComm, currentProcID);
-    return procNo(comm, physProcID);
+    return procNo(myComm, physProcID);
 }
 
 
@@ -453,7 +377,7 @@ Foam::DynamicList<int> Foam::UPstream::myProcNo_(10);
 
 Foam::DynamicList<Foam::List<int>> Foam::UPstream::procIDs_(10);
 
-Foam::DynamicList<Foam::label> Foam::UPstream::parentComm_(10);
+Foam::DynamicList<Foam::label> Foam::UPstream::parentCommunicator_(10);
 
 Foam::DynamicList<Foam::label> Foam::UPstream::freeComms_;
 
@@ -467,25 +391,14 @@ Foam::DynamicList<Foam::List<Foam::UPstream::commsStruct>>
 Foam::UPstream::treeCommunication_(10);
 
 
-Foam::label Foam::UPstream::worldComm(0);
-
-Foam::label Foam::UPstream::warnComm(-1);
-
-
-// Predefine worldComm, selfComm slots.
-// These are overwritten in parallel mode (by UPstream::setParRun())
-const Foam::label nPredefinedComm = []()
-{
-    const Foam::labelList singleProc(Foam::one{}, 0);
-
-    // 0: worldComm
-    (void) Foam::UPstream::allocateCommunicator(-1, singleProc, false);
-
-    // 1: selfComm
-    (void) Foam::UPstream::allocateCommunicator(-2, singleProc, false);
-
-    return Foam::UPstream::nComms();
-}();
+// Allocate a serial communicator. This gets overwritten in parallel mode
+// (by UPstream::setParRun())
+Foam::UPstream::communicator serialComm
+(
+    -1,
+    Foam::labelList(Foam::one{}, 0),
+    false
+);
 
 
 bool Foam::UPstream::floatTransfer
@@ -521,7 +434,7 @@ Foam::UPstream::commsTypes Foam::UPstream::defaultCommsType
 
 namespace Foam
 {
-    //- Registered reader for UPstream::defaultCommsType
+    // Register re-reader
     class addcommsTypeToOpt
     :
         public ::Foam::simpleRegIOobject
@@ -549,6 +462,10 @@ namespace Foam
 
     addcommsTypeToOpt addcommsTypeToOpt_("commsType");
 }
+
+Foam::label Foam::UPstream::worldComm(0);
+
+Foam::label Foam::UPstream::warnComm(-1);
 
 int Foam::UPstream::nPollProcInterfaces
 (

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -291,7 +291,7 @@ int main(int argc, char *argv[])
         // (ie, probably not a surface filename at all).
         // If it is missing, this will fail nicely with an appropriate error
         // message.
-        if (surfaceDict.found("surfaces") || !dictName.has_ext())
+        if (surfaceDict.found("surfaces") || !dictName.hasExt())
         {
             loader.select(surfaceDict.get<wordRes>("surfaces"));
         }
@@ -373,9 +373,6 @@ int main(int argc, char *argv[])
             }
         }
 
-
-        const dictionary* subDictPtr = nullptr;
-
         //
         // Extract features using the preferred extraction method
         //
@@ -385,9 +382,9 @@ int main(int argc, char *argv[])
         // ~~~~~~~~
 
         // Option: "trimFeatures" (dictionary)
-        if ((subDictPtr = surfaceDict.findDict("trimFeatures")) != nullptr)
+        if (surfaceDict.isDict("trimFeatures"))
         {
-            const dictionary& trimDict = *subDictPtr;
+            const dictionary& trimDict = surfaceDict.subDict("trimFeatures");
 
             const scalar minLen =
                 trimDict.getOrDefault<scalar>("minLen", 0);
@@ -422,15 +419,18 @@ int main(int argc, char *argv[])
         List<surfaceFeatures::edgeStatus> edgeStat(features().toStatus());
 
         // Option: "subsetFeatures" (dictionary)
-        if ((subDictPtr = surfaceDict.findDict("subsetFeatures")) != nullptr)
+        if (surfaceDict.isDict("subsetFeatures"))
         {
-            const dictionary& subsetDict = *subDictPtr;
-
-            treeBoundBox bb;
+            const dictionary& subsetDict = surfaceDict.subDict
+            (
+                "subsetFeatures"
+            );
 
             // Suboption: "insideBox"
-            if (subsetDict.readIfPresent("insideBox", bb))
+            if (subsetDict.found("insideBox"))
             {
+                treeBoundBox bb(subsetDict.lookup("insideBox"));
+
                 Info<< "Subset edges inside box " << bb << endl;
                 features().subsetBox(edgeStat, bb);
 
@@ -445,8 +445,10 @@ int main(int argc, char *argv[])
                 }
             }
             // Suboption: "outsideBox"
-            else if (subsetDict.readIfPresent("outsideBox", bb))
+            else if (subsetDict.found("outsideBox"))
             {
+                treeBoundBox bb(subsetDict.lookup("outsideBox"));
+
                 Info<< "Exclude edges outside box " << bb << endl;
                 features().excludeBox(edgeStat, bb);
 
@@ -547,11 +549,12 @@ int main(int argc, char *argv[])
         );
 
 
-        if ((subDictPtr = surfaceDict.findDict("addFeatures")) != nullptr)
+        if (surfaceDict.isDict("addFeatures"))
         {
-            const dictionary& addFeaturesDict = *subDictPtr;
-
-            const word addFeName = addFeaturesDict.get<word>("name");
+            const word addFeName
+            (
+                surfaceDict.subDict("addFeatures").get<word>("name")
+            );
 
             Info<< "Adding (without merging) features from " << addFeName
                 << nl << endl;

@@ -72,7 +72,7 @@ Foam::fileName Foam::coordSetWriters::ensightWriter::writeCollated
     // - NAME1/data/00000000/VAR2
 
     // Names "data" and "geometry" as per ensightCase:
-    const int maskWidth = 8;
+    const char* fmt  = "%08d";
     const char* mask = "data/********/";
 
     // Ignore the useTimeDir setting - manage ourselves
@@ -118,65 +118,14 @@ Foam::fileName Foam::coordSetWriters::ensightWriter::writeCollated
         // or just the masking part for moving geometries.
         const fileName geometryName
         (
-            "data"
-          / ensightCase::padded(maskWidth, geomIndex)
-          / ensightCase::geometryName
+            "data"/word::printf(fmt, geomIndex)/ensightCase::geometryName
         );
 
 
-        // Location for data (and possibly the geometry as well)
-        const fileName dataDir
-        (
-            baseDir/"data"/ensightCase::padded(maskWidth, timeIndex)
-        );
-
-        // As per mkdir -p "data/00000000"
-        mkDir(dataDir);
-
-
-        const fileName geomFile(baseDir/geometryName);
-
-        if (!exists(geomFile))
-        {
-            if (verbose_)
-            {
-                Info<< "Writing geometry to " << geomFile.name() << endl;
-            }
-
-            // Two-argument form for path-name to avoid validating base-dir
-            ensightGeoFile osGeom
-            (
-                geomFile.path(),
-                geomFile.name(),
-                writeFormat_
-            );
-
-            writeGeometry(osGeom, elemOutput);
-        }
-
-
-        // Write field
-        ensightFile osField
-        (
-            dataDir,
-            varName,
-            writeFormat_
-        );
-
-        if (verbose_)
-        {
-            Info<< "Writing field file to " << osField.name() << endl;
-        }
-
-
-        // Write field (serial only)
-        writeTrackField<Type>(osField, fieldPtrs);
-
-
-        // Update case file
+        // Do case file
         if (stateChanged)
         {
-            OFstream osCase(outputFile, IOstreamOption::ASCII);
+            OFstream osCase(outputFile, IOstream::ASCII);
 
             // Format options
             osCase.setf(ios_base::left);
@@ -245,7 +194,7 @@ Foam::fileName Foam::coordSetWriters::ensightWriter::writeCollated
                       : " per element: 1  "  // time-set 1
                     )
                     << setw(15) << varName << ' '
-                    << mask << ensight::FileName(varName).c_str() << nl;
+                    << mask << varName << nl;
             }
 
             osCase
@@ -266,6 +215,53 @@ Foam::fileName Foam::coordSetWriters::ensightWriter::writeCollated
 
             osCase << "# end" << nl;
         }
+
+
+        // Location for data (and possibly the geometry as well)
+        fileName dataDir = baseDir/"data"/word::printf(fmt, timeIndex);
+
+        // As per mkdir -p "data/00000000"
+        mkDir(dataDir);
+
+
+        const fileName geomFile(baseDir/geometryName);
+
+        if (!exists(geomFile))
+        {
+            if (verbose_)
+            {
+                Info<< "Writing geometry to " << geomFile.name() << endl;
+            }
+
+            // Two-argument form for path-name to avoid validating base-dir
+            ensightGeoFile osGeom
+            (
+                geomFile.path(),
+                geomFile.name(),
+                writeFormat_
+            );
+
+            writeGeometry(osGeom, elemOutput);
+        }
+
+
+        // Write field
+        ensightFile osField
+        (
+            dataDir,
+            varName,
+            writeFormat_
+        );
+
+        if (verbose_)
+        {
+            Info<< "Writing field file to " << osField.name() << endl;
+        }
+
+
+        // Write field (serial only)
+        writeTrackField<Type>(osField, fieldPtrs);
+
 
         // Timestamp in the directory for future reference
         {

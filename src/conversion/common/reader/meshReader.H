@@ -49,8 +49,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_meshReader_H
-#define Foam_meshReader_H
+#ifndef meshReader_H
+#define meshReader_H
 
 #include "polyMesh.H"
 #include "HashTable.H"
@@ -122,7 +122,7 @@ private:
         //- Point-cell addressing. Used for topological analysis
         // Warning. This point cell addressing list potentially contains
         // duplicate cell entries. Use additional checking
-        mutable std::unique_ptr<labelListList> pointCellsPtr_;
+        mutable unique_ptr<labelListList> pointCellsPtr_;
 
         //- Association between two faces
         List<labelPair> interfaces_;
@@ -179,7 +179,7 @@ private:
         void createPolyBoundary();
 
         //- Add polyhedral boundary
-        polyPatchList polyBoundaryPatches(const polyMesh&);
+        List<polyPatch*> polyBoundaryPatches(const polyMesh&);
 
         //- Clear extra storage before creation of the mesh to remove
         //  a memory peak

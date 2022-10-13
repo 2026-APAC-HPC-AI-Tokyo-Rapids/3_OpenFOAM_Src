@@ -32,8 +32,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_particle_H
-#define Foam_particle_H
+#ifndef particle_H
+#define particle_H
 
 #include "vector.H"
 #include "barycentric.H"
@@ -43,6 +43,7 @@ Description
 #include "pointField.H"
 #include "faceList.H"
 #include "OFstream.H"
+#include "tetPointRef.H"
 #include "FixedList.H"
 #include "polyMeshTetDecomposition.H"
 #include "particleMacros.H"
@@ -106,7 +107,7 @@ public:
 
 
         // Constructor
-        template<class TrackCloudType>
+        template <class TrackCloudType>
         trackingData(const TrackCloudType& cloud)
         {}
     };
@@ -176,6 +177,15 @@ private:
     // Private Member Functions
 
         // Tetrahedra functions
+
+            //- Get the vertices of the current tet
+            inline void stationaryTetGeometry
+            (
+                vector& centre,
+                vector& base,
+                vector& vertex1,
+                vector& vertex2
+            ) const;
 
             //- Get the transformation associated with the current tet. This
             //  will convert a barycentric position within the tet to a
@@ -283,7 +293,7 @@ private:
 
 protected:
 
-    // Patch Interactions
+    // Patch interactions
 
         //- Read particle from stream. Optionally (for old format) return
         //  read position. Used by construct-from-Istream

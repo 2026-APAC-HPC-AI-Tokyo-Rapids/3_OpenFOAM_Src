@@ -37,8 +37,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_SmoothSolver_H
-#define Foam_SmoothSolver_H
+#ifndef SmoothSolver_H
+#define SmoothSolver_H
 
 #include "lduMatrix.H"
 
@@ -56,9 +56,10 @@ class SmoothSolver
 :
     public LduMatrix<Type, DType, LUType>::solver
 {
+
 protected:
 
-    // Protected Data
+    // Protected data
 
         //- Number of sweeps before the evaluation of residual
         label nSweeps_;

@@ -98,7 +98,6 @@ SeeAlso
 #include "wordList.H"
 #include "className.H"
 #include "refPtr.H"
-#include "IOobjectOption.H"
 
 // Some common data types
 #include "label.H"
@@ -176,14 +175,14 @@ public:
 
             //- Construct for the given dictionary context.
             //  Allow implicit conversion
-            Searcher(dict_pointer dict) noexcept
+            Searcher(dict_pointer dict)
             :
                 dict_(dict),
                 eptr_(nullptr)
             {}
 
             //- Assign the entry
-            void set(pointer eptr) noexcept
+            void set(pointer eptr)
             {
                 eptr_ = eptr;
             }
@@ -192,7 +191,7 @@ public:
         public:
 
             //- Default construct
-            constexpr Searcher() noexcept
+            Searcher()
             :
                 dict_(nullptr),
                 eptr_(nullptr)
@@ -200,19 +199,34 @@ public:
 
 
             //- True if entry was found
-            bool good() const noexcept { return eptr_; }
+            bool good() const noexcept
+            {
+                return eptr_;
+            }
 
             //- True if entry was found
-            bool found() const noexcept { return eptr_; }
+            bool found() const noexcept
+            {
+                return eptr_;
+            }
 
             //- The containing dictionary context
-            dict_reference context() const { return *dict_; }
+            dict_reference context() const
+            {
+                return *dict_;
+            }
 
             //- A pointer to the entry (nullptr if not found)
-            pointer ptr() const noexcept { return eptr_; }
+            pointer ptr() const noexcept
+            {
+                return eptr_;
+            }
 
             //- A reference to the entry (Error if not found)
-            reference ref() const { return *eptr_; }
+            reference ref() const
+            {
+                return *eptr_;
+            }
 
             //- True if found entry is a dictionary.
             bool isDict() const noexcept
@@ -493,26 +507,26 @@ public:
         tokenList tokens() const;
 
 
-    // Searching
+    // Search and lookup
 
-        //- Find an entry (const access) with the given keyword.
+        //- Search for an entry (const access) with the given keyword.
         //
         //  \param keyword the keyword to search for
         //  \param matchOpt search mode (default: non-recursive with patterns)
         //
-        //  \return pointer to the entry found or a nullptr.
-        inline const entry* findEntry
+        //  \return True if entry was found
+        inline bool found
         (
             const word& keyword,
             enum keyType::option matchOpt = keyType::REGEX
         ) const;
 
-        //- Find an entry (non-const access) with the given keyword.
+        //- Find for an entry (non-const access) with the given keyword.
         //
         //  \param keyword the keyword to search for
         //  \param matchOpt search mode (default: non-recursive with patterns)
         //
-        //  \return pointer to the entry found or a nullptr.
+        //  \return the entry pointer found or a nullptr.
         inline entry* findEntry
         (
             const word& keyword,
@@ -524,8 +538,8 @@ public:
         //  \param keyword the keyword to search for
         //  \param matchOpt search mode (default: non-recursive with patterns)
         //
-        //  \return True if entry was found
-        inline bool found
+        //  \return the entry pointer found or a nullptr.
+        inline const entry* findEntry
         (
             const word& keyword,
             enum keyType::option matchOpt = keyType::REGEX
@@ -539,7 +553,7 @@ public:
         //  \param keyword the keyword to search for
         //  \param matchOpt search mode (default: non-recursive with patterns)
         //
-        //  \return pointer to the entry found or a nullptr.
+        //  \return the entry pointer found or a nullptr.
         inline const entry* findScoped
         (
             const word& keyword,
@@ -547,20 +561,7 @@ public:
         ) const;
 
         //- Find and return a sub-dictionary pointer if present
-        //- (and a sub-dictionary) otherwise return nullptr.
-        //
-        //  \param keyword the keyword to search for
-        //  \param matchOpt search mode (default: non-recursive with patterns)
-        //
-        //  \return pointer to sub-dictionary found or a nullptr.
-        inline const dictionary* findDict
-        (
-            const word& keyword,
-            enum keyType::option matchOpt = keyType::REGEX
-        ) const;
-
-        //- Find and return a sub-dictionary pointer if present
-        //- (and a sub-dictionary) otherwise return nullptr.
+        //  (and a sub-dictionary) otherwise return nullptr.
         //
         //  \param keyword the keyword to search for
         //  \param matchOpt search mode (default: non-recursive with patterns)
@@ -572,20 +573,18 @@ public:
             enum keyType::option matchOpt = keyType::REGEX
         );
 
-        //- Find a sub-dictionary.
+        //- Find and return a sub-dictionary pointer if present
+        //  (and a sub-dictionary) otherwise return nullptr.
         //
         //  \param keyword the keyword to search for
         //  \param matchOpt search mode (default: non-recursive with patterns)
         //
-        //  \return true if the sub-dictionary was found
-        inline bool isDict
+        //  \return pointer to sub-dictionary found or a nullptr.
+        inline const dictionary* findDict
         (
             const word& keyword,
             enum keyType::option matchOpt = keyType::REGEX
         ) const;
-
-
-    // Lookup
 
         //- Search for an entry (const access) with the given keyword.
         //
@@ -660,16 +659,16 @@ public:
         //  \param keyword the keyword to search for
         //  \param val the value to read into
         //  \param matchOpt search mode (default: non-recursive with patterns)
-        //  \param readOpt the entry is required/optional (default: MUST_READ)
+        //  \param mandatory the keyword is mandatory (default: true)
         //
-        //  \return true if the entry was read
+        //  \return true if the entry was found.
         template<class T>
         bool readEntry
         (
             const word& keyword,
             T& val,
             enum keyType::option matchOpt = keyType::REGEX,
-            IOobjectOption::readOption readOpt = IOobjectOption::MUST_READ
+            bool mandatory = true
         ) const;
 
         //- Find an entry if present, and assign to T val.
@@ -679,7 +678,7 @@ public:
         //  \param val the value to read into
         //  \param matchOpt search mode (default: non-recursive with patterns)
         //
-        //  \return true if the entry was read
+        //  \return true if the entry was found.
         template<class T>
         bool readIfPresent
         (
@@ -743,9 +742,9 @@ public:
         //  \param val the value to read into
         //  \param pred the value check predicate
         //  \param matchOpt search mode (default: non-recursive with patterns)
-        //  \param readOpt the entry is required/optional (default: MUST_READ)
+        //  \param mandatory the keyword is mandatory (default: true)
         //
-        //  \return true if the entry was read
+        //  \return true if the entry was found.
         template<class T, class Predicate>
         bool readCheck
         (
@@ -753,7 +752,7 @@ public:
             T& val,
             const Predicate& pred,
             enum keyType::option matchOpt = keyType::REGEX,
-            IOobjectOption::readOption readOpt = IOobjectOption::MUST_READ
+            bool mandatory = true
         ) const;
 
         //- Find an entry if present, and assign to T val.
@@ -764,13 +763,25 @@ public:
         //  \param pred the value check predicate
         //  \param matchOpt search mode (default: non-recursive with patterns)
         //
-        //  \return true if the entry read
+        //  \return true if the entry was found.
         template<class T, class Predicate>
         bool readCheckIfPresent
         (
             const word& keyword,
             T& val,
             const Predicate& pred,
+            enum keyType::option matchOpt = keyType::REGEX
+        ) const;
+
+        //- Check if entry is found and is a sub-dictionary.
+        //
+        //  \param keyword the keyword to search for
+        //  \param matchOpt search mode (default: non-recursive with patterns)
+        //
+        //  \return true if the entry was found.
+        inline bool isDict
+        (
+            const word& keyword,
             enum keyType::option matchOpt = keyType::REGEX
         ) const;
 
@@ -1109,6 +1120,19 @@ public:
             enum keyType::option matchOpt = keyType::REGEX
         ) const;
 
+        //- Search dictionary for given keyword and any compatibility names
+        //
+        //  \param keyword the keyword to search for
+        //  \param compat list of old compatibility keywords and the last
+        //      OpenFOAM version for which they were used.
+        //  \param matchOpt search mode (default: non-recursive with patterns)
+        bool foundCompat
+        (
+            const word& keyword,
+            std::initializer_list<std::pair<const char*,int>> compat,
+            enum keyType::option matchOpt = keyType::REGEX
+        ) const;
+
         //- Find and return an entry pointer if present, or return a nullptr,
         //- using any compatibility names if needed.
         //
@@ -1121,19 +1145,6 @@ public:
             const word& keyword,
             std::initializer_list<std::pair<const char*,int>> compat,
             enum keyType::option matchOpt
-        ) const;
-
-        //- Search dictionary for given keyword and any compatibility names
-        //
-        //  \param keyword the keyword to search for
-        //  \param compat list of old compatibility keywords and the last
-        //      OpenFOAM version for which they were used.
-        //  \param matchOpt search mode (default: non-recursive with patterns)
-        bool foundCompat
-        (
-            const word& keyword,
-            std::initializer_list<std::pair<const char*,int>> compat,
-            enum keyType::option matchOpt = keyType::REGEX
         ) const;
 
         //- Find and return an entry if present, otherwise FatalIOError,
@@ -1206,9 +1217,9 @@ public:
         //      OpenFOAM version for which they were used.
         //  \param val the value to read
         //  \param matchOpt search mode (default: non-recursive with patterns)
-        //  \param readOpt the entry is required/optional (default: MUST_READ)
+        //  \param mandatory the keyword is mandatory (default: true)
         //
-        //  \return true if the entry was read
+        //  \return true if the entry was found.
         template<class T>
         bool readCompat
         (
@@ -1216,7 +1227,7 @@ public:
             std::initializer_list<std::pair<const char*,int>> compat,
             T& val,
             enum keyType::option matchOpt = keyType::REGEX,
-            IOobjectOption::readOption readOpt = IOobjectOption::MUST_READ
+            bool mandatory = true
         ) const;
 
         //- Find an entry if present, and assign to T val
@@ -1267,30 +1278,6 @@ public:
         friend Ostream& operator<<(Ostream& os, const dictionary& dict);
 
 
-    // Shortcuts - when a templated classes also inherits from a dictionary
-
-        #undef defineDictionaryGetter
-        #define defineDictionaryGetter(Func, Type)                            \
-            /*! \brief Same as get\<Type\>(const word&, keyType::option) */   \
-            Type Func                                                         \
-            (                                                                 \
-                const word& keyword,                                          \
-                enum keyType::option matchOpt = keyType::REGEX                \
-            ) const                                                           \
-            {                                                                 \
-                return get<Type>(keyword, matchOpt);                          \
-            }
-
-        defineDictionaryGetter(getBool, bool);
-        defineDictionaryGetter(getLabel, label);
-        defineDictionaryGetter(getScalar, scalar);
-        defineDictionaryGetter(getString, string);
-        defineDictionaryGetter(getWord, word);
-        defineDictionaryGetter(getFileName, fileName);
-
-        #undef defineDictionaryGetter
-
-
     // Housekeeping
 
         //- Find and return a T, or return the given default value.
@@ -1329,7 +1316,29 @@ public:
             return getOrAdd<T>(keyword, deflt, matchOpt);
         }
 
-        //- Deprecated(2018-07) - use lookup() method
+        //- Find and return a T, or return the given default value
+        //- using any compatibility names if needed.
+        //
+        //  \param keyword the keyword to search for
+        //  \param compat list of old compatibility keywords and the last
+        //      OpenFOAM version for which they were used.
+        //  \param deflt the default value to use
+        //  \param matchOpt search mode (default: non-recursive with patterns)
+        template<class T>
+        FOAM_DEPRECATED_FOR(2019-05, "getOrDefaultCompat() method")
+        T lookupOrDefaultCompat
+        (
+            const word& keyword,
+            std::initializer_list<std::pair<const char*,int>> compat,
+            const T& deflt,
+            enum keyType::option matchOpt = keyType::REGEX
+        ) const
+        {
+            return getOrDefaultCompat<T>(keyword, compat, deflt, matchOpt);
+        }
+
+        //- Deprecated(2018-07) find and return an entry data stream
+        //
         //  \deprecated(2018-07) - use lookup() method
         FOAM_DEPRECATED_FOR(2018-07, "lookup() method")
         ITstream& operator[](const word& keyword) const
@@ -1351,7 +1360,7 @@ public:
         }
 
         //- Deprecated(2018-10)
-        //  \deprecated(2018-10) - use findEntry() method
+        //  \deprecated(2018-10) - use keyType::option version
         FOAM_DEPRECATED_FOR(2018-10, "findEntry(keyType::option)")
         entry* lookupEntryPtr
         (
@@ -1364,7 +1373,7 @@ public:
         }
 
         //- Deprecated(2018-10)
-        //  \deprecated(2018-10) - use findEntry() method
+        //  \deprecated(2018-10) - use keyType::option version
         FOAM_DEPRECATED_FOR(2018-10, "findEntry(keyType::option)")
         const entry* lookupEntryPtr
         (
@@ -1377,7 +1386,7 @@ public:
         }
 
         //- Deprecated(2018-10)
-        //  \deprecated(2018-10) - use findScoped() method
+        //  \deprecated(2018-10) - use keyType::option version
         FOAM_DEPRECATED_FOR(2018-10, "findScoped(keyType::option)")
         const entry* lookupScopedEntryPtr
         (
@@ -1518,6 +1527,30 @@ public:
             return get<T>(keyword, matchOpt(recursive, patternMatch));
         }
         #endif
+
+
+    // Shortcuts - when a templated classes also inherits from a dictionary
+
+        #undef defineDictionaryGetter
+        #define defineDictionaryGetter(Func, Type)                            \
+            /*! \brief Same as get\<Type\>(const word&, keyType::option) */   \
+            Type Func                                                         \
+            (                                                                 \
+                const word& keyword,                                          \
+                enum keyType::option matchOpt = keyType::REGEX                \
+            ) const                                                           \
+            {                                                                 \
+                return get<Type>(keyword, matchOpt);                          \
+            }
+
+        defineDictionaryGetter(getBool, bool);
+        defineDictionaryGetter(getLabel, label);
+        defineDictionaryGetter(getScalar, scalar);
+        defineDictionaryGetter(getString, string);
+        defineDictionaryGetter(getWord, word);
+        defineDictionaryGetter(getFileName, fileName);
+
+        #undef defineDictionaryGetter
 };
 
 

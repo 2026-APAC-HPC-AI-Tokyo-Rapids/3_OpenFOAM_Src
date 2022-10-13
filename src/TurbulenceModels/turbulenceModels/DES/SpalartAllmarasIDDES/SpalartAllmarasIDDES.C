@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -64,7 +64,7 @@ tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::ft
     const volScalarField& magGradU
 ) const
 {
-    return tanh(pow3(sqr(Ct_)*this->r(this->nut_, magGradU, this->y_)));
+    return tanh(pow3(sqr(Ct_)*rd(this->nut_, magGradU)));
 }
 
 
@@ -74,7 +74,36 @@ tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::fl
     const volScalarField& magGradU
 ) const
 {
-    return tanh(pow(sqr(Cl_)*this->r(this->nu(), magGradU, this->y_), 10));
+    return tanh(pow(sqr(Cl_)*rd(this->nu(), magGradU), 10));
+}
+
+
+template<class BasicTurbulenceModel>
+tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::rd
+(
+    const volScalarField& nur,
+    const volScalarField& magGradU
+) const
+{
+    tmp<volScalarField> tr
+    (
+        min
+        (
+            nur
+           /(
+                max
+                (
+                    magGradU,
+                    dimensionedScalar("SMALL", magGradU.dimensions(), SMALL)
+                )
+               *sqr(this->kappa_*this->y_)
+            ),
+            scalar(10)
+        )
+    );
+    tr.ref().boundaryFieldRef() == 0.0;
+
+    return tr;
 }
 
 
@@ -84,7 +113,7 @@ tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::fdt
     const volScalarField& magGradU
 ) const
 {
-    return 1 - tanh(pow(Cdt1_*this->r(this->nut_, magGradU, this->y_), Cdt2_));
+    return 1 - tanh(pow(Cdt1_*rd(this->nut_, magGradU), Cdt2_));
 }
 
 
@@ -101,35 +130,31 @@ tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::dTilda
     const volScalarField magGradU(mag(gradU));
     const volScalarField psi(this->psi(chi, fv1));
 
-    const volScalarField& lRAS = this->y_;
+    const volScalarField& lRAS(this->y_);
     const volScalarField lLES(psi*this->CDES_*this->delta());
 
     const volScalarField alpha(this->alpha());
     const volScalarField expTerm(exp(sqr(alpha)));
 
     tmp<volScalarField> fB = min(2*pow(expTerm, -9.0), scalar(1));
+    tmp<volScalarField> fe1 =
+        2*(pos0(alpha)*pow(expTerm, -11.09) + neg(alpha)*pow(expTerm, -9.0));
+    tmp<volScalarField> fe2 = 1 - max(ft(magGradU), fl(magGradU));
+    tmp<volScalarField> fe = max(fe1 - 1, scalar(0))*psi*fe2;
+
     const volScalarField fdTilda(max(1 - fdt(magGradU), fB));
 
-    if (fe_)
-    {
-        tmp<volScalarField> fe1 =
-            2*(pos0(alpha)*pow(expTerm, -11.09) + neg(alpha)*pow(expTerm, -9.));
-        tmp<volScalarField> fe2 = 1 - max(ft(magGradU), fl(magGradU));
-        tmp<volScalarField> fe = max(fe1 - 1, scalar(0))*psi*fe2;
-
-        // Original formulation from Shur et al. paper (2008)
-        return max
-        (
-            fdTilda*(1 + fe)*lRAS + (1 - fdTilda)*lLES,
-            dimensionedScalar("SMALL", dimLength, SMALL)
-        );
-    }
-
-
     // Simplified formulation from Gritskevich et al. paper (2011) where fe = 0
+    // return max
+    // (
+    //     fdTilda*lRAS + (1 - fdTilda)*lLES,
+    //     dimensionedScalar("SMALL", dimLength, SMALL)
+    // );
+
+    // Original formulation from Shur et al. paper (2008)
     return max
     (
-        fdTilda*lRAS + (1 - fdTilda)*lLES,
+        fdTilda*(1 + fe)*lRAS + (1 - fdTilda)*lLES,
         dimensionedScalar("SMALL", dimLength, SMALL)
     );
 }
@@ -198,16 +223,6 @@ SpalartAllmarasIDDES<BasicTurbulenceModel>::SpalartAllmarasIDDES
             1.63
         )
     ),
-    fe_
-    (
-        Switch::getOrAddToDict
-        (
-            "fe",
-            this->coeffDict_,
-            true
-        )
-    ),
-
     IDDESDelta_(setDelta())
 {
     if (type == typeName)
@@ -233,17 +248,6 @@ bool SpalartAllmarasIDDES<BasicTurbulenceModel>::read()
     }
 
     return false;
-}
-
-
-template<class BasicTurbulenceModel>
-tmp<volScalarField> SpalartAllmarasIDDES<BasicTurbulenceModel>::fd() const
-{
-    const volScalarField alpha(this->alpha());
-    const volScalarField expTerm(exp(sqr(alpha)));
-
-    tmp<volScalarField> fB = min(2*pow(expTerm, -9.0), scalar(1));
-    return max(1 - fdt(mag(fvc::grad(this->U_))), fB);
 }
 
 

@@ -45,7 +45,12 @@ namespace Foam
 
 bool Foam::refinementHistory::readContents()
 {
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        readOpt() == IOobject::MUST_READ
+     || readOpt() == IOobject::MUST_READ_IF_MODIFIED
+     || (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         readStream(typeName) >> *this;
         close();
@@ -490,8 +495,8 @@ void Foam::refinementHistory::add
 
     if (refinementHistory::debug)
     {
-        Info<< type() << " : unblocked "
-            << returnReduce(nUnblocked, sumOp<label>()) << " faces" << endl;
+        reduce(nUnblocked, sumOp<label>());
+        Info<< type() << " : unblocked " << nUnblocked << " faces" << endl;
     }
 
     syncTools::syncFaceList(mesh, blockedFace, andEqOp<bool>());
@@ -550,8 +555,9 @@ void Foam::refinementHistory::apply
 
     if (refinementHistory::debug)
     {
-        Info<< type() << " : changed decomposition on "
-            << returnReduce(nChanged, sumOp<label>()) << " cells" << endl;
+        reduce(nChanged, sumOp<label>());
+        Info<< type() << " : changed decomposition on " << nChanged
+            << " cells" << endl;
     }
 }
 
@@ -571,7 +577,7 @@ Foam::refinementHistory::refinementHistory(const IOobject& io)
     // When running in redistributePar + READ_IF_PRESENT it can happen
     // that some processors do have refinementHistory and some don't so
     // test for active has to be outside of above condition.
-    active_ = returnReduceOr(visibleCells_.size());
+    active_ = (returnReduce(visibleCells_.size(), sumOp<label>()) > 0);
 
     if (debug)
     {
@@ -644,7 +650,7 @@ Foam::refinementHistory::refinementHistory
         }
     }
 
-    active_ = returnReduceOr(visibleCells_.size());
+    active_ = (returnReduce(visibleCells_.size(), sumOp<label>()) > 0);
 
 
     // Check indices.
@@ -734,11 +740,16 @@ Foam::refinementHistory::refinementHistory
     regIOobject(io),
     active_(false)
 {
-    if (io.readOpt() != IOobject::NO_READ)
+    if
+    (
+        io.readOpt() == IOobject::MUST_READ
+     || io.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+     || (io.readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         WarningInFunction
-            << "read option IOobject::MUST_READ or READ_IF_PRESENT "
-            << "or MUST_READ_IF_MODIFIED"
+            << "read option IOobject::MUST_READ, READ_IF_PRESENT or "
+            << "MUST_READ_IF_MODIFIED"
             << " suggests that a read constructor would be more appropriate."
             << endl;
     }
@@ -842,7 +853,7 @@ Foam::refinementHistory::refinementHistory(const IOobject& io, Istream& is)
     freeSplitCells_(),
     visibleCells_(is)
 {
-    active_ = returnReduceOr(visibleCells_.size());
+    active_ = (returnReduce(visibleCells_.size(), sumOp<label>()) > 0);
 
     // Check indices.
     checkIndices();
@@ -1672,7 +1683,7 @@ bool Foam::refinementHistory::read()
     bool ok = readData(readStream(typeName));
     close();
 
-    active_ = returnReduceOr(visibleCells_.size());
+    active_ = (returnReduce(visibleCells_.size(), sumOp<label>()) > 0);
 
     return ok;
 }

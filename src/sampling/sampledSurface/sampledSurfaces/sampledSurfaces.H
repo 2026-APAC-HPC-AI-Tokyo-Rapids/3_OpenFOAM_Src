@@ -62,13 +62,9 @@ Description
 
         formatOptions
         {
-            default
-            {
-                verbose     true;
-            }
             vtk
             {
-                precision   10;
+                precision  10;
             }
         }
 
@@ -226,8 +222,8 @@ class sampledSurfaces
         //- A new surfaceWriter, with per-surface formatOptions
         static autoPtr<surfaceWriter> newWriter
         (
-            word writerType,
-            const dictionary& topDict,
+            word writeType,
+            const dictionary& formatOptions,
             const dictionary& surfDict
         );
 

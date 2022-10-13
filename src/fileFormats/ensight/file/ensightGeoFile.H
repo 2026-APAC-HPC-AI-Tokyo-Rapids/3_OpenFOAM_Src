@@ -52,8 +52,8 @@ class ensightGeoFile
 {
     // Private Member Functions
 
-        //- Initialize outputs the header information
-        void init();
+        //- Initialize by outputting header information
+        void initialize();
 
         //- No copy construct
         ensightGeoFile(const ensightGeoFile&) = delete;
@@ -67,7 +67,7 @@ public:
     // Static Functions
 
         //- Return a null ensightGeoFile
-        static const ensightGeoFile& null()
+        inline static const ensightGeoFile& null()
         {
             return NullObjectRef<ensightGeoFile>();
         }
@@ -75,21 +75,21 @@ public:
 
     // Constructors
 
-        //- Construct from path-name.
-        //  The path-name is adjusted for valid ensight file naming.
+        //- Construct from pathName.
+        //  The entire pathName is checked for valid ensight naming.
         explicit ensightGeoFile
         (
             const fileName& pathname,
-            IOstreamOption::streamFormat fmt = IOstreamOption::BINARY
+            IOstreamOption::streamFormat format = IOstreamOption::BINARY
         );
 
         //- Construct from path and name.
-        //  Only the name portion is adjusted for valid ensight file naming.
+        //  Only the name portion is checked for valid ensight naming.
         ensightGeoFile
         (
             const fileName& path,
             const fileName& name,
-            IOstreamOption::streamFormat fmt = IOstreamOption::BINARY
+            IOstreamOption::streamFormat format = IOstreamOption::BINARY
         );
 
 

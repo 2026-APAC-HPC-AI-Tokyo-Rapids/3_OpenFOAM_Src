@@ -304,7 +304,9 @@ Foam::triSurfaceMesh::triSurfaceMesh(const IOobject& io, const triSurface& s)
     surfaceClosed_(-1),
     outsideVolType_(volumeType::UNKNOWN)
 {
-    bounds() = boundBox(triSurface::points(), false);
+    const pointField& pts = triSurface::points();
+
+    bounds() = boundBox(pts, false);
 }
 
 
@@ -332,7 +334,9 @@ Foam::triSurfaceMesh::triSurfaceMesh(const IOobject& io)
     surfaceClosed_(-1),
     outsideVolType_(volumeType::UNKNOWN)
 {
-    bounds() = boundBox(triSurface::points(), false);
+    const pointField& pts = triSurface::points();
+
+    bounds() = boundBox(pts, false);
 }
 
 
@@ -383,7 +387,9 @@ Foam::triSurfaceMesh::triSurfaceMesh
             << " : using scale " << scaleFactor << endl;
     }
 
-    bounds() = boundBox(triSurface::points(), false);
+    const pointField& pts = triSurface::points();
+
+    bounds() = boundBox(pts, false);
 
     // Have optional minimum quality for normal calculation
     if (dict.readIfPresent("minQuality", minQuality_) && minQuality_ > 0)
@@ -444,11 +450,7 @@ Foam::triSurfaceMesh::triSurfaceMesh(const IOobject& io, const readAction r)
             // Check where surface was found
             const fileName localFile(io.localFilePath(typeName));
 
-            if
-            (
-                r == masterOnly
-             && ((actualFile.empty() || actualFile != localFile))
-            )
+            if (r == masterOnly && (actualFile != localFile))
             {
                 // Found undecomposed surface. Load on master only
                 if (Pstream::master())
@@ -456,7 +458,7 @@ Foam::triSurfaceMesh::triSurfaceMesh(const IOobject& io, const readAction r)
                     triSurface s2(actualFile);
                     triSurface::transfer(s2);
                 }
-                Pstream::broadcast(triSurface::patches());
+                Pstream::scatter(triSurface::patches());
                 if (debug)
                 {
                     Pout<< "triSurfaceMesh(const IOobject& io) :"
@@ -488,7 +490,8 @@ Foam::triSurfaceMesh::triSurfaceMesh(const IOobject& io, const readAction r)
         }
     }
 
-    bounds() = boundBox(triSurface::points(), false);
+    const pointField& pts = triSurface::points();
+    bounds() = boundBox(pts, false);
 }
 
 
@@ -560,18 +563,10 @@ Foam::triSurfaceMesh::triSurfaceMesh
 
         if (searchGlobal && Pstream::parRun())
         {
-            // Check where surface was found. Bit tricky:
-            // - master will have actualFile (in parent directory)
-            //   different from localFilePath (in processor0/)
-            // - slave might have actualFile empty and localFile empty
-
+            // Check where surface was found
             const fileName localFile(io.localFilePath(typeName));
 
-            if
-            (
-                r == masterOnly
-             && ((actualFile.empty() || actualFile != localFile))
-            )
+            if (r == masterOnly && (actualFile != localFile))
             {
                 // Surface not loaded from processor directories -> undecomposed
                 // surface. Load on master only
@@ -580,7 +575,7 @@ Foam::triSurfaceMesh::triSurfaceMesh
                     triSurface s2(actualFile, surfType, scaleFactor);
                     triSurface::transfer(s2);
                 }
-                Pstream::broadcast(triSurface::patches());
+                Pstream::scatter(triSurface::patches());
                 if (debug)
                 {
                     Pout<< "triSurfaceMesh(const IOobject& io) :"
@@ -622,7 +617,8 @@ Foam::triSurfaceMesh::triSurfaceMesh
     }
 
 
-    bounds() = boundBox(triSurface::points(), false);
+    const pointField& pts = triSurface::points();
+    bounds() = boundBox(pts, false);
 
     // Have optional minimum quality for normal calculation
     if (dict.readIfPresent("minQuality", minQuality_) && minQuality_ > 0)
@@ -698,7 +694,8 @@ void Foam::triSurfaceMesh::boundingSpheres
         const point& fc = centres[facei];
         for (const label pointi : f)
         {
-            radiusSqr[facei] = max(radiusSqr[facei], fc.distSqr(pts[pointi]));
+            const point& pt = pts[pointi];
+            radiusSqr[facei] = max(radiusSqr[facei], Foam::magSqr(fc-pt));
         }
     }
 
@@ -768,9 +765,12 @@ Foam::triSurfaceMesh::edgeTree() const
         }
 
         // Boundary edges
-        const labelRange bEdges(nInternalEdges(), nBoundaryEdges());
+        labelList bEdges
+        (
+            identity(nEdges() - nInternalEdges(), nInternalEdges())
+        );
 
-        treeBoundBox bb(point::zero);
+        treeBoundBox bb(Zero, Zero);
 
         if (bEdges.size())
         {
@@ -788,7 +788,9 @@ Foam::triSurfaceMesh::edgeTree() const
             // Slightly extended bb. Slightly off-centred just so on symmetric
             // geometry there are less face/edge aligned items.
 
-            bb.inflate(rndGen, 1e-4, ROOTVSMALL);
+            bb = bb.extend(rndGen, 1e-4);
+            bb.min() -= point::uniform(ROOTVSMALL);
+            bb.max() += point::uniform(ROOTVSMALL);
         }
 
 
@@ -798,16 +800,20 @@ Foam::triSurfaceMesh::edgeTree() const
                 << "calculating edge tree for bb:" << bb << endl;
         }
 
-        const scalar oldTol =
-            indexedOctree<treeDataEdge>::perturbTol(tolerance());
+        scalar oldTol = indexedOctree<treeDataEdge>::perturbTol();
+        indexedOctree<treeDataEdge>::perturbTol() = tolerance();
 
         edgeTree_.reset
         (
             new indexedOctree<treeDataEdge>
             (
-                // Boundary edges
-                treeDataEdge(edges(), localPoints(), bEdges),
-
+                treeDataEdge
+                (
+                    false,          // cachebb
+                    edges(),        // edges
+                    localPoints(),  // points
+                    bEdges          // selected edges
+                ),
                 bb,                 // bb
                 maxTreeDepth(),     // maxLevel
                 10,                 // leafsize
@@ -815,7 +821,7 @@ Foam::triSurfaceMesh::edgeTree() const
             )
         );
 
-        indexedOctree<treeDataEdge>::perturbTol(oldTol);
+        indexedOctree<treeDataEdge>::perturbTol() = oldTol;
 
         if (debug)
         {
@@ -1214,8 +1220,8 @@ void Foam::triSurfaceMesh::getVolumeType
     List<volumeType>& volType
 ) const
 {
-    const scalar oldTol =
-        indexedOctree<treeDataTriSurface>::perturbTol(tolerance());
+    const scalar oldTol = indexedOctree<treeDataTriSurface>::perturbTol();
+    indexedOctree<treeDataTriSurface>::perturbTol() = tolerance();
 
     if (debug)
     {
@@ -1251,8 +1257,7 @@ void Foam::triSurfaceMesh::getVolumeType
         }
     }
 
-    indexedOctree<treeDataTriSurface>::perturbTol(oldTol);
-
+    indexedOctree<treeDataTriSurface>::perturbTol() = oldTol;
     if (debug)
     {
         Pout<< "triSurfaceMesh::getVolumeType :"

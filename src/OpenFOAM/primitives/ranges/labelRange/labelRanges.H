@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_labelRanges_H
-#define Foam_labelRanges_H
+#ifndef labelRanges_H
+#define labelRanges_H
 
 #include "labelRange.H"
 #include "DynamicList.H"
@@ -102,11 +102,8 @@ public:
         //- Return true if the list is empty
         using DynamicList<labelRange>::empty;
 
-        //- True if the value is contained within any of the sub-ranges
-        inline bool contains(const label value) const;
-
-        //- True if the value is contained within any of the sub-ranges
-        bool found(const label value) const { return contains(value); }
+        //- Return true if the value is found any of the sub-ranges
+        inline bool found(const label value) const;
 
         //- Add the range to the list
         bool add(const labelRange& range);

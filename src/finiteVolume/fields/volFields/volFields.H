@@ -33,8 +33,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_volFields_H
-#define Foam_volFields_H
+#ifndef volFields_H
+#define volFields_H
 
 #include "GeometricFields.H"
 #include "volMesh.H"

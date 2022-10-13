@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -44,8 +44,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_faMeshReconstructor_H
-#define Foam_faMeshReconstructor_H
+#ifndef faMeshReconstructor_H
+#define faMeshReconstructor_H
 
 #include "faMesh.H"
 #include "primitivePatch.H"
@@ -68,11 +68,6 @@ class faMeshReconstructor
 
         //- The processor-specific faMesh
         const faMesh& procMesh_;
-
-    // Flags
-
-        //- Problems encountered during construction?
-        int errors_;
 
 
     // Addressing
@@ -147,12 +142,7 @@ public:
     // Constructors
 
         //- Construct from components
-        explicit faMeshReconstructor
-        (
-            const faMesh& procMesh,
-            IOobjectOption::readOption readVolProcAddr =
-                IOobjectOption::MUST_READ
-        );
+        explicit faMeshReconstructor(const faMesh& procMesh);
 
         //- Construct from components
         faMeshReconstructor
@@ -169,9 +159,6 @@ public:
 
 
     // Member Functions
-
-        //- True if no construct errors encountered
-        bool good() const noexcept { return !errors_; }
 
         //- Processor point addressing
         const labelList& pointProcAddressing() const noexcept

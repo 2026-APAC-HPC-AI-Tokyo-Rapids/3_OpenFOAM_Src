@@ -27,6 +27,7 @@ License
 
 #include "Pstream.H"
 #include "ops.H"
+#include <algorithm>
 
 // * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
 
@@ -171,7 +172,7 @@ Foam::Tuple2<T1,T2> Foam::FieldOps::findMinData
         result.second() = data[i];
     }
 
-    Pstream::combineReduce(result, minFirstEqOp<T1>());
+    Pstream::combineAllGather(result, minFirstEqOp<T1>());
     return result;
 }
 
@@ -192,7 +193,7 @@ Foam::Tuple2<T1,T2> Foam::FieldOps::findMaxData
         result.second() = data[i];
     }
 
-    Pstream::combineReduce(result, maxFirstEqOp<T1>());
+    Pstream::combineAllGather(result, maxFirstEqOp<T1>());
     return result;
 }
 

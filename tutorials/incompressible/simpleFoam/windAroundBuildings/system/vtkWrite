@@ -6,10 +6,6 @@ vtkWrite
     libs    (utilityFunctionObjects);
     log     true;
 
-    //- Write more frequent than fields
-    writeControl    timeStep;
-    writeInterval   25;
-
     // Fields to output (words or regex)
     fields  (U p "(k|epsilon|omega)");
 
@@ -25,8 +21,9 @@ vtkWrite
     //- Write cell ids as field - Default=true
     writeIds    false;
 
-    //- These patches are uninteresting
-    excludePatches ( inlet outlet frontAndBack );
+    //- Write more frequent than fields
+    writeControl    timeStep;
+    writeInterval   25;
 }
 
 subset
@@ -34,10 +31,6 @@ subset
     type    vtkWrite;
     libs    (utilityFunctionObjects);
     log     true;
-
-    //- Write more frequent than fields
-    writeControl    timeStep;
-    writeInterval   25;
 
     // boundary    false;
 
@@ -49,8 +42,9 @@ subset
     //- Write cell ids as field - Default=true
     writeIds    false;
 
-    //- These patches are uninteresting
-    excludePatches ( inlet outlet frontAndBack );
+    //- Write more frequent than fields
+    writeControl    timeStep;
+    writeInterval   25;
 
     // Region of interest
     selection

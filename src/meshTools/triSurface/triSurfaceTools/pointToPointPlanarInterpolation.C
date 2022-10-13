@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -44,38 +44,43 @@ namespace Foam
 }
 
 
-// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 Foam::coordSystem::cartesian
 Foam::pointToPointPlanarInterpolation::calcCoordinateSystem
 (
     const pointField& points
-)
+) const
 {
     if (points.size() < 3)
     {
         FatalErrorInFunction
-            << "Need at least 3 non-collinear points for planar interpolation,"
-            << " but only had " << points.size() << " points" << nl
+            << "Only " << points.size() << " provided." << nl
+            << "Need at least three non-colinear points"
+            << " to be able to interpolate."
             << exit(FatalError);
     }
 
     const point& p0 = points[0];
 
     // Find furthest away point
+    vector e1;
     label index1 = -1;
-    scalar maxDistSqr = ROOTVSMALL;
+    scalar maxDist = ROOTVSMALL;
 
-    for (label i = 1; i < points.size(); ++i)
+    for (label i = 1; i < points.size(); i++)
     {
-        const scalar mag2 = magSqr(points[i] - p0);
+        const vector d = points[i] - p0;
+        scalar magD = mag(d);
 
-        if (maxDistSqr < mag2)
+        if (magD > maxDist)
         {
-            maxDistSqr = mag2;
+            e1 = d/magD;
             index1 = i;
+            maxDist = magD;
         }
     }
+
     if (index1 == -1)
     {
         FatalErrorInFunction
@@ -84,24 +89,26 @@ Foam::pointToPointPlanarInterpolation::calcCoordinateSystem
             << exit(FatalError);
     }
 
-    const vector e1(normalised(points[index1] - p0));
 
-    // Find point that is furthest perpendicular distance from the p0-p1 line
+    // Find point that is furthest away from line p0-p1
+    const point& p1 = points[index1];
+
     label index2 = -1;
-    maxDistSqr = ROOTVSMALL;
+    maxDist = ROOTVSMALL;
     for (label i = 1; i < points.size(); i++)
     {
         if (i != index1)
         {
-            vector e2(points[i] - p0);
+            const point& p2 = points[i];
+            vector e2(p2 - p0);
             e2.removeCollinear(e1);
 
-            const scalar mag2 = magSqr(e2);
+            scalar magE2 = mag(e2);
 
-            if (maxDistSqr < mag2)
+            if (magE2 > maxDist)
             {
-                maxDistSqr = mag2;
                 index2 = i;
+                maxDist = magE2;
             }
         }
     }
@@ -109,7 +116,7 @@ Foam::pointToPointPlanarInterpolation::calcCoordinateSystem
     {
         FatalErrorInFunction
             << "Cannot find points that define a plane with a valid normal."
-            << nl << "Have so far points " << p0 << " and " << points[index1]
+            << nl << "Have so far points " << p0 << " and " << p1
             << ". Are all your points on a single line instead of a plane?"
             << exit(FatalError);
     }
@@ -117,8 +124,8 @@ Foam::pointToPointPlanarInterpolation::calcCoordinateSystem
     const vector n = normalised(e1 ^ (points[index2]-p0));
 
     DebugInFunction
-        << " Used points "
-        << p0 << ' ' << points[index1] << ' ' << points[index2]
+        << " Used points " << p0 << ' ' << points[index1]
+        << ' ' << points[index2]
         << " to define coordinate system with normal " << n << endl;
 
     return coordSystem::cartesian
@@ -129,8 +136,6 @@ Foam::pointToPointPlanarInterpolation::calcCoordinateSystem
     );
 }
 
-
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 void Foam::pointToPointPlanarInterpolation::calcWeights
 (
@@ -157,8 +162,8 @@ void Foam::pointToPointPlanarInterpolation::calcWeights
                 << " centre" << exit(FatalError);
         }
 
-        nearestVertex_.resize(destPoints.size());
-        nearestVertexWeight_.resize(destPoints.size());
+        nearestVertex_.setSize(destPoints.size());
+        nearestVertexWeight_.setSize(destPoints.size());
         forAll(nearestVertex_, i)
         {
             nearestVertex_[i][0] = destToSource[i];
@@ -183,18 +188,15 @@ void Foam::pointToPointPlanarInterpolation::calcWeights
                     << endl;
             }
 
-            OBJstream str
-            (
-                "destToSource_" + Foam::name(UPstream::myProcNo()) + ".obj"
-            );
+            OBJstream str("destToSource.obj");
             Pout<< "pointToPointPlanarInterpolation::calcWeights :"
                 << " Dumping lines from face centres to original points to "
                 << str.name() << endl;
 
             forAll(destPoints, i)
             {
-                const label v0 = nearestVertex_[i][0];
-                str.writeLine(destPoints[i], sourcePoints[v0]);
+                label v0 = nearestVertex_[i][0];
+                str.write(linePointRef(destPoints[i], sourcePoints[v0]));
             }
         }
     }
@@ -235,24 +237,18 @@ void Foam::pointToPointPlanarInterpolation::calcWeights
 
         if (debug)
         {
-            fileName outName
-            (
-                "triangulation_" + Foam::name(UPstream::myProcNo()) + ".obj"
-            );
-
             Pout<< "pointToPointPlanarInterpolation::calcWeights :"
-                <<" Dumping triangulated surface to " << outName << endl;
+                <<" Dumping triangulated surface to triangulation.stl" << endl;
+            s.write("triangulation.stl");
 
-            s.write(outName);
-
-            OBJstream os
-            (
-                "localFaceCentres_" + Foam::name(UPstream::myProcNo()) + ".obj"
-            );
+            OBJstream str("localFaceCentres.obj");
             Pout<< "pointToPointPlanarInterpolation::calcWeights :"
-                << " Dumping face centres to " << os.name() << endl;
+                << " Dumping face centres to " << str.name() << endl;
 
-            os.write(localFaceCentres);
+            forAll(localFaceCentres, i)
+            {
+                str.write(localFaceCentres[i]);
+            }
         }
 
         // Determine interpolation onto face centres.
@@ -273,18 +269,15 @@ void Foam::pointToPointPlanarInterpolation::calcWeights
                     << endl;
             }
 
-            OBJstream str
-            (
-                "stencil_" + Foam::name(UPstream::myProcNo()) + ".obj"
-            );
+            OBJstream str("stencil.obj");
             Pout<< "pointToPointPlanarInterpolation::calcWeights :"
                 << " Dumping stencil to " << str.name() << endl;
 
             forAll(destPoints, i)
             {
-                const label v0 = nearestVertex_[i][0];
-                const label v1 = nearestVertex_[i][1];
-                const label v2 = nearestVertex_[i][2];
+                label v0 = nearestVertex_[i][0];
+                label v1 = nearestVertex_[i][1];
+                label v2 = nearestVertex_[i][2];
 
                 Pout<< "For location " << destPoints[i]
                     << " 2d:" << localFaceCentres[i]
@@ -293,21 +286,21 @@ void Foam::pointToPointPlanarInterpolation::calcWeights
                     << " at:" << sourcePoints[v0]
                     << " weight:" << nearestVertexWeight_[i][0] << nl;
 
-                str.writeLine(destPoints[i], sourcePoints[v0]);
+                str.write(linePointRef(destPoints[i], sourcePoints[v0]));
 
                 if (v1 != -1)
                 {
                     Pout<< "    " << v1
                         << " at:" << sourcePoints[v1]
                         << " weight:" << nearestVertexWeight_[i][1] << nl;
-                    str.writeLine(destPoints[i], sourcePoints[v1]);
+                    str.write(linePointRef(destPoints[i], sourcePoints[v1]));
                 }
                 if (v2 != -1)
                 {
                     Pout<< "    " << v2
                         << " at:" << sourcePoints[v2]
                         << " weight:" << nearestVertexWeight_[i][2] << nl;
-                    str.writeLine(destPoints[i], sourcePoints[v2]);
+                    str.write(linePointRef(destPoints[i], sourcePoints[v2]));
                 }
 
                 Pout<< endl;
@@ -363,20 +356,35 @@ Foam::pointToPointPlanarInterpolation::pointToPointPlanarInterpolation
     const bool nearestOnly,
     const coordinateSystem& referenceCS,
     const label sourceSize,
-    List<FixedList<label, 3>>&& nearestVertex,
-    List<FixedList<scalar, 3>>&& nearestVertexWeight
+    const List<FixedList<label, 3>>& nearestVertex,
+    const List<FixedList<scalar, 3>>& nearestVertexWeight
 )
 :
     perturb_(perturb),
     nearestOnly_(nearestOnly),
     referenceCS_(referenceCS),
     nPoints_(sourceSize),
-    nearestVertex_(std::move(nearestVertex)),
-    nearestVertexWeight_(std::move(nearestVertexWeight))
+    nearestVertex_(nearestVertex),
+    nearestVertexWeight_(nearestVertexWeight)
 {}
 
 
-// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
+Foam::autoPtr<Foam::pointToPointPlanarInterpolation>
+Foam::pointToPointPlanarInterpolation::clone() const
+{
+    return autoPtr<pointToPointPlanarInterpolation>::New
+    (
+        perturb_,
+        nearestOnly_,
+        referenceCS_,
+        nPoints_,
+        nearestVertex_,
+        nearestVertexWeight_
+    );
+}
+
+
+// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 Foam::wordList Foam::pointToPointPlanarInterpolation::timeNames
 (
@@ -390,6 +398,67 @@ Foam::wordList Foam::pointToPointPlanarInterpolation::timeNames
         names[i] = times[i].name();
     }
     return names;
+}
+
+
+bool Foam::pointToPointPlanarInterpolation::findTime
+(
+    const instantList& times,
+    const label startSampleTime,
+    const scalar timeVal,
+    label& lo,
+    label& hi
+)
+{
+    lo = startSampleTime;
+    hi = -1;
+
+    for (label i = startSampleTime+1; i < times.size(); i++)
+    {
+        if (times[i].value() > timeVal)
+        {
+            break;
+        }
+        else
+        {
+            lo = i;
+        }
+    }
+
+    if (lo == -1)
+    {
+        //FatalErrorInFunction
+        //    << "Cannot find starting sampling values for current time "
+        //    << timeVal << nl
+        //    << "Have sampling values for times "
+        //    << timeNames(times) << nl
+        //    << exit(FatalError);
+        return false;
+    }
+
+    if (lo < times.size()-1)
+    {
+        hi = lo+1;
+    }
+
+
+    if (debug)
+    {
+        if (hi == -1)
+        {
+            Pout<< "findTime : Found time " << timeVal << " after"
+                << " index:" << lo << " time:" << times[lo].value()
+                << endl;
+        }
+        else
+        {
+            Pout<< "findTime : Found time " << timeVal << " inbetween"
+                << " index:" << lo << " time:" << times[lo].value()
+                << " and index:" << hi << " time:" << times[hi].value()
+                << endl;
+        }
+    }
+    return true;
 }
 
 

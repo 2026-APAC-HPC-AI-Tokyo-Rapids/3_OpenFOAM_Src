@@ -118,7 +118,7 @@ void Foam::dynamicRefineFvMesh::mapNewInternalFaces
 
             GeoField& sFld = *iter();
 
-            if (sFld.is_oriented())
+            if (sFld.oriented()())
             {
                 WarningInFunction << "Ignoring mapping oriented field "
                     << sFld.name() << " since of type " << sFld.type()
@@ -154,7 +154,7 @@ void Foam::dynamicRefineFvMesh::mapNewInternalFaces
 
             GeoField& sFld = *iter();
 
-            if (sFld.is_oriented())
+            if (sFld.oriented()())
             {
                 DebugInfo
                     << "dynamicRefineFvMesh::mapNewInternalFaces(): "

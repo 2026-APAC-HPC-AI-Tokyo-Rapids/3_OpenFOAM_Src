@@ -171,7 +171,7 @@ void Foam::vtk::writeListParallel
 
 
     // Gather sizes (offsets irrelevant)
-    const globalIndex procAddr(globalIndex::gatherOnly{}, values.size());
+    const globalIndex procAddr(values.size(), globalIndex::gatherOnly{});
 
 
     if (Pstream::master())
@@ -184,34 +184,27 @@ void Foam::vtk::writeListParallel
 
         for (const label proci : procAddr.subProcs())
         {
-            const label procSize = procAddr.localSize(proci);
-
-            if (procSize)
-            {
-                recvData.resize_nocopy(procSize);
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData.data_bytes(),
-                    recvData.size_bytes()
-                );
-                vtk::writeList(fmt, recvData);
-            }
+            recvData.resize_nocopy(procAddr.localSize(proci));
+            UIPstream::read
+            (
+                UPstream::commsTypes::scheduled,
+                proci,
+                recvData.data_bytes(),
+                recvData.size_bytes()
+            );
+            vtk::writeList(fmt, recvData);
         }
     }
     else
     {
-        if (values.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                values.cdata_bytes(),
-                values.size_bytes()
-            );
-        }
+        // Send
+        UOPstream::write
+        (
+            UPstream::commsTypes::scheduled,
+            UPstream::masterNo(),
+            values.cdata_bytes(),
+            values.size_bytes()
+        );
     }
 }
 
@@ -240,7 +233,7 @@ void Foam::vtk::writeListParallel
     }
 
     // Gather sizes (offsets irrelevant)
-    const globalIndex procAddr(globalIndex::gatherOnly{}, sendData.size());
+    const globalIndex procAddr(sendData.size(), globalIndex::gatherOnly{});
 
 
     if (Pstream::master())
@@ -253,34 +246,26 @@ void Foam::vtk::writeListParallel
 
         for (const label proci : procAddr.subProcs())
         {
-            const label procSize = procAddr.localSize(proci);
-
-            if (procSize)
-            {
-                recvData.resize_nocopy(procSize);
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData.data_bytes(),
-                    recvData.size_bytes()
-                );
-                vtk::writeList(fmt, recvData);
-            }
+            recvData.resize_nocopy(procAddr.localSize(proci));
+            UIPstream::read
+            (
+                UPstream::commsTypes::scheduled,
+                proci,
+                recvData.data_bytes(),
+                recvData.size_bytes()
+            );
+            vtk::writeList(fmt, recvData);
         }
     }
     else
     {
-        if (sendData.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                sendData.cdata_bytes(),
-                sendData.size_bytes()
-            );
-        }
+        UOPstream::write
+        (
+            UPstream::commsTypes::scheduled,
+            UPstream::masterNo(),
+            sendData.cdata_bytes(),
+            sendData.size_bytes()
+        );
     }
 }
 
@@ -309,7 +294,7 @@ void Foam::vtk::writeListParallel
     }
 
     // Gather sizes (offsets irrelevant)
-    const globalIndex procAddr(globalIndex::gatherOnly{}, sendData.size());
+    const globalIndex procAddr(sendData.size(), globalIndex::gatherOnly{});
 
 
     if (Pstream::master())
@@ -322,35 +307,26 @@ void Foam::vtk::writeListParallel
 
         for (const label proci : procAddr.subProcs())
         {
-            const label procSize = procAddr.localSize(proci);
-
-            if (procSize)
-            {
-                recvData.resize_nocopy(procSize);
-
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData.data_bytes(),
-                    recvData.size_bytes()
-                );
-                vtk::writeList(fmt, recvData);
-            }
+            recvData.resize_nocopy(procAddr.localSize(proci));
+            UIPstream::read
+            (
+                UPstream::commsTypes::scheduled,
+                proci,
+                recvData.data_bytes(),
+                recvData.size_bytes()
+            );
+            vtk::writeList(fmt, recvData);
         }
     }
     else
     {
-        if (sendData.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                sendData.cdata_bytes(),
-                sendData.size_bytes()
-            );
-        }
+        UOPstream::write
+        (
+            UPstream::commsTypes::scheduled,
+            UPstream::masterNo(),
+            sendData.cdata_bytes(),
+            sendData.size_bytes()
+        );
     }
 }
 
@@ -373,8 +349,8 @@ void Foam::vtk::writeListsParallel
 
 
     // Gather sizes (offsets irrelevant)
-    const globalIndex procAddr1(globalIndex::gatherOnly{}, values1.size());
-    const globalIndex procAddr2(globalIndex::gatherOnly{}, values2.size());
+    const globalIndex procAddr1(values1.size(), globalIndex::gatherOnly{});
+    const globalIndex procAddr2(values2.size(), globalIndex::gatherOnly{});
 
 
     if (Pstream::master())
@@ -392,61 +368,45 @@ void Foam::vtk::writeListsParallel
         for (const label proci : procAddr1.subProcs())
         {
             // values1
-            label procSize = procAddr1.localSize(proci);
-
-            if (procSize)
-            {
-                recvData.resize_nocopy(procSize);
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData.data_bytes(),
-                    recvData.size_bytes()
-                );
-                vtk::writeList(fmt, recvData);
-            }
+            recvData.resize_nocopy(procAddr1.localSize(proci));
+            UIPstream::read
+            (
+                UPstream::commsTypes::scheduled,
+                proci,
+                recvData.data_bytes(),
+                recvData.size_bytes()
+            );
+            vtk::writeList(fmt, recvData);
 
             // values2
-            procSize = procAddr2.localSize(proci);
-
-            if (procSize)
-            {
-                recvData.resize_nocopy(procSize);
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData.data_bytes(),
-                    recvData.size_bytes()
-                );
-                vtk::writeList(fmt, recvData);
-            }
+            recvData.resize_nocopy(procAddr2.localSize(proci));
+            UIPstream::read
+            (
+                UPstream::commsTypes::scheduled,
+                proci,
+                recvData.data_bytes(),
+                recvData.size_bytes()
+            );
+            vtk::writeList(fmt, recvData);
         }
     }
     else
     {
-        if (values1.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                values1.cdata_bytes(),
-                values1.size_bytes()
-            );
-        }
+        UOPstream::write
+        (
+            UPstream::commsTypes::scheduled,
+            UPstream::masterNo(),
+            values1.cdata_bytes(),
+            values1.size_bytes()
+        );
 
-        if (values2.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                values2.cdata_bytes(),
-                values2.size_bytes()
-            );
-        }
+        UOPstream::write
+        (
+            UPstream::commsTypes::scheduled,
+            UPstream::masterNo(),
+            values2.cdata_bytes(),
+            values2.size_bytes()
+        );
     }
 }
 
@@ -477,8 +437,8 @@ void Foam::vtk::writeListsParallel
 
 
     // Gather sizes (offsets irrelevant)
-    const globalIndex procAddr1(globalIndex::gatherOnly{}, values1.size());
-    const globalIndex procAddr2(globalIndex::gatherOnly{}, sendData2.size());
+    const globalIndex procAddr1(values1.size(), globalIndex::gatherOnly{});
+    const globalIndex procAddr2(sendData2.size(), globalIndex::gatherOnly{});
 
 
     if (Pstream::master())
@@ -497,61 +457,45 @@ void Foam::vtk::writeListsParallel
         for (const label proci : procAddr1.subProcs())
         {
             // values1
-            label procSize = procAddr1.localSize(proci);
-
-            if (procSize)
-            {
-                recvData.resize_nocopy(procSize);
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData.data_bytes(),
-                    recvData.size_bytes()
-                );
-                vtk::writeList(fmt, recvData);
-            }
+            recvData.resize_nocopy(procAddr1.localSize(proci));
+            UIPstream::read
+            (
+                UPstream::commsTypes::scheduled,
+                proci,
+                recvData.data_bytes(),
+                recvData.size_bytes()
+            );
+            vtk::writeList(fmt, recvData);
 
             // values2
-            procSize = procAddr2.localSize(proci);
-
-            if (procSize)
-            {
-                recvData.resize_nocopy(procSize);
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData.data_bytes(),
-                    recvData.size_bytes()
-                );
-                vtk::writeList(fmt, recvData);
-            }
+            recvData.resize_nocopy(procAddr2.localSize(proci));
+            UIPstream::read
+            (
+                UPstream::commsTypes::scheduled,
+                proci,
+                recvData.data_bytes(),
+                recvData.size_bytes()
+            );
+            vtk::writeList(fmt, recvData);
         }
     }
     else
     {
-        if (values1.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                values1.cdata_bytes(),
-                values1.size_bytes()
-            );
-        }
+        UOPstream::write
+        (
+            UPstream::commsTypes::scheduled,
+            UPstream::masterNo(),
+            values1.cdata_bytes(),
+            values1.size_bytes()
+        );
 
-        if (sendData2.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                sendData2.cdata_bytes(),
-                sendData2.size_bytes()
-            );
-        }
+        UOPstream::write
+        (
+            UPstream::commsTypes::scheduled,
+            UPstream::masterNo(),
+            sendData2.cdata_bytes(),
+            sendData2.size_bytes()
+        );
     }
 }
 

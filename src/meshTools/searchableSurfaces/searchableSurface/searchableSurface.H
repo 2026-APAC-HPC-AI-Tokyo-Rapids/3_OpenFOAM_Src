@@ -41,15 +41,15 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_searchableSurface_H
-#define Foam_searchableSurface_H
+#ifndef searchableSurface_H
+#define searchableSurface_H
 
 #include "pointField.H"
 #include "boundBox.H"
 #include "typeInfo.H"
 #include "runTimeSelectionTables.H"
 #include "pointIndexHit.H"
-#include "line.H"
+#include "linePointRef.H"
 #include "objectRegistry.H"
 #include "volumeType.H"
 
@@ -58,7 +58,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
+// Forward declarations
 class objectRegistry;
 class mapDistribute;
 class treeBoundBox;

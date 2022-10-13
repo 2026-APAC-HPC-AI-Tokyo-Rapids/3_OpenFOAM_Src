@@ -139,16 +139,17 @@ Foam::functionObjects::streamLineBase::wallPatch() const
 }
 
 
-Foam::refPtr<Foam::interpolation<Foam::vector>>
-Foam::functionObjects::streamLineBase::initInterpolations
+void Foam::functionObjects::streamLineBase::initInterpolations
 (
     const label nSeeds,
+    label& UIndex,
+    PtrList<volScalarField>& vsFlds,
     PtrList<interpolation<scalar>>& vsInterp,
+    PtrList<volVectorField>& vvFlds,
     PtrList<interpolation<vector>>& vvInterp
 )
 {
-    refPtr<interpolation<vector>> UInterp;
-
+    // Read fields
     label nScalar = 0;
     label nVector = 0;
 
@@ -165,7 +166,7 @@ Foam::functionObjects::streamLineBase::initInterpolations
         else
         {
             FatalErrorInFunction
-                << "Cannot find scalar/vector field " << fieldName << nl
+                << "Cannot find field " << fieldName << nl
                 << "Valid scalar fields: "
                 << flatOutput(mesh_.sortedNames<volScalarField>()) << nl
                 << "Valid vector fields: "
@@ -173,9 +174,9 @@ Foam::functionObjects::streamLineBase::initInterpolations
                 << exit(FatalError);
         }
     }
-    vsInterp.resize(nScalar);
-    vvInterp.resize(nVector);
+    vsInterp.setSize(nScalar);
     nScalar = 0;
+    vvInterp.setSize(nVector);
     nVector = 0;
 
     for (const word& fieldName : fields_)
@@ -185,55 +186,56 @@ Foam::functionObjects::streamLineBase::initInterpolations
             const volScalarField& f = lookupObject<volScalarField>(fieldName);
             vsInterp.set
             (
-                nScalar,
-                interpolation<scalar>::New(interpolationScheme_, f)
+                nScalar++,
+                interpolation<scalar>::New
+                (
+                    interpolationScheme_,
+                    f
+                )
             );
-            ++nScalar;
         }
         else if (foundObject<volVectorField>(fieldName))
         {
             const volVectorField& f = lookupObject<volVectorField>(fieldName);
 
-            vvInterp.set
-            (
-                nVector,
-                interpolation<vector>::New(interpolationScheme_, f)
-            );
-
             if (f.name() == UName_)
             {
-                // Velocity is part of sampled velocity fields
-                UInterp.cref(vvInterp[nVector]);
+                UIndex = nVector;
             }
 
-            ++nVector;
+            vvInterp.set
+            (
+                nVector++,
+                interpolation<vector>::New
+                (
+                    interpolationScheme_,
+                    f
+                )
+            );
         }
     }
 
-    if (!UInterp)
-    {
-        // Velocity was not in sampled velocity fields
-        UInterp.reset
-        (
-            interpolation<vector>::New
-            (
-                interpolationScheme_,
-                // Fatal if missing
-                lookupObject<volVectorField>(UName_)
-            )
-        );
-    }
-
     // Store the names
-    scalarNames_.resize(vsInterp.size());
+    scalarNames_.setSize(vsInterp.size());
     forAll(vsInterp, i)
     {
         scalarNames_[i] = vsInterp[i].psi().name();
     }
-    vectorNames_.resize(vvInterp.size());
+    vectorNames_.setSize(vvInterp.size());
     forAll(vvInterp, i)
     {
         vectorNames_[i] = vvInterp[i].psi().name();
+    }
+
+    // Check that we know the index of U in the interpolators.
+
+    if (UIndex == -1)
+    {
+        FatalErrorInFunction
+            << "Cannot find field to move particles with : " << UName_ << nl
+            << "This field has to be present in the sampled fields " << fields_
+            << " and in the objectRegistry."
+            << exit(FatalError);
     }
 
     // Sampled data
@@ -242,20 +244,18 @@ Foam::functionObjects::streamLineBase::initInterpolations
     // Size to maximum expected sizes.
     allTracks_.clear();
     allTracks_.setCapacity(nSeeds);
-    allScalars_.resize(vsInterp.size());
+    allScalars_.setSize(vsInterp.size());
     forAll(allScalars_, i)
     {
         allScalars_[i].clear();
         allScalars_[i].setCapacity(nSeeds);
     }
-    allVectors_.resize(vvInterp.size());
+    allVectors_.setSize(vvInterp.size());
     forAll(allVectors_, i)
     {
         allVectors_[i].clear();
         allVectors_[i].setCapacity(nSeeds);
     }
-
-    return UInterp;
 }
 
 
@@ -800,7 +800,7 @@ bool Foam::functionObjects::streamLineBase::writeToFile()
 
 
     // File names generated on the master but setProperty needed everywher
-    Pstream::broadcast(outputFileNames);
+    Pstream::scatter(outputFileNames);
 
     forAllConstIters(outputFileNames, iter)
     {
@@ -877,12 +877,21 @@ bool Foam::functionObjects::streamLineBase::read(const dictionary& dict)
     Info<< type() << " " << name() << ":" << nl;
 
     UName_ = dict.getOrDefault<word>("U", "U");
-    Info<< "    Employing velocity field " << UName_ << endl;
 
     if (fields_.empty())
     {
         dict.readEntry("fields", fields_);
+
+        if (!fields_.found(UName_))
+        {
+            FatalIOErrorInFunction(dict)
+                << "Velocity field for tracking " << UName_
+                << " should be present in the list of fields " << fields_
+                << exit(FatalIOError);
+        }
     }
+
+    Info<< "    Employing velocity field " << UName_ << endl;
 
     bool trackForward;
     if (dict.readIfPresent("trackForward", trackForward))
@@ -903,12 +912,7 @@ bool Foam::functionObjects::streamLineBase::read(const dictionary& dict)
     }
     else
     {
-        trackDir_ = trackDirTypeNames.getOrDefault
-        (
-            "direction",
-            dict,
-            trackDirType::FORWARD
-        );
+        trackDir_ = trackDirTypeNames.get("direction", dict);
     }
     dict.readEntry("lifeTime", lifeTime_);
     if (lifeTime_ < 1)
@@ -927,7 +931,7 @@ bool Foam::functionObjects::streamLineBase::read(const dictionary& dict)
     }
 
 
-    bounds_.reset();
+    bounds_ = boundBox::invertedBox;
     if (dict.readIfPresent("bounds", bounds_) && !bounds_.empty())
     {
         Info<< "    clipping all segments to " << bounds_ << nl << endl;

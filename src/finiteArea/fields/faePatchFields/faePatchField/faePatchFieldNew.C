@@ -106,7 +106,7 @@ Foam::tmp<Foam::faePatchField<Type>> Foam::faePatchField<Type>::New
 
     if (!ctorPtr)
     {
-        if (!faePatchFieldBase::disallowGenericPatchField)
+        if (!disallowGenericFaePatchField)
         {
             ctorPtr = dictionaryConstructorTable("generic");
         }

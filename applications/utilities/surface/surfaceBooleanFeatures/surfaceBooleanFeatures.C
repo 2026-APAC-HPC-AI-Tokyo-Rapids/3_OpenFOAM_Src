@@ -81,6 +81,7 @@ Description
 #include "triSurfaceSearch.H"
 #include "triSurfaceMesh.H"
 #include "OFstream.H"
+#include "OBJstream.H"
 #include "booleanSurface.H"
 #include "edgeIntersections.H"
 #include "meshTools.H"
@@ -94,7 +95,6 @@ Description
 #if defined(CGAL_VERSION_NR) && (CGAL_VERSION_NR < 1050211000)
 #define BOOST_BIND_GLOBAL_PLACEHOLDERS
 #endif
-#pragma clang diagnostic ignored "-Wbitwise-instead-of-logical"
 
 #include <CGAL/AABB_tree.h>
 #include <CGAL/AABB_traits.h>
@@ -1719,9 +1719,9 @@ int main(int argc, char *argv[])
 
     const fileName sFeatFileName
     (
-        fileName::stem(surf1Name)
+        fileName(surf1Name).nameLessExt()
       + "_"
-      + fileName::stem(surf2Name)
+      + fileName(surf2Name).nameLessExt()
       + "_"
       + action
     );

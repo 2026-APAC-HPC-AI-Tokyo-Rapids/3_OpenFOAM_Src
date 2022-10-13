@@ -6,8 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
-    Copyright (C) 2022 Upstream CFD GmbH
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,52 +38,44 @@ namespace LESModels
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
 template<class BasicTurbulenceModel>
+tmp<volScalarField> kOmegaSSTDDES<BasicTurbulenceModel>::rd
+(
+    const volScalarField& magGradU
+) const
+{
+    tmp<volScalarField> tr
+    (
+        min
+        (
+            this->nuEff()
+           /(
+                max
+                (
+                    magGradU,
+                    dimensionedScalar("SMALL", magGradU.dimensions(), SMALL)
+                )
+                *sqr(this->kappa_*this->y_)
+            ),
+            scalar(10)
+        )
+    );
+    tr.ref().boundaryFieldRef() == 0.0;
+
+    return tr;
+}
+
+
+template<class BasicTurbulenceModel>
 tmp<volScalarField> kOmegaSSTDDES<BasicTurbulenceModel>::fd
 (
     const volScalarField& magGradU
 ) const
 {
-    return 1 - tanh(pow(Cd1_*this->r(this->nuEff(), magGradU), Cd2_));
+    return 1 - tanh(pow(Cd1_*rd(magGradU), Cd2_));
 }
 
 
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
-
-template<class BasicTurbulenceModel>
-tmp<volScalarField> kOmegaSSTDDES<BasicTurbulenceModel>::S2
-(
-    const volTensorField& gradU
-) const
-{
-    tmp<volScalarField> tS2 =
-        kOmegaSSTBase<DESModel<BasicTurbulenceModel>>::S2(gradU);
-
-    if (this->useSigma_)
-    {
-        volScalarField& S2 = tS2.ref();
-
-        const volScalarField& k = this->k_;
-        const volScalarField& omega = this->omega_;
-
-        const volScalarField CDkOmega
-        (
-            (2*this->alphaOmega2_)*(fvc::grad(k) & fvc::grad(omega))/omega
-        );
-
-        const volScalarField F1(this->F1(CDkOmega));
-
-        const volScalarField CDES(this->CDES(F1));
-        const volScalarField Ssigma(this->Ssigma(gradU));
-
-        S2 -=
-            fd(mag(gradU))
-           *pos(this->lengthScaleRAS() - this->lengthScaleLES(CDES))
-           *(S2 - sqr(Ssigma));
-    }
-
-    return tS2;
-}
-
 
 template<class BasicTurbulenceModel>
 tmp<volScalarField> kOmegaSSTDDES<BasicTurbulenceModel>::dTilda
@@ -93,43 +84,23 @@ tmp<volScalarField> kOmegaSSTDDES<BasicTurbulenceModel>::dTilda
     const volScalarField& CDES
 ) const
 {
-    const volScalarField lRAS(this->lengthScaleRAS());
-    const volScalarField lLES(this->lengthScaleLES(CDES));
-    const dimensionedScalar l0(dimLength, Zero);
+    const volScalarField& k = this->k_;
+    const volScalarField& omega = this->omega_;
+
+    const volScalarField lRAS(sqrt(k)/(this->betaStar_*omega));
+    const volScalarField lLES(CDES*this->delta());
 
     return max
     (
-        lRAS - fd(magGradU)*max(lRAS - lLES, l0),
+        lRAS
+      - fd(magGradU)
+       *max
+        (
+            lRAS - lLES,
+            dimensionedScalar(dimLength, Zero)
+        ),
         dimensionedScalar("small", dimLength, SMALL)
     );
-}
-
-template<class BasicTurbulenceModel>
-tmp<volScalarField::Internal> kOmegaSSTDDES<BasicTurbulenceModel>::GbyNu0
-(
-    const volTensorField& gradU,
-    const volScalarField& S2
-) const
-{
-    if (this->useSigma_)
-    {
-        return S2();
-    }
-
-    return
-        kOmegaSSTBase<DESModel<BasicTurbulenceModel>>::GbyNu0(gradU, S2);
-}
-
-
-template<class BasicTurbulenceModel>
-tmp<volScalarField::Internal> kOmegaSSTDDES<BasicTurbulenceModel>::GbyNu
-(
-    const volScalarField::Internal& GbyNu0,
-    const volScalarField::Internal& F2,
-    const volScalarField::Internal& S2
-) const
-{
-    return GbyNu0; // Unlimited
 }
 
 
@@ -162,19 +133,12 @@ kOmegaSSTDDES<BasicTurbulenceModel>::kOmegaSSTDDES
 
     Cd1_
     (
-        this->useSigma_
-          ? dimensioned<scalar>::getOrAddToDict
-            (
-                "Cd1Sigma",
-                this->coeffDict_,
-                22
-            )
-          : dimensioned<scalar>::getOrAddToDict
-            (
-                "Cd1",
-                this->coeffDict_,
-                20
-            )
+        dimensioned<scalar>::getOrAddToDict
+        (
+            "Cd1",
+            this->coeffDict_,
+            20
+        )
     ),
     Cd2_
     (
@@ -207,13 +171,6 @@ bool kOmegaSSTDDES<BasicTurbulenceModel>::read()
     }
 
     return false;
-}
-
-
-template<class BasicTurbulenceModel>
-tmp<volScalarField> kOmegaSSTDDES<BasicTurbulenceModel>::fd() const
-{
-    return fd(mag(fvc::grad(this->U_)));
 }
 
 

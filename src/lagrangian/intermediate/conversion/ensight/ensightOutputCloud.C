@@ -35,41 +35,40 @@ License
 
 namespace Foam
 {
-
-//- Binary output
-static inline void writeMeasured_binary
-(
-    ensightFile& os,
-    const UList<floatVector>& points
-)
-{
-    for (const floatVector& p : points)
+    //- Binary output
+    static inline void writeMeasured_binary
+    (
+        ensightFile& os,
+        const UList<point>& points
+    )
     {
-        os.write(p.x());
-        os.write(p.y());
-        os.write(p.z());
-    }
-}
-
-//- ASCII output. Id + position together
-static inline label writeMeasured_ascii
-(
-    ensightFile& os,
-    label pointId,
-    const UList<floatVector>& points
-)
-{
-    for (const floatVector& p : points)
-    {
-        os.write(++pointId, 8); // 1-index and an unusual width
-        os.write(p.x());
-        os.write(p.y());
-        os.write(p.z());
-        os.newline();
+        for (const point& p : points)
+        {
+            os.write(p.x());
+            os.write(p.y());
+            os.write(p.z());
+        }
     }
 
-    return pointId;
-}
+    //- ASCII output. Id + position together
+    static inline label writeMeasured_ascii
+    (
+        ensightFile& os,
+        label pointId,
+        const UList<point>& points
+    )
+    {
+        for (const point& p : points)
+        {
+            os.write(++pointId, 8); // 1-index and an unusual width
+            os.write(p.x());
+            os.write(p.y());
+            os.write(p.z());
+            os.newline();
+        }
+
+        return pointId;
+    }
 
 } // End namespace Foam
 
@@ -78,10 +77,10 @@ static inline label writeMeasured_ascii
 
 bool Foam::ensightOutput::writeCloudPositions
 (
-    ensightFile& os,
     const fvMesh& mesh,
     const word& cloudName,
-    bool exists
+    bool exists,
+    autoPtr<ensightFile>& output
 )
 {
     label nLocalParcels(0);
@@ -98,6 +97,7 @@ bool Foam::ensightOutput::writeCloudPositions
 
     if (Pstream::master())
     {
+        ensightFile& os = output();
         os.beginParticleCoordinates(nTotParcels);
     }
 
@@ -111,12 +111,10 @@ bool Foam::ensightOutput::writeCloudPositions
     const globalIndex procAddr(nLocalParcels, globalIndex::gatherOnly{});
 
 
-    DynamicList<floatVector> positions;
+    DynamicList<point> positions;
     positions.reserve(Pstream::master() ? procAddr.maxSize() : nLocalParcels);
 
-    // Extract positions from parcel.
-    // Store as floatVector, since that is what Ensight will write anyhow
-
+    // Extract positions
     if (parcelsPtr)
     {
         const auto& parcels = *parcelsPtr;
@@ -125,26 +123,10 @@ bool Foam::ensightOutput::writeCloudPositions
 
         auto outIter = positions.begin();
 
-        if (std::is_same<float, vector::cmptType>::value)
+        for (const passiveParticle& p : parcels)
         {
-            for (const passiveParticle& p : parcels)
-            {
-                *outIter = p.position();
-                ++outIter;
-            }
-        }
-        else
-        {
-            for (const passiveParticle& p : parcels)
-            {
-                vector pos(p.position());
-
-                (*outIter).x() = narrowFloat(pos.x());
-                (*outIter).y() = narrowFloat(pos.y());
-                (*outIter).z() = narrowFloat(pos.z());
-
-                ++outIter;
-            }
+            *outIter = p.position();
+            ++outIter;
         }
 
         parcelsPtr.reset(nullptr);
@@ -152,7 +134,8 @@ bool Foam::ensightOutput::writeCloudPositions
 
     if (Pstream::master())
     {
-        const bool isBinaryOutput = (os.format() == IOstreamOption::BINARY);
+        ensightFile& os = output();
+        const bool isBinaryOutput = (os.format() == IOstream::BINARY);
 
         label parcelId = 0;
 
@@ -181,42 +164,35 @@ bool Foam::ensightOutput::writeCloudPositions
         // Receive and write
         for (const label proci : procAddr.subProcs())
         {
-            const label procSize = procAddr.localSize(proci);
+            positions.resize_nocopy(procAddr.localSize(proci));
+            UIPstream::read
+            (
+                UPstream::commsTypes::scheduled,
+                proci,
+                positions.data_bytes(),
+                positions.size_bytes()
+            );
 
-            if (procSize)
+            if (isBinaryOutput)
             {
-                positions.resize_nocopy(procSize);
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    positions.data_bytes(),
-                    positions.size_bytes()
-                );
-
-                if (isBinaryOutput)
-                {
-                    writeMeasured_binary(os, positions);
-                }
-                else
-                {
-                    parcelId = writeMeasured_ascii(os, parcelId, positions);
-                }
+                writeMeasured_binary(os, positions);
+            }
+            else
+            {
+                parcelId = writeMeasured_ascii(os, parcelId, positions);
             }
         }
     }
     else
     {
-        if (positions.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                positions.cdata_bytes(),
-                positions.size_bytes()
-            );
-        }
+        // Send
+        UOPstream::write
+        (
+            UPstream::commsTypes::scheduled,
+            UPstream::masterNo(),
+            positions.cdata_bytes(),
+            positions.size_bytes()
+        );
     }
 
     return true;

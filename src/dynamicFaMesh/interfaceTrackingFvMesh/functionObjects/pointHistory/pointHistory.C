@@ -146,11 +146,21 @@ Foam::pointHistory::pointHistory
         // File update
         if (Pstream::master())
         {
-            const word startTimeName =
+            fileName historyDir;
+
+            word startTimeName =
                 time_.timeName(mesh.time().startTime().value());
 
-            const fileName historyDir =
-                time_.globalPath()/"history"/startTimeName;
+            if (Pstream::parRun())
+            {
+                // Put in undecomposed case (Note: gives problems for
+                // distributed data running)
+                historyDir = time_.path()/".."/"history"/startTimeName;
+            }
+            else
+            {
+                historyDir = time_.path()/"history"/startTimeName;
+            }
 
             // Create directory if does not exist.
             mkDir(historyDir);

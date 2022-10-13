@@ -84,14 +84,12 @@ void Foam::DevolatilisationModel<CloudType>::addToDevolatilisationMass
 
 
 template<class CloudType>
-void Foam::DevolatilisationModel<CloudType>::info()
+void Foam::DevolatilisationModel<CloudType>::info(Ostream& os)
 {
-    CloudSubModelBase<CloudType>::info();
-
     const scalar mass0 = this->template getBaseProperty<scalar>("mass");
     const scalar massTotal = mass0 + returnReduce(dMass_, sumOp<scalar>());
 
-    Log_<< "    Mass transfer devolatilisation  = " << massTotal << nl;
+    Info<< "    Mass transfer devolatilisation  = " << massTotal << nl;
 
     if (this->writeTime())
     {

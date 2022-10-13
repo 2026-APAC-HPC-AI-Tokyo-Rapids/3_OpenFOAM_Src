@@ -54,9 +54,7 @@ snGradSchemes
 
 oversetInterpolation
 {
-    method              inverseDistance;
-    holeLayers          6;
-    useLayer            3;
+    method          cellVolumeWeight;
 }
 
 oversetInterpolationSuppressed

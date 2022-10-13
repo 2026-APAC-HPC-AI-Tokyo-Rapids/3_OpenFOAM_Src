@@ -88,7 +88,14 @@ void Foam::coordinateSystems::readFromStream(const bool valid)
 
 bool Foam::coordinateSystems::readContents()
 {
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        (
+            readOpt() == IOobject::MUST_READ
+         || readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         readFromStream();
         return true;
@@ -238,8 +245,12 @@ Foam::coordinateSystems::cfind(const word& name) const
             << name << '=' << index << endl;
     }
 
-    // Return nullptr if not found
-    return PtrList<coordinateSystem>::test(index);
+    if (index < 0)
+    {
+        return nullptr;
+    }
+
+    return this->operator()(index);
 }
 
 
@@ -314,7 +325,7 @@ bool Foam::coordinateSystems::writeObject
     // Force ASCII, uncompressed
     return regIOobject::writeObject
     (
-        IOstreamOption(IOstreamOption::ASCII),
+        IOstreamOption(IOstream::ASCII),
         valid
     );
 }

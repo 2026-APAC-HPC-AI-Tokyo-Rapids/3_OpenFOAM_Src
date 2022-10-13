@@ -232,13 +232,13 @@ vtk::outputOptions getOutputOptions(const argList& args)
 
         if (!args.found("ascii"))
         {
-            if (sizeof(float) != 4 || sizeof(label) != 4)
+            if (sizeof(floatScalar) != 4 || sizeof(label) != 4)
             {
                 opts.ascii(true);
 
                 WarningInFunction
                     << "Using ASCII rather than legacy binary VTK format since "
-                    << "float and/or label are not 4 bytes in size."
+                    << "floatScalar and/or label are not 4 bytes in size."
                     << nl << endl;
             }
             else
@@ -268,6 +268,7 @@ int main(int argc, char *argv[])
 
     // Less frequently used - reduce some clutter
     argList::setAdvanced("decomposeParDict");
+    argList::setAdvanced("noFunctionObjects");
 
     argList::addVerboseOption("Additional verbosity");
 

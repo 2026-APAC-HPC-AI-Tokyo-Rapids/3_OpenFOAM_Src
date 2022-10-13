@@ -170,17 +170,18 @@ void Foam::regionToFace::combine(topoSet& set, const bool add) const
         if (!ni.first().hit() || d2 < ni.second().first())
         {
             ni.second().first() = d2;
-            ni.first().hitPoint(fc);
+            ni.first().setHit();
+            ni.first().setPoint(fc);
             ni.first().setIndex(i);
         }
     }
 
     // Globally reduce
-    Pstream::combineReduce(ni, mappedPatchBase::nearestEqOp());
+    Pstream::combineAllGather(ni, mappedPatchBase::nearestEqOp());
 
     if (verbose_)
     {
-        Info<< "    Found nearest face at " << ni.first().point()
+        Info<< "    Found nearest face at " << ni.first().rawPoint()
             << " on processor " << ni.second().second()
             << " face " << ni.first().index()
             << " distance " << Foam::sqrt(ni.second().first()) << endl;

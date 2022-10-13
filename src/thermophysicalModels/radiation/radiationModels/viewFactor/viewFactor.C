@@ -35,8 +35,6 @@ License
 #include "boundaryRadiationProperties.H"
 #include "lduCalculatedProcessorField.H"
 
-
-
 using namespace Foam::constant;
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -57,36 +55,7 @@ const Foam::word Foam::radiation::viewFactor::viewFactorWalls
 
 void Foam::radiation::viewFactor::initialise()
 {
-    const polyBoundaryMesh& patches = mesh_.boundaryMesh();
-
-    if (!finalAgglom_.typeHeaderOk<labelListIOList>())
-    {
-        finalAgglom_.setSize(patches.size());
-        for (label patchi=0;  patchi < patches.size(); patchi++)
-        {
-            finalAgglom_[patchi] = identity(patches[patchi].size());
-        }
-    }
-
-    coarseMesh_.reset
-    (
-        new singleCellFvMesh
-        (
-            IOobject
-            (
-                "coarse:" + mesh_.name(),
-                mesh_.polyMesh::instance(),
-                mesh_.time(),
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                false
-            ),
-            mesh_,
-            finalAgglom_
-        )
-    );
-
-    const polyBoundaryMesh& coarsePatches = coarseMesh_->boundaryMesh();
+    const polyBoundaryMesh& coarsePatches = coarseMesh_.boundaryMesh();
 
     selectedPatches_ = mesh_.boundaryMesh().indices(viewFactorWalls);
 
@@ -103,14 +72,13 @@ void Foam::radiation::viewFactor::initialise()
             << nLocalCoarseFaces_ << endl;
     }
 
-    totalNCoarseFaces_ = returnReduce(nLocalCoarseFaces_, sumOp<label>());
+    totalNCoarseFaces_ = nLocalCoarseFaces_;
+    reduce(totalNCoarseFaces_, sumOp<label>());
 
     DebugInFunction
         << "Total number of clusters : " << totalNCoarseFaces_ << endl;
 
     useDirect_ = coeffs_.getOrDefault<bool>("useDirectSolver", true);
-
-
 
     map_.reset
     (
@@ -218,7 +186,7 @@ void Foam::radiation::viewFactor::initialise()
         labelList upper(rays_.size(), -1);
         labelList lower(rays_.size(), -1);
 
-        const edgeList raysLst(rays_.sortedToc());
+        const edgeList& raysLst = rays_.sortedToc();
         label rayI = 0;
         for (const auto& e : raysLst)
         {
@@ -400,7 +368,7 @@ void Foam::radiation::viewFactor::initialise()
         (
             new lduPrimitiveMesh
             (
-                globalFaceFaces_().size(),    //rays_.size(),
+                rays_.size(),
                 lower,
                 upper,
                 allInterfacesPtr,
@@ -418,34 +386,30 @@ void Foam::radiation::viewFactor::initialise()
         {
             scalar maxDelta = 0;
             scalar totalDelta = 0;
-
-            if (myF.size())
+            forAll (myF, i)
             {
-                forAll (myF, i)
+                scalar sumF = 0.0;
+                scalarList& myFij = myF[i];
+                forAll (myFij, j)
                 {
-                    scalar sumF = 0.0;
-                    scalarList& myFij = myF[i];
-                    forAll (myFij, j)
-                    {
-                        sumF += myFij[j];
-                    }
-                    const scalar delta = sumF - 1.0;
-                    forAll (myFij, j)
-                    {
-                        myFij[j] *= (1.0 - delta/(sumF + 0.001));
-                    }
-                    totalDelta += delta;
-                    if (delta > maxDelta)
-                    {
-                        maxDelta = delta;
-                    }
+                    sumF += myFij[j];
                 }
-                totalDelta /= myF.size();
+                const scalar delta = sumF - 1.0;
+                forAll (myFij, j)
+                {
+                    myFij[j] *= (1.0 - delta/(sumF + 0.001));
+                }
+                totalDelta += delta;
+                if (delta > maxDelta)
+                {
+                    maxDelta = delta;
+                }
             }
+            totalDelta /= myF.size();
             reduce(totalDelta, sumOp<scalar>());
             reduce(maxDelta, maxOp<scalar>());
-            Info << "Smoothing average delta : " << totalDelta << endl;
-            Info << "Smoothing maximum delta : " << maxDelta << nl << endl;
+            Info << "Smoothng average delta : " << totalDelta << endl;
+            Info << "Smoothng maximum delta : " << maxDelta << nl << endl;
         }
     }
 
@@ -546,26 +510,26 @@ Foam::radiation::viewFactor::viewFactor(const volScalarField& T)
             "finalAgglom",
             mesh_.facesInstance(),
             mesh_,
-            IOobject::READ_IF_PRESENT,
+            IOobject::MUST_READ,
             IOobject::NO_WRITE,
             false
         )
     ),
     map_(),
-    coarseMesh_(),
-//     (
-//         IOobject
-//         (
-//             "coarse:" + mesh_.name(),
-//             mesh_.polyMesh::instance(),
-//             mesh_.time(),
-//             IOobject::NO_READ,
-//             IOobject::NO_WRITE,
-//             false
-//         ),
-//         mesh_,
-//         finalAgglom_
-//     ),
+    coarseMesh_
+    (
+        IOobject
+        (
+            "coarse:" + mesh_.name(),
+            mesh_.polyMesh::instance(),
+            mesh_.time(),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        mesh_,
+        finalAgglom_
+    ),
     qr_
     (
         IOobject
@@ -609,26 +573,26 @@ Foam::radiation::viewFactor::viewFactor
             "finalAgglom",
             mesh_.facesInstance(),
             mesh_,
-            IOobject::READ_IF_PRESENT,
+            IOobject::MUST_READ,
             IOobject::NO_WRITE,
             false
         )
     ),
     map_(),
-    coarseMesh_(),
-//     (
-//         IOobject
-//         (
-//             "coarse:" + mesh_.name(),
-//             mesh_.polyMesh::instance(),
-//             mesh_.time(),
-//             IOobject::NO_READ,
-//             IOobject::NO_WRITE,
-//             false
-//         ),
-//         mesh_,
-//         finalAgglom_
-//     ),
+    coarseMesh_
+    (
+        IOobject
+        (
+            "coarse:" + mesh_.name(),
+            mesh_.polyMesh::instance(),
+            mesh_.time(),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        mesh_,
+        finalAgglom_
+    ),
     qr_
     (
         IOobject
@@ -755,10 +719,10 @@ void Foam::radiation::viewFactor::calculate()
             const tmp<scalarField> tHoi = qrp.qro(bandI);
             const scalarField& Hoi = tHoi();
 
-            const polyPatch& pp = coarseMesh_->boundaryMesh()[patchID];
+            const polyPatch& pp = coarseMesh_.boundaryMesh()[patchID];
 
             const labelList& coarsePatchFace =
-                coarseMesh_->patchFaceMap()[patchID];
+                coarseMesh_.patchFaceMap()[patchID];
 
             scalarList T4ave(pp.size(), 0.0);
             scalarList Eave(pp.size(), 0.0);
@@ -856,7 +820,7 @@ void Foam::radiation::viewFactor::calculate()
             // Local matrix coefficients
             if (!constEmissivity_ || iterCounter_ == 0)
             {
-                const edgeList raysLst(rays_.sortedToc());
+                const edgeList& raysLst = rays_.sortedToc();
 
                 label rayI = 0;
                 for (const auto& e : raysLst)
@@ -930,7 +894,8 @@ void Foam::radiation::viewFactor::calculate()
                     i,
                     new lduCalculatedProcessorField<scalar>
                     (
-                        lduPtr_().interfaces()[i]
+                        lduPtr_().interfaces()[i],
+                        qrBandI_[bandI]
                     )
                 );
             }
@@ -976,9 +941,13 @@ void Foam::radiation::viewFactor::calculate()
                 qrExt[compactGlobalIds[i]] = compactCoarseHo[i];
             }
 
-            Pstream::listCombineReduce(T4, maxEqOp<scalar>());
-            Pstream::listCombineReduce(E, maxEqOp<scalar>());
-            Pstream::listCombineReduce(qrExt, maxEqOp<scalar>());
+            Pstream::listCombineGather(T4, maxEqOp<scalar>());
+            Pstream::listCombineGather(E, maxEqOp<scalar>());
+            Pstream::listCombineGather(qrExt, maxEqOp<scalar>());
+
+            Pstream::listCombineScatter(T4);
+            Pstream::listCombineScatter(E);
+            Pstream::listCombineScatter(qrExt);
 
             if (Pstream::master())
             {
@@ -1076,7 +1045,7 @@ void Foam::radiation::viewFactor::calculate()
     label globCoarseId = 0;
     for (const label patchID : selectedPatches_)
     {
-        const polyPatch& pp = coarseMesh_->boundaryMesh()[patchID];
+        const polyPatch& pp = coarseMesh_.boundaryMesh()[patchID];
 
         if (pp.size() > 0)
         {
@@ -1088,7 +1057,7 @@ void Foam::radiation::viewFactor::calculate()
             labelListList coarseToFine(invertOneToMany(nAgglom, agglom));
 
             const labelList& coarsePatchFace =
-                coarseMesh_->patchFaceMap()[patchID];
+                coarseMesh_.patchFaceMap()[patchID];
 
             //scalar heatFlux = 0.0;
             forAll(coarseToFine, coarseI)
@@ -1121,7 +1090,7 @@ void Foam::radiation::viewFactor::calculate()
 
     if (debug)
     {
-        for (const label patchID : selectedPatches_)
+        forAll(qrBf, patchID)
         {
             const scalarField& qrp = qrBf[patchID];
             const scalarField& magSf = mesh_.magSf().boundaryField()[patchID];

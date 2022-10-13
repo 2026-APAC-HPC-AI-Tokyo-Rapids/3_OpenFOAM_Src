@@ -41,18 +41,7 @@ namespace Foam
 }
 
 
-const Foam::scalar Foam::lduMatrix::defaultTolerance = 1e-6;
-
-const Foam::Enum
-<
-    Foam::lduMatrix::normTypes
->
-Foam::lduMatrix::normTypesNames_
-({
-    { normTypes::NO_NORM, "none" },
-    { normTypes::DEFAULT_NORM, "default" },
-    { normTypes::L1_SCALED_NORM, "L1_scaled" },
-});
+const Foam::label Foam::lduMatrix::solver::defaultMaxIter_ = 1000;
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

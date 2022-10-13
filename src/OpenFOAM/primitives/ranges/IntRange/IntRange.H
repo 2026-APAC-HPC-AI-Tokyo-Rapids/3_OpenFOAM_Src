@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -39,8 +39,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_IntRange_H
-#define Foam_IntRange_H
+#ifndef IntRange_H
+#define IntRange_H
 
 #include "labelFwd.H"
 #include <iterator>
@@ -72,6 +72,19 @@ class IntRange
 
         //- The length of the interval
         IntType size_;
+
+
+protected:
+
+    // Protected Member Functions
+
+        //- The value 1 before the start of the range.
+        //  Corresponds to the value of the rend() iterator
+        inline IntType rend_value() const noexcept;
+
+        //- The value 1 beyond the end of the range.
+        //  Corresponds to the value of the end() iterator
+        inline IntType end_value() const noexcept;
 
 
 public:
@@ -157,34 +170,26 @@ public:
 
     // Access
 
-        //- True if range is empty (zero-sized)
-        bool empty() const noexcept { return !size_; }
+        //- The (inclusive) lower value of the range
+        inline IntType start() const noexcept;
 
         //- The size of the range
-        IntType size() const noexcept { return size_; }
-
-        //- Non-const access to size of the range
-        IntType& size() noexcept { return size_; }
-
-        //- The (inclusive) lower value of the range
-        IntType start() const noexcept { return start_; }
+        inline IntType size() const noexcept;
 
         //- Non-const access to start of the range
-        IntType& start() noexcept { return start_; }
+        inline IntType& start() noexcept;
+
+        //- Non-const access to size of the range
+        inline IntType& size() noexcept;
+
+        //- True if range is empty (zero-sized)
+        inline bool empty() const noexcept;
 
         //- The (inclusive) lower value of the range. Same as start()
-        IntType first() const noexcept { return start_; }
+        inline IntType first() const noexcept;
 
         //- The (inclusive) upper value of the range
-        IntType last() const noexcept { return (start_ + (size_ - 1)); }
-
-        //- The (inclusive) lower value of the range,
-        //- same as first(), start(), begin_value()
-        IntType min() const noexcept { return start(); }
-
-        //- The (inclusive) upper value of the range,
-        //- same as last(), rbegin_value()
-        IntType max() const noexcept { return last(); }
+        inline IntType last() const noexcept;
 
 
     // Edit
@@ -210,27 +215,18 @@ public:
 
     // Search
 
-        //- True if the (global) value is within the range
-        inline bool contains(const IntType value) const noexcept;
-
-        //- True if the (global) value is within the range
-        bool found(const IntType val) const noexcept { return contains(val); }
+        //- True if the (global) value is located within the range
+        inline bool found(const IntType value) const noexcept;
 
 
     // Member Operators
-
-        //- Return const_iterator to a position within the range,
-        //- with bounds checking.
-        //  \return iterator at the requested position, or end() for
-        //      out-of-bounds
-        inline const_iterator at(const IntType i) const;
 
         //- Offset dereference, without bounds checking
         inline constexpr IntType operator[](const IntType i) const noexcept;
 
         //- True if the global value is located within the range.
-        //  Behaviour identical to contains() - usable as a predicate
-        bool operator()(const IntType i) const noexcept { return contains(i); }
+        //  Behaviour identical to found() - usable as a predicate
+        inline bool operator()(const IntType value) const noexcept;
 
         //- Increase the size by 1.
         inline IntType operator++() noexcept;
@@ -250,22 +246,43 @@ public:
         explicit operator bool() const noexcept { return bool(size_); }
 
 
-    // Iterator ranges
-
-        //- The value at the beginning of the range - same as first(), start()
-        inline IntType begin_value() const noexcept;
-
-        //- The value 1 beyond the end of the range.
-        inline IntType end_value() const noexcept;
-
-        //- The last value of the range.
-        inline IntType rbegin_value() const noexcept;
-
-        //- The value 1 before the begin of range
-        inline IntType rend_value() const noexcept;
-
-
     // Bidirectional input iterators (const)
+
+        //- Return const_iterator to a position within the range,
+        //- with bounds checking.
+        //  \return iterator at the requested position, or end() for
+        //      out-of-bounds
+        inline const_iterator at(const IntType i) const;
+
+        //- A const_iterator set to the beginning of the range
+        inline const_iterator begin() const noexcept;
+
+        //- A const_iterator set to the beginning of the range
+        inline const_iterator cbegin() const noexcept;
+
+        //- A const_iterator set to 1 beyond the end of the range.
+        inline const_iterator cend() const noexcept;
+
+        //- A const_iterator set to 1 beyond the end of the range.
+        inline const_iterator end() const noexcept;
+
+
+    // Bidirectional reverse input iterators (const)
+
+        //- A const_reverse_iterator set to 1 before the end of range
+        inline const_reverse_iterator rbegin() const noexcept;
+
+        //- A const_reverse_iterator set to 1 before the end of range
+        inline const_reverse_iterator crbegin() const noexcept;
+
+        //- A const_reverse_iterator set to 1 before the begin of range
+        inline const_reverse_iterator rend() const noexcept;
+
+        //- A const_reverse_iterator set to 1 before the begin of range
+        inline const_reverse_iterator crend() const noexcept;
+
+
+    // Iterators
 
         //- Random-access input iterator with const access
         //  \note No operator+(IntType, iterator) since this provokes
@@ -288,16 +305,16 @@ public:
         // Constructors
 
             //- Construct with specified value, or default construct
-            explicit constexpr const_iterator(IntType val = 0) noexcept
-            :
-                value_(val)
-            {}
+            inline explicit constexpr const_iterator
+            (
+                const IntType val = 0
+            ) noexcept;
 
 
         // Member Operators
 
             //- Return the value
-            constexpr IntType operator*() const noexcept { return value_; }
+            inline constexpr IntType operator*() const noexcept;
 
             //- Offset dereference operator
             inline constexpr IntType operator[](const IntType n) const noexcept;
@@ -399,16 +416,16 @@ public:
         // Constructors
 
             //- Construct with specified value, or default construct
-            explicit constexpr const_reverse_iterator(IntType val = 0) noexcept
-            :
-                value_(val)
-            {}
+            inline explicit constexpr const_reverse_iterator
+            (
+                const IntType val = 0
+            ) noexcept;
 
 
         // Member Operators
 
             //- Return the value
-            constexpr IntType operator*() const noexcept { return value_; }
+            inline constexpr IntType operator*() const noexcept;
 
             //- Offset dereference operator
             inline constexpr IntType operator[](const IntType n) const noexcept;
@@ -487,36 +504,6 @@ public:
                 return !(*this < iter);
             }
         };
-
-
-    // Bidirectional input iterators (const)
-
-        //- A const_iterator set to the beginning of the range
-        inline const_iterator begin() const noexcept;
-
-        //- A const_iterator set to the beginning of the range
-        inline const_iterator cbegin() const noexcept;
-
-        //- A const_iterator set to 1 beyond the end of the range.
-        inline const_iterator cend() const noexcept;
-
-        //- A const_iterator set to 1 beyond the end of the range.
-        inline const_iterator end() const noexcept;
-
-
-    // Bidirectional reverse input iterators (const)
-
-        //- A const_reverse_iterator set to 1 before the end of range
-        inline const_reverse_iterator rbegin() const noexcept;
-
-        //- A const_reverse_iterator set to 1 before the end of range
-        inline const_reverse_iterator crbegin() const noexcept;
-
-        //- A const_reverse_iterator set to 1 before the begin of range
-        inline const_reverse_iterator rend() const noexcept;
-
-        //- A const_reverse_iterator set to 1 before the begin of range
-        inline const_reverse_iterator crend() const noexcept;
 };
 
 

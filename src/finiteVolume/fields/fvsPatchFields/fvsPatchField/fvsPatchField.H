@@ -56,6 +56,7 @@ namespace Foam
 {
 
 // Forward Declarations
+
 class objectRegistry;
 class dictionary;
 class fvPatchFieldMapper;
@@ -69,86 +70,18 @@ Ostream& operator<<(Ostream&, const fvsPatchField<Type>&);
 
 
 /*---------------------------------------------------------------------------*\
-                      Class fvsPatchFieldBase Declaration
-\*---------------------------------------------------------------------------*/
-
-//- Template invariant parts for fvsPatchField
-class fvsPatchFieldBase
-{
-    // Private Data
-
-        //- Reference to patch
-        const fvPatch& patch_;
-
-protected:
-
-    // Protected Member Functions
-
-        //- Read dictionary entries.
-        //  Useful when initially constructed without a dictionary
-        virtual void readDict(const dictionary& dict);
-
-
-public:
-
-    //- Debug switch to disallow the use of generic fvsPatchField
-    static int disallowGenericPatchField;
-
-    //- Runtime type information
-    TypeName("fvsPatchField");
-
-
-    // Constructors
-
-        //- Construct from patch
-        explicit fvsPatchFieldBase(const fvPatch& p);
-
-        //- Construct from patch and dictionary (unused)
-        fvsPatchFieldBase(const fvPatch& p, const dictionary& dict);
-
-        //- Copy construct with new patch
-        fvsPatchFieldBase(const fvsPatchFieldBase& rhs, const fvPatch& p);
-
-        //- Copy construct
-        fvsPatchFieldBase(const fvsPatchFieldBase& rhs);
-
-
-    //- Destructor
-    virtual ~fvsPatchFieldBase() = default;
-
-
-    // Member Functions
-
-    // Access
-
-        //- The associated objectRegistry
-        const objectRegistry& db() const;
-
-        //- Return the patch
-        const fvPatch& patch() const noexcept
-        {
-            return patch_;
-        }
-
-
-    // Check
-
-        //- Check that patches are identical
-        void checkPatch(const fvsPatchFieldBase& rhs) const;
-};
-
-
-/*---------------------------------------------------------------------------*\
-                        Class fvsPatchField Declaration
+                           Class patch Declaration
 \*---------------------------------------------------------------------------*/
 
 template<class Type>
 class fvsPatchField
 :
-    public fvsPatchFieldBase,
     public Field<Type>
 {
     // Private Data
+
+        //- Reference to patch
+        const fvPatch& patch_;
 
         //- Reference to internal field
         const DimensionedField<Type, surfaceMesh>& internalField_;
@@ -164,6 +97,13 @@ public:
 
     //- Type for a \em calculated patch
     typedef calculatedFvsPatchField<Type> Calculated;
+
+
+    //- Runtime type information
+    TypeName("fvsPatchField");
+
+    //- Debug switch to disallow the use of genericFvsPatchField
+    static int disallowGenericFvsPatchField;
 
 
     // Declare run-time constructor selection tables
@@ -246,18 +186,18 @@ public:
         //- Construct as copy
         fvsPatchField(const fvsPatchField<Type>&);
 
+        //- Construct and return a clone
+        virtual tmp<fvsPatchField<Type>> clone() const
+        {
+            return tmp<fvsPatchField<Type>>::New(*this);
+        }
+
         //- Construct as copy setting internal field reference
         fvsPatchField
         (
             const fvsPatchField<Type>&,
             const DimensionedField<Type, surfaceMesh>&
         );
-
-        //- Construct and return a clone
-        virtual tmp<fvsPatchField<Type>> clone() const
-        {
-            return tmp<fvsPatchField<Type>>::New(*this);
-        }
 
         //- Construct and return a clone setting internal field reference
         virtual tmp<fvsPatchField<Type>> clone
@@ -329,18 +269,38 @@ public:
 
 
     //- Destructor
-    virtual ~fvsPatchField() = default;
+    virtual ~fvsPatchField<Type>() = default;
 
 
-    // Member Functions
+    // Member functions
 
-        //- The type name for calculated patch fields
-        static const word& calculatedType();
+        // Access
 
+            //- Return local objectRegistry
+            const objectRegistry& db() const;
 
-        // Attributes
+            //- Return patch
+            const fvPatch& patch() const
+            {
+                return patch_;
+            }
 
-            //- True if this patch field fixes a value.
+            //- Return dimensioned internal field reference
+            const DimensionedField<Type, surfaceMesh>& internalField() const
+            {
+                return internalField_;
+            }
+
+            //- Return internal field reference
+            const Field<Type>& primitiveField() const
+            {
+                return internalField_;
+            }
+
+            //- Return the type of the calculated for of fvsPatchField
+            static const word& calculatedType();
+
+            //- Return true if this patch field fixes a value.
             //  Needed to check if a level has to be specified while solving
             //  Poissons equations.
             virtual bool fixesValue() const
@@ -348,30 +308,14 @@ public:
                 return false;
             }
 
-            //- True if this patch field is coupled
+            //- Return true if this patch field is coupled
             virtual bool coupled() const
             {
                 return false;
             }
 
 
-        // Access
-
-            //- Return dimensioned internal field reference
-            const DimensionedField<Type, surfaceMesh>& internalField()
-            const noexcept
-            {
-                return internalField_;
-            }
-
-            //- Return internal field reference
-            const Field<Type>& primitiveField() const noexcept
-            {
-                return internalField_;
-            }
-
-
-        // Mapping Functions
+        // Mapping functions
 
             //- Map (and resize as needed) from self given a mapping object
             virtual void autoMap
@@ -397,7 +341,7 @@ public:
             void check(const fvsPatchField<Type>&) const;
 
 
-    // Member Operators
+    // Member operators
 
         virtual void operator=(const UList<Type>&);
 
@@ -427,7 +371,7 @@ public:
         virtual void operator==(const Type&);
 
 
-    // Ostream Operator
+    // Ostream operator
 
         friend Ostream& operator<< <Type>(Ostream&, const fvsPatchField<Type>&);
 };
@@ -444,9 +388,6 @@ public:
     #include "calculatedFvsPatchField.H"
 #endif
 
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-// Runtime selection macros
 
 #define makeFvsPatchTypeFieldTypeName(type)                                    \
                                                                                \

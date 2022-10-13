@@ -36,11 +36,11 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_zeroField_H
-#define Foam_zeroField_H
+#ifndef zeroField_H
+#define zeroField_H
 
 #include "zero.H"
-#include "scalarFwd.H"
+#include "scalar.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -65,7 +65,6 @@ public:
 
     // Member Functions
 
-        //- Method name compatibility with DimensionedField
         zeroField field() const noexcept
         {
             return zeroField{};

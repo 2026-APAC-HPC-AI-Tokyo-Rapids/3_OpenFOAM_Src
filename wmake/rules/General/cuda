@@ -3,7 +3,7 @@
 
 SUFFIXES += .cu
 
-ifeq (,$(strip $(NVARCH)))
+ifeq (,$(NVARCH))
     NVARCH  = 70
 endif
 

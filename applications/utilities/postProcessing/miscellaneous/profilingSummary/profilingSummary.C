@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -100,9 +100,7 @@ int main(int argc, char *argv[])
             (
                 Time::controlDictName,
                 args.rootPath(),
-                args.caseName()/("processor" + Foam::name(proci)),
-                args.allowFunctionObjects(),
-                args.allowLibs()
+                args.caseName()/("processor" + Foam::name(proci))
             )
         );
     }
@@ -392,7 +390,7 @@ int main(int argc, char *argv[])
 
             summary.writeHeader(os);
             summary.writeData(os);
-            IOobject::writeEndDivider(os);
+            summary.writeEndDivider(os);
 
             Info<< "Wrote to " << outputName << nl << endl;
         }

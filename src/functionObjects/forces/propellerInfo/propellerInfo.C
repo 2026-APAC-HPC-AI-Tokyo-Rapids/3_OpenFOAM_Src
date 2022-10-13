@@ -181,8 +181,7 @@ void Foam::functionObjects::propellerInfo::createFiles()
 
     if (writePropellerPerformance_ && !propellerPerformanceFilePtr_)
     {
-        propellerPerformanceFilePtr_ =
-            newFileAtStartTime("propellerPerformance");
+        propellerPerformanceFilePtr_ = createFile("propellerPerformance");
         auto& os = propellerPerformanceFilePtr_();
 
         writeHeader(os, "Propeller performance");
@@ -204,9 +203,8 @@ void Foam::functionObjects::propellerInfo::createFiles()
 
     if (writeWakeFields_)
     {
-        if (!wakeFilePtr_) wakeFilePtr_ = newFileAtStartTime("wake");
-        if (!axialWakeFilePtr_) axialWakeFilePtr_ =
-            newFileAtStartTime("axialWake");
+        if (!wakeFilePtr_) wakeFilePtr_ = createFile("wake");
+        if (!axialWakeFilePtr_) axialWakeFilePtr_ = createFile("axialWake");
     }
 }
 
@@ -355,20 +353,16 @@ void Foam::functionObjects::propellerInfo::setSampleDiskSurface
         points_
     );
 
-    // Surface writer (keywords: surfaceWriter, writeOptions)
-
-    word writerType;
-    if (sampleDiskDict.readIfPresent("surfaceWriter", writerType))
+    // Surface writer
+    word surfWriterType;
+    if (sampleDiskDict.readIfPresent("surfaceWriter", surfWriterType))
     {
+        const auto writeOptions = sampleDiskDict.subOrEmptyDict("writeOptions");
+
         surfaceWriterPtr_ = surfaceWriter::New
         (
-            writerType,
-            surfaceWriter::formatOptions
-            (
-                sampleDiskDict,
-                writerType,
-                "writeOptions"
-            )
+            surfWriterType,
+            writeOptions.subOrEmptyDict(surfWriterType)
         );
 
         // Use outputDir/TIME/surface-name
@@ -435,7 +429,7 @@ void Foam::functionObjects::propellerInfo::updateSampleDiskCells()
     // Kick the tet base points calculation to avoid parallel comms later
     (void)mesh_.tetBasePtIs();
 
-    const auto& treeData = tree.shapes();
+    const auto& cellLabels = tree.shapes().cellLabels();
 
     forAll(points_, pointi)
     {
@@ -453,11 +447,9 @@ void Foam::functionObjects::propellerInfo::updateSampleDiskCells()
         if (proci >= 0)
         {
             cellIds_[pointi] =
-            (
                 proci == Pstream::myProcNo()
-              ? treeData.objectIndex(treeCelli)
-              : -1
-            );
+              ? cellLabels[treeCelli]
+              : -1;
         }
         else
         {
@@ -476,7 +468,7 @@ void Foam::functionObjects::propellerInfo::updateSampleDiskCells()
         }
     }
 
-    Pstream::listCombineReduce(pointMask_, orEqOp<bool>());
+    Pstream::listCombineAllGather(pointMask_, orEqOp<bool>());
 }
 
 
@@ -735,21 +727,11 @@ void Foam::functionObjects::propellerInfo::writeAxialWake
 }
 
 
-void Foam::functionObjects::propellerInfo::writeWakeFields(const scalar URef0)
+void Foam::functionObjects::propellerInfo::writeWakeFields(const scalar URef)
 {
     if (!writeWakeFields_)
     {
         return;
-    }
-
-    scalar URef = URef0;
-    if (mag(URef) < ROOTSMALL)
-    {
-        WarningInFunction
-            << "Magnitude of reference velocity should be greater than zero"
-            << endl;
-
-        URef = ROOTVSMALL;
     }
 
     // Normalised velocity
@@ -791,7 +773,7 @@ Foam::tmp<Foam::Field<Type>> Foam::functionObjects::propellerInfo::interpolate
         }
     }
 
-    Pstream::listCombineReduce(field, maxEqOp<Type>());
+    Pstream::listCombineAllGather(field, maxEqOp<Type>());
 
     return tfield;
 }

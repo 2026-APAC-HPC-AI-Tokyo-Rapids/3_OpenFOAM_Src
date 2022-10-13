@@ -538,11 +538,8 @@ int main(int argc, char *argv[])
 
         // Add any patches.
 
-        const label nAdded = returnReduce
-        (
-            nPatches - mesh.boundaryMesh().size(),
-            sumOp<label>()
-        );
+        label nAdded = nPatches - mesh.boundaryMesh().size();
+        reduce(nAdded, sumOp<label>());
 
         Info<< "Adding overall " << nAdded << " processor patches." << endl;
 
@@ -890,10 +887,11 @@ int main(int argc, char *argv[])
 
 
     const boundBox& bb = mesh.bounds();
+    const vector span = bb.span();
     const scalar mergeDim = mergeTol * bb.minDim();
 
     Info<< "Mesh bounding box : " << bb << nl
-        << "        with span : " << bb.span() << nl
+        << "        with span : " << span << nl
         << "Merge distance    : " << mergeDim << nl
         << endl;
 
@@ -948,8 +946,9 @@ int main(int argc, char *argv[])
 
         // Put all modifications into meshMod
         bool anyChange = collapser.setRefinement(allPointInfo, meshMod);
+        reduce(anyChange, orOp<bool>());
 
-        if (returnReduceOr(anyChange))
+        if (anyChange)
         {
             // Construct new mesh from polyTopoChange.
             autoPtr<mapPolyMesh> map = meshMod.changeMesh(mesh, false);
@@ -1119,7 +1118,8 @@ int main(int argc, char *argv[])
     processorMeshes::removeFiles(mesh);
 
     // Need writing cellSet
-    if (returnReduceOr(addedCellsSet.size()))
+    label nAdded = returnReduce(addedCellsSet.size(), sumOp<label>());
+    if (nAdded > 0)
     {
         cellSet addedCells(mesh, "addedCells", addedCellsSet);
         Info<< "Writing added cells to cellSet " << addedCells.name()

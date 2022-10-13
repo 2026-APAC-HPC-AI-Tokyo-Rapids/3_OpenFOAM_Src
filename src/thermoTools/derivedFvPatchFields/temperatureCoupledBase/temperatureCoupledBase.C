@@ -54,70 +54,18 @@ Foam::temperatureCoupledBase::KMethodTypeNames_
 Foam::temperatureCoupledBase::temperatureCoupledBase
 (
     const fvPatch& patch,
-    const KMethodType method
-)
-:
-    patch_(patch),
-    method_(method),
-    kappaName_(),
-    alphaName_(),
-    alphaAniName_(),
-    kappaFunction1_(nullptr),
-    alphaFunction1_(nullptr)
-{
-    switch (method_)
-    {
-        case mtDirectionalSolidThermo:
-        case mtLookup:
-        case mtFunction:
-        {
-            FatalErrorInFunction
-                << "Cannot construct kappaMethod: "
-                << KMethodTypeNames_[method_] << " without a dictionary"
-                << abort(FatalError);
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
-}
-
-
-Foam::temperatureCoupledBase::temperatureCoupledBase
-(
-    const fvPatch& patch,
-    const KMethodType method,
+    const word& calculationType,
     const word& kappaName,
-    const word& alphaName,
-    const word& alphaAniName
+    const word& alphaAniName,
+    const word& alphaName
 )
 :
     patch_(patch),
-    method_(method),
+    method_(KMethodTypeNames_[calculationType]),
     kappaName_(kappaName),
-    alphaName_(alphaName),
     alphaAniName_(alphaAniName),
-    kappaFunction1_(nullptr),
-    alphaFunction1_(nullptr)
-{
-    switch (method_)
-    {
-        case mtFunction:
-        {
-            FatalErrorInFunction
-                << "Cannot construct kappaMethod: "
-                << KMethodTypeNames_[method_] << " without a dictionary"
-                << abort(FatalError);
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
-}
+    alphaName_(alphaName)
+{}
 
 
 Foam::temperatureCoupledBase::temperatureCoupledBase
@@ -129,10 +77,8 @@ Foam::temperatureCoupledBase::temperatureCoupledBase
     patch_(patch),
     method_(KMethodTypeNames_.get("kappaMethod", dict)),
     kappaName_(dict.getOrDefault<word>("kappa", word::null)),
-    alphaName_(dict.getOrDefault<word>("alpha", word::null)),
     alphaAniName_(dict.getOrDefault<word>("alphaAni", word::null)),
-    kappaFunction1_(nullptr),
-    alphaFunction1_(nullptr)
+    alphaName_(dict.getOrDefault<word>("alpha", word::null))
 {
     switch (method_)
     {
@@ -143,7 +89,7 @@ Foam::temperatureCoupledBase::temperatureCoupledBase
                 FatalIOErrorInFunction(dict)
                     << "Did not find entry 'alphaAni'"
                        " required for 'kappaMethod' "
-                    << KMethodTypeNames_[method_] << nl
+                    << KMethodTypeNames_[method_]
                     << exit(FatalIOError);
             }
 
@@ -158,8 +104,8 @@ Foam::temperatureCoupledBase::temperatureCoupledBase
                     << "Did not find entry 'kappa'"
                        " required for 'kappaMethod' "
                     <<  KMethodTypeNames_[method_] << nl
-                    << "Please set 'kappa' to the name of"
-                       " a volScalar or volSymmTensor field" << nl
+                    << "    Please set 'kappa' to the name of a volScalarField"
+                       " or volSymmTensorField"
                     << exit(FatalIOError);
             }
 
@@ -170,18 +116,16 @@ Foam::temperatureCoupledBase::temperatureCoupledBase
         {
             kappaFunction1_ = PatchFunction1<scalar>::New
             (
-                patch_.patch(),
+                patch.patch(),
                 "kappaValue",
                 dict
             );
             alphaFunction1_ = PatchFunction1<scalar>::New
             (
-                patch_.patch(),
+                patch.patch(),
                 "alphaValue",
                 dict
             );
-
-            break;
         }
 
         default:
@@ -197,7 +141,13 @@ Foam::temperatureCoupledBase::temperatureCoupledBase
     const temperatureCoupledBase& base
 )
 :
-    temperatureCoupledBase(base.patch_, base)
+    patch_(base.patch_),
+    method_(base.method_),
+    kappaName_(base.kappaName_),
+    alphaAniName_(base.alphaAniName_),
+    alphaName_(base.alphaName_),
+    kappaFunction1_(base.kappaFunction1_.clone(patch_.patch())),
+    alphaFunction1_(base.alphaFunction1_.clone(patch_.patch()))
 {}
 
 
@@ -210,8 +160,8 @@ Foam::temperatureCoupledBase::temperatureCoupledBase
     patch_(patch),
     method_(base.method_),
     kappaName_(base.kappaName_),
-    alphaName_(base.alphaName_),
     alphaAniName_(base.alphaAniName_),
+    alphaName_(base.alphaName_),
     kappaFunction1_(base.kappaFunction1_.clone(patch_.patch())),
     alphaFunction1_(base.alphaFunction1_.clone(patch_.patch()))
 {}
@@ -331,7 +281,6 @@ Foam::tmp<Foam::scalarField> Foam::temperatureCoupledBase::kappa
                 mesh.lookupObject<solidThermo>(basicThermo::dictName);
 
             return thermo.kappa(patchi);
-
             break;
         }
 
@@ -357,42 +306,35 @@ Foam::tmp<Foam::scalarField> Foam::temperatureCoupledBase::kappa
 
         case mtLookup:
         {
+            if (mesh.foundObject<volScalarField>(kappaName_))
             {
-                const auto* ptr =
-                    mesh.cfindObject<volScalarField>(kappaName_);
-
-                if (ptr)
-                {
-                    return patch_.patchField<volScalarField>(*ptr);
-                }
+                return patch_.lookupPatchField<volScalarField, scalar>
+                (
+                    kappaName_
+                );
             }
-
+            else if (mesh.foundObject<volSymmTensorField>(kappaName_))
             {
-                const auto* ptr =
-                    mesh.cfindObject<volSymmTensorField>(kappaName_);
+                const symmTensorField& KWall =
+                    patch_.lookupPatchField<volSymmTensorField, scalar>
+                    (
+                        kappaName_
+                    );
 
-                if (ptr)
-                {
-                    const symmTensorField& wallValues =
-                        patch_.patchField<volSymmTensorField>(*ptr);
+                const vectorField n(patch_.nf());
 
-                    const vectorField n(patch_.nf());
-
-                    return n & wallValues & n;
-                }
+                return n & KWall & n;
             }
-
-
-            FatalErrorInFunction
-                << "Did not find field '" << kappaName_
-                << "' on mesh " << mesh.name()
-                << " patch " << patch_.name() << nl
-                << "Please set 'kappa' to the name of"
-                   " a volScalar or volSymmTensor field"
-                   ", or use another method" << nl
-                << "    " << flatOutput(KMethodTypeNames_.sortedToc()) << nl
-                << exit(FatalError);
-
+            else
+            {
+                FatalErrorInFunction
+                    << "Did not find field " << kappaName_
+                    << " on mesh " << mesh.name() << " patch " << patch_.name()
+                    << nl
+                    << "    Please set 'kappa' to the name of a volScalarField"
+                    << " or volSymmTensorField."
+                    << exit(FatalError);
+            }
             break;
         }
 
@@ -409,8 +351,8 @@ Foam::tmp<Foam::scalarField> Foam::temperatureCoupledBase::kappa
                 << "Unimplemented method " << KMethodTypeNames_[method_] << nl
                 << "Please set 'kappaMethod' to one of "
                 << flatOutput(KMethodTypeNames_.sortedToc()) << nl
-                << "If kappaMethod=lookup, also set 'kappa' to the name of"
-                   " a volScalar or volSymmTensor field" << nl
+                << "and 'kappa' to the name of the volScalar"
+                << " or volSymmTensor field (if kappaMethod=lookup)"
                 << exit(FatalError);
 
             break;
@@ -510,40 +452,38 @@ Foam::tmp<Foam::scalarField> Foam::temperatureCoupledBase::alpha
 
         case mtLookup:
         {
+            if (mesh.foundObject<volScalarField>(alphaName_))
             {
-                const auto* ptr =
-                    mesh.cfindObject<volScalarField>(alphaName_);
-
-                if (ptr)
-                {
-                    return patch_.patchField<volScalarField>(*ptr);
-                }
+                return
+                    patch_.lookupPatchField<volScalarField, scalar>
+                    (
+                        alphaName_
+                    );
             }
-
+            else if (mesh.foundObject<volSymmTensorField>(alphaName_))
             {
-                const auto* ptr =
-                    mesh.cfindObject<volSymmTensorField>(alphaName_);
+                const symmTensorField& alphaWall =
+                    patch_.lookupPatchField<volSymmTensorField, scalar>
+                    (
+                        alphaName_
+                    );
 
-                if (ptr)
-                {
-                    const symmTensorField& wallValues =
-                        patch_.patchField<volSymmTensorField>(*ptr);
+                const vectorField n(patch_.nf());
 
-                    const vectorField n(patch_.nf());
-
-                    return n & wallValues & n;
-                }
+                return n & alphaWall & n;
             }
-
-            FatalErrorInFunction
-                << "Did not find field '" << alphaName_
-                << "' on mesh " << mesh.name()
-                << " patch " << patch_.name() << nl
-                << "Please set 'alpha' to the name of"
-                   " a volScalar or volSymmTensor field"
-                   ", or use another method" << nl
-                << "    " << flatOutput(KMethodTypeNames_.sortedToc()) << nl
-                << exit(FatalError);
+            else
+            {
+                FatalErrorInFunction
+                    << "Did not find field " << alphaName_
+                    << " on mesh " << mesh.name() << " patch " << patch_.name()
+                    << nl
+                    << "Please set 'kappaMethod' to one of "
+                    << flatOutput(KMethodTypeNames_.sortedToc()) << nl
+                    << "and 'alpha' to the name of the volScalar"
+                    << " or volSymmTensor field (if kappaMethod=lookup)"
+                    << exit(FatalError);
+            }
 
             break;
         }
@@ -561,8 +501,8 @@ Foam::tmp<Foam::scalarField> Foam::temperatureCoupledBase::alpha
                 << "Unimplemented method " << KMethodTypeNames_[method_] << nl
                 << "Please set 'kappaMethod' to one of "
                 << flatOutput(KMethodTypeNames_.sortedToc()) << nl
-                << "If kappaMethod=lookup, also set 'alpha' to the name of"
-                   " a volScalar or volSymmTensor field" << nl
+                << "and 'alpha' to the name of the volScalar"
+                << " or volSymmTensor field (if kappaMethod=lookup)"
                 << exit(FatalError);
 
             break;

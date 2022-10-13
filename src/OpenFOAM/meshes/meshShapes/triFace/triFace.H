@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -48,7 +48,7 @@ SourceFiles
 #include "pointHit.H"
 #include "intersection.H"
 #include "pointField.H"
-#include "triangle.H"
+#include "triPointRef.H"
 #include "ListListOps.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -73,22 +73,18 @@ class triFace
 {
 public:
 
-    // Generated Methods
-
-        //- The front() accessor (from FixedList) has no purpose
-        void front() = delete;
-
-        //- The back() accessor (from FixedList) has no purpose
-        void back() = delete;
-
-
     // Constructors
 
         //- Default construct, with invalid point labels (-1)
         inline triFace();
 
         //- Construct from three point labels
-        inline triFace(const label p0, const label p1, const label p2) noexcept;
+        inline triFace
+        (
+            const label a,
+            const label b,
+            const label c
+        );
 
         //- Construct from an initializer list of three point labels
         inline explicit triFace(std::initializer_list<label> list);
@@ -111,32 +107,23 @@ public:
 
     // Access
 
-        //- The first vertex
-        label a() const noexcept { return get<0>(); }
+        //- Return first vertex label
+        using FixedList<label, 3>::first;
 
-        //- The second vertex
-        label b() const noexcept { return get<1>(); }
+        //- Return last (third) vertex label
+        using FixedList<label, 3>::last;
 
-        //- The third vertex
-        label c() const noexcept { return get<2>(); }
+        //- Return second vertex label
+        label& second() { return operator[](1); }
 
-        //- The first vertex
-        label& a() noexcept { return get<0>(); }
-
-        //- The second vertex
-        label& b() noexcept { return get<1>(); }
-
-        //- The third vertex
-        label& c() noexcept { return get<2>(); }
+        //- Return second vertex label
+        label second() const { return operator[](1); }
 
 
     // Queries
 
-        //- True if vertices are unique and non-negative.
-        inline bool good() const noexcept;
-
-        //- True if vertices are unique and non-negative.
-        bool valid() const noexcept { return good(); }
+        //- Return true if the vertices are unique and non-negative.
+        inline bool valid() const;
 
 
     // Other
@@ -183,9 +170,6 @@ public:
 
         //- Magnitude of face area
         inline scalar mag(const UList<point>& points) const;
-
-        //- The enclosing (bounding) box for the face
-        inline Pair<point> box(const UList<point>& points) const;
 
         //- Number of triangles after splitting == 1
         inline label nTriangles() const noexcept;
@@ -337,12 +321,6 @@ public:
         static inline int compare(const triFace& a, const triFace& b);
 
 
-    // Member Operators
-
-        //- Increment (offset) vertices by given amount
-        inline void operator+=(const label vertexOffset);
-
-
     // Hashing
 
         //- The (commutative) hash value for triFace
@@ -399,11 +377,19 @@ template<> struct Hash<triFace> : triFace::hasher {};
 template<>
 struct offsetOp<triFace>
 {
-    triFace operator()(const triFace& x, const label offset) const
+    inline triFace operator()
+    (
+        const triFace& x,
+        const label offset
+    ) const
     {
-        triFace f(x);
-        f += offset;
-        return f;
+        triFace result;
+
+        forAll(x, i)
+        {
+            result[i] = x[i] + offset;
+        }
+        return result;
     }
 };
 

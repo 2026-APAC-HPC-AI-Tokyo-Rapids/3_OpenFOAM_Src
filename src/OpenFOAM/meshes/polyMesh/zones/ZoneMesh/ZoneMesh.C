@@ -155,7 +155,12 @@ void Foam::ZoneMesh<ZoneType, MeshType>::calcGroupIDs() const
 template<class ZoneType, class MeshType>
 bool Foam::ZoneMesh<ZoneType, MeshType>::readContents()
 {
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        readOpt() == IOobject::MUST_READ
+     || readOpt() == IOobject::MUST_READ_IF_MODIFIED
+     || (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         // Warn for MUST_READ_IF_MODIFIED
         warnNoRereading<ZoneMesh<ZoneType, MeshType>>();
@@ -767,12 +772,12 @@ bool Foam::ZoneMesh<ZoneType, MeshType>::checkParallelSync
     const wordList localTypes(this->types());
 
     // Check and report error(s) on master
-    // - don't need indexing on master itself
 
     const globalIndex procAddr
     (
-        globalIndex::gatherNonLocal{},
-        localNames.size()
+        // Don't need to collect master itself
+        (Pstream::master() ? 0 : localNames.size()),
+        globalIndex::gatherOnly{}
     );
 
     const wordList allNames(procAddr.gather(localNames));

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -743,8 +743,7 @@ Foam::Istream& Foam::ISstream::read(token& t)
             }
             buf[nChar] = '\0';  // Terminate string
 
-            syncState();
-
+            setState(is_.rdstate());
             if (is_.bad())
             {
                 t.setBad();
@@ -997,23 +996,23 @@ Foam::Istream& Foam::ISstream::read(string& str)
 Foam::Istream& Foam::ISstream::read(label& val)
 {
     is_ >> val;
-    syncState();
+    setState(is_.rdstate());
     return *this;
 }
 
 
-Foam::Istream& Foam::ISstream::read(float& val)
+Foam::Istream& Foam::ISstream::read(floatScalar& val)
 {
     is_ >> val;
-    syncState();
+    setState(is_.rdstate());
     return *this;
 }
 
 
-Foam::Istream& Foam::ISstream::read(double& val)
+Foam::Istream& Foam::ISstream::read(doubleScalar& val)
 {
     is_ >> val;
-    syncState();
+    setState(is_.rdstate());
     return *this;
 }
 
@@ -1031,7 +1030,8 @@ Foam::Istream& Foam::ISstream::read(char* buf, std::streamsize count)
 Foam::Istream& Foam::ISstream::readRaw(char* buf, std::streamsize count)
 {
     is_.read(buf, count);
-    syncState();
+    setState(is_.rdstate());
+
     return *this;
 }
 
@@ -1046,7 +1046,8 @@ bool Foam::ISstream::beginRawRead()
     }
 
     readBegin("binaryBlock");
-    syncState();
+    setState(is_.rdstate());
+
     return is_.good();
 }
 
@@ -1054,7 +1055,8 @@ bool Foam::ISstream::beginRawRead()
 bool Foam::ISstream::endRawRead()
 {
     readEnd("binaryBlock");
-    syncState();
+    setState(is_.rdstate());
+
     return is_.good();
 }
 
@@ -1068,6 +1070,20 @@ void Foam::ISstream::rewind()
 
     // pubseekpos() rather than seekg() so that it works with gzstream
     stdStream().rdbuf()->pubseekpos(0, std::ios_base::in);
+}
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+std::ios_base::fmtflags Foam::ISstream::flags() const
+{
+    return is_.flags();
+}
+
+
+std::ios_base::fmtflags Foam::ISstream::flags(const ios_base::fmtflags f)
+{
+    return is_.flags(f);
 }
 
 

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,7 +26,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "velocityFilmShellFvPatchVectorField.H"
-#include "dictionaryContent.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -43,13 +42,13 @@ velocityFilmShellFvPatchVectorField::velocityFilmShellFvPatchVectorField
 )
 :
     mixedFvPatchField<vector>(p, iF),
-    baffle_(nullptr),
-    dict_(),
+    baffle_(),
+    dict_(dictionary::null),
     curTimeIndex_(-1),
     zeroWallVelocity_(true)
 {
-    refValue() = Zero;
-    refGrad() = Zero;
+    refValue() = 0;
+    refGrad() = 0;
     valueFraction() = 1;
 }
 
@@ -69,7 +68,7 @@ velocityFilmShellFvPatchVectorField::velocityFilmShellFvPatchVectorField
         iF,
         mapper
     ),
-    baffle_(nullptr),
+    baffle_(),
     dict_(ptf.dict_),
     curTimeIndex_(-1),
     zeroWallVelocity_(true)
@@ -85,24 +84,13 @@ velocityFilmShellFvPatchVectorField::velocityFilmShellFvPatchVectorField
 :
     mixedFvPatchField<vector>(p, iF),
     baffle_(nullptr),
-    dict_
-    (
-        // Copy dictionary, but without "heavy" data chunks
-        dictionaryContent::copyDict
-        (
-            dict,
-            wordList(),  // allow
-            wordList     // deny
-            ({
-                "type",  // redundant
-                "value", "refValue", "refGradient", "valueFraction"
-            })
-        )
-    ),
+    dict_(dict),
     curTimeIndex_(-1),
     zeroWallVelocity_(dict.getOrDefault<bool>("zeroWallVelocity", true))
 {
     fvPatchVectorField::operator=(vectorField("value", dict, p.size()));
+
+    typedef regionModels::areaSurfaceFilmModels::liquidFilmBase baffle;
 
     if (dict.found("refValue"))
     {
@@ -115,13 +103,13 @@ velocityFilmShellFvPatchVectorField::velocityFilmShellFvPatchVectorField
     {
         // Start from user entered data. Assume fixedValue.
         refValue() = *this;
-        refGrad() = Zero;
+        refGrad() = vector::zero;
         valueFraction() = 1;
     }
 
     if (!baffle_)
     {
-        baffle_.reset(baffleType::New(p.boundaryMesh().mesh(), dict_));
+        baffle_.reset(baffle::New(p, dict).ptr());
     }
 }
 
@@ -133,7 +121,7 @@ velocityFilmShellFvPatchVectorField::velocityFilmShellFvPatchVectorField
 )
 :
     mixedFvPatchField<vector>(ptf, iF),
-    baffle_(nullptr),
+    baffle_(),
     dict_(ptf.dict_),
     curTimeIndex_(-1),
     zeroWallVelocity_(true)
@@ -155,9 +143,13 @@ void velocityFilmShellFvPatchVectorField::updateCoeffs()
     {
         baffle_->evolve();
 
-        vectorField& pfld = *this;
+        volVectorField::Boundary& vfb =
+            db().lookupObjectRef<volVectorField>
+            (
+                this->internalField().name()
+            ).boundaryFieldRef();
 
-        baffle_->vsm().mapToVolumePatch(baffle_->Us(), pfld, patch().index());
+        baffle_->vsm().mapToVolume(baffle_->Us(), vfb);
 
         refGrad() = Zero;
         valueFraction() = 1;
@@ -168,9 +160,8 @@ void velocityFilmShellFvPatchVectorField::updateCoeffs()
         }
         else
         {
-            refValue() = pfld;
+            refValue() = vfb[patch().index()];
         }
-
         curTimeIndex_ = this->db().time().timeIndex();
     }
 
@@ -181,6 +172,13 @@ void velocityFilmShellFvPatchVectorField::updateCoeffs()
 void velocityFilmShellFvPatchVectorField::write(Ostream& os) const
 {
     mixedFvPatchField<vector>::write(os);
+
+    // Remove value and type already written by mixedFvPatchField
+    dict_.remove("value");
+    dict_.remove("type");
+    dict_.remove("refValue");
+    dict_.remove("refGradient");
+    dict_.remove("valueFraction");
     dict_.write(os, false);
 }
 

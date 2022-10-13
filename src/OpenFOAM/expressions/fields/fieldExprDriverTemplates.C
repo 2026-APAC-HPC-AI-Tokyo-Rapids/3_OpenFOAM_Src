@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -52,7 +52,7 @@ Foam::expressions::fieldExpr::parseDriver::getField
 
         const label len = (hasPointData ? this->pointSize() : this->size());
 
-        if (returnReduceAnd(vals.size() == len))
+        if (returnReduce((vals.size() == len), andOp<bool>()))
         {
             // Return a copy of the field
             return tmp<Field<Type>>::New(vals);

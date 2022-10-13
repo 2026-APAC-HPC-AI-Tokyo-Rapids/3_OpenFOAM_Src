@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2016 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,7 +29,6 @@ License
 #include "turbulenceFields.H"
 #include "turbulentTransportModel.H"
 #include "turbulentFluidThermoModel.H"
-#include "DESModelBase.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -61,8 +60,6 @@ Foam::functionObjects::turbulenceFields::compressibleFieldNames_
     { compressibleField::cfDevRhoReff, "devRhoReff" },
     { compressibleField::cfL, "L" },
     { compressibleField::cfI, "I" },
-    { compressibleField::cfLESRegion, "LESRegion" },
-    { compressibleField::cffd, "fd" },
 });
 
 
@@ -82,8 +79,6 @@ Foam::functionObjects::turbulenceFields::incompressibleFieldNames_
     { incompressibleField::ifDevReff, "devReff" },
     { incompressibleField::ifL, "L" },
     { incompressibleField::ifI, "I" },
-    { incompressibleField::ifLESRegion, "LESRegion" },
-    { incompressibleField::iffd, "fd" },
 });
 
 
@@ -272,36 +267,6 @@ bool Foam::functionObjects::turbulenceFields::execute()
                     processField<scalar>(f, I(model));
                     break;
                 }
-                case cfLESRegion:
-                {
-                    auto* DESPtr = mesh_.cfindObject<DESModelBase>(modelName_);
-                    if (!DESPtr)
-                    {
-                        WarningInFunction
-                            << "Turbulence model is not a DES model - "
-                            << "skipping request for LESRegion" << endl;
-
-                        break;
-                    }
-
-                    processField<scalar>(f, DESPtr->LESRegion());
-                    break;
-                }
-                case cffd:
-                {
-                    auto* DESPtr = mesh_.cfindObject<DESModelBase>(modelName_);
-                    if (!DESPtr)
-                    {
-                        WarningInFunction
-                            << "Turbulence model is not a DES model - "
-                            << "skipping request for fd" << endl;
-
-                        break;
-                    }
-
-                    processField<scalar>(f, DESPtr->fd());
-                    break;
-                }
                 default:
                 {
                     FatalErrorInFunction
@@ -367,36 +332,6 @@ bool Foam::functionObjects::turbulenceFields::execute()
                 case ifI:
                 {
                     processField<scalar>(f, I(model));
-                    break;
-                }
-                case ifLESRegion:
-                {
-                    auto* DESPtr = mesh_.cfindObject<DESModelBase>(modelName_);
-                    if (!DESPtr)
-                    {
-                        WarningInFunction
-                            << "Turbulence model is not a DES model - "
-                            << "skipping request for LESRegion" << endl;
-
-                        break;
-                    }
-
-                    processField<scalar>(f, DESPtr->LESRegion());
-                    break;
-                }
-                case iffd:
-                {
-                    auto* DESPtr = mesh_.cfindObject<DESModelBase>(modelName_);
-                    if (!DESPtr)
-                    {
-                        WarningInFunction
-                            << "Turbulence model is not a DES model - "
-                            << "skipping request for fd" << endl;
-
-                        break;
-                    }
-
-                    processField<scalar>(f, DESPtr->fd());
                     break;
                 }
                 default:

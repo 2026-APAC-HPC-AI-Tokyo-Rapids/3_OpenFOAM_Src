@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -52,8 +52,7 @@ Foam::radiation::boundaryRadiationProperties::boundaryRadiationProperties
         Foam::GeometricMeshObject,
         boundaryRadiationProperties
     >(mesh),
-    radBoundaryPropertiesPtrList_(mesh.boundary().size()),
-    radZonePropertiesPtrList_(mesh.faceZones().size())
+    radBoundaryPropertiesPtrList_(mesh.boundary().size())
 {
     IOobject boundaryIO
     (
@@ -76,110 +75,28 @@ Foam::radiation::boundaryRadiationProperties::boundaryRadiationProperties
         // Model number of bands
         label nBands = radiation.nBands();
 
-        // Load in dictionary
         const IOdictionary radiationDict(boundaryIO);
 
-
-        wordHashSet matchedEntries;
-
-        // Match patches
+        forAll(mesh.boundary(), patchi)
         {
-            const auto& pbm = mesh.boundaryMesh();
-            for (const auto& pp : pbm)
+            const polyPatch& pp = mesh.boundaryMesh()[patchi];
+
+            if (radiationDict.isDict(pp.name()))
             {
-                const label patchi = pp.index();
+                const dictionary& dict = radiationDict.subDict(pp.name());
 
-                const auto* ePtr = radiationDict.findEntry(pp.name());
+                radBoundaryPropertiesPtrList_[patchi].reset
+                (
+                    boundaryRadiationPropertiesPatch::New(dict, pp)
+                );
 
-                if (ePtr && ePtr->isDict())
+                if (nBands != radBoundaryPropertiesPtrList_[patchi]->nBands())
                 {
-                    radBoundaryPropertiesPtrList_.set
-                    (
-                        patchi,
-                        boundaryRadiationPropertiesPatch::New(ePtr->dict(), pp)
-                    );
-
-                    matchedEntries.insert(pp.name());
-
-                    if
-                    (
-                        nBands
-                     != radBoundaryPropertiesPtrList_[patchi].nBands()
-                    )
-                    {
-                        FatalErrorInFunction
-                            << "Radiation bands : " <<  nBands << nl
-                            << "Bands on patch : " << patchi << " is "
-                            << radBoundaryPropertiesPtrList_[patchi].nBands()
-                            << abort(FatalError);
-                    }
-                }
-            }
-        }
-
-
-        // Match faceZones if any dictionary entries have not been used for
-        // patch matching.
-        //
-        // Note: radiation properties are hardcoded to take patch reference.
-        //       Supply patch0 for now.
-        {
-            const auto& dummyRef = mesh.boundaryMesh()[0];
-
-            const auto& fzs = mesh.faceZones();
-
-            for (const auto& fz : fzs)
-            {
-                const label zonei = fz.index();
-
-                if (!matchedEntries.found(fz.name()))
-                {
-                    // Note: avoid wildcard matches. Assume user explicitly
-                    // provided information for faceZones.
-                    const auto* ePtr = radiationDict.findEntry
-                    (
-                        fz.name(),
-                        keyType::LITERAL
-                    );
-
-                    // Skip face zones that are not used in boundary radiation
-                    if (!ePtr)
-                    {
-                        continue;
-                    }
-
-                    if (ePtr->isDict())
-                    {
-                        const dictionary& dict = ePtr->dict();
-
-                        radZonePropertiesPtrList_.set
-                        (
-                            zonei,
-                            boundaryRadiationPropertiesPatch::New
-                            (
-                                dict,
-                                dummyRef
-                            )
-                        );
-
-                        matchedEntries.insert(fz.name());
-
-                        if
-                        (
-                            nBands
-                         != radZonePropertiesPtrList_[zonei].nBands()
-                        )
-                        {
-                            FatalErrorInFunction
-                                << "Radiation bands : " <<  nBands << nl
-                                << "Bands on zone : " << zonei << " is "
-                                <<  radBoundaryPropertiesPtrList_
-                                    [
-                                        zonei
-                                    ].nBands()
-                                << abort(FatalError);
-                        }
-                    }
+                    FatalErrorInFunction
+                        << "Radiation bands : " <<  nBands << nl
+                        << "Bands on patch : " << patchi << " is "
+                        << radBoundaryPropertiesPtrList_[patchi]->nBands()
+                        << abort(FatalError);
                 }
             }
         }
@@ -198,9 +115,9 @@ Foam::radiation::boundaryRadiationProperties::emissivity
     scalarField* T
 ) const
 {
-    if (radBoundaryPropertiesPtrList_.set(patchi))
+    if (radBoundaryPropertiesPtrList_[patchi])
     {
-        return radBoundaryPropertiesPtrList_[patchi].e
+        return radBoundaryPropertiesPtrList_[patchi]->e
         (
             bandi,
             incomingDirection,
@@ -221,17 +138,17 @@ Foam::radiation::boundaryRadiationProperties::emissivity
 Foam::scalar Foam::radiation::boundaryRadiationProperties::faceEmissivity
 (
     const label patchi,
-    const label facei,
+    const label faceI,
     const label bandi,
     vector incomingDirection,
     scalar T
 ) const
 {
-    if (radBoundaryPropertiesPtrList_.set(patchi))
+    if (radBoundaryPropertiesPtrList_[patchi])
     {
-        return radBoundaryPropertiesPtrList_[patchi].e
+        return radBoundaryPropertiesPtrList_[patchi]->e
         (
-            facei,
+            faceI,
             bandi,
             incomingDirection,
             T
@@ -257,9 +174,9 @@ Foam::radiation::boundaryRadiationProperties::absorptivity
     scalarField* T
 ) const
 {
-    if (radBoundaryPropertiesPtrList_.set(patchi))
+    if (radBoundaryPropertiesPtrList_[patchi])
     {
-        return radBoundaryPropertiesPtrList_[patchi].a
+        return radBoundaryPropertiesPtrList_[patchi]->a
         (
             bandi,
             incomingDirection,
@@ -280,17 +197,17 @@ Foam::radiation::boundaryRadiationProperties::absorptivity
 Foam::scalar Foam::radiation::boundaryRadiationProperties::faceAbsorptivity
 (
     const label patchi,
-    const label facei,
+    const label faceI,
     const label bandi,
     vector incomingDirection,
     scalar T
 ) const
 {
-    if (radBoundaryPropertiesPtrList_.set(patchi))
+    if (radBoundaryPropertiesPtrList_[patchi])
     {
-        return radBoundaryPropertiesPtrList_[patchi].a
+        return radBoundaryPropertiesPtrList_[patchi]->a
         (
-            facei,
+            faceI,
             bandi,
             incomingDirection,
             T
@@ -316,9 +233,9 @@ Foam::radiation::boundaryRadiationProperties::transmissivity
     scalarField* T
 ) const
 {
-    if (radBoundaryPropertiesPtrList_.set(patchi))
+    if (radBoundaryPropertiesPtrList_[patchi])
     {
-        return radBoundaryPropertiesPtrList_[patchi].t
+        return radBoundaryPropertiesPtrList_[patchi]->t
         (
             bandi,
             incomingDirection,
@@ -339,17 +256,17 @@ Foam::radiation::boundaryRadiationProperties::transmissivity
 Foam::scalar Foam::radiation::boundaryRadiationProperties::faceTransmissivity
 (
     const label patchi,
-    const label facei,
+    const label faceI,
     const label bandi,
     vector incomingDirection,
     scalar T
 ) const
 {
-    if (radBoundaryPropertiesPtrList_.set(patchi))
+    if (radBoundaryPropertiesPtrList_[patchi])
     {
-        return radBoundaryPropertiesPtrList_[patchi].t
+        return radBoundaryPropertiesPtrList_[patchi]->t
         (
-            facei,
+            faceI,
             bandi,
             incomingDirection,
             T
@@ -367,43 +284,6 @@ Foam::scalar Foam::radiation::boundaryRadiationProperties::faceTransmissivity
 
 
 Foam::tmp<Foam::scalarField>
-Foam::radiation::boundaryRadiationProperties::zoneTransmissivity
-(
-    const label zonei,
-    const labelUList& faceIDs,
-    const label bandi,
-    vector incomingDirection,
-    scalar T
-) const
-{
-    if (radZonePropertiesPtrList_.set(zonei))
-    {
-        auto tfld = tmp<scalarField>::New(faceIDs.size());
-        auto& fld = tfld.ref();
-        forAll(fld, i)
-        {
-            fld[i] = radZonePropertiesPtrList_[zonei].t
-            (
-                faceIDs[i],
-                bandi,
-                incomingDirection,
-                T
-            );
-        }
-        return tfld;
-    }
-
-    FatalErrorInFunction
-         << "Zone : " << mesh().faceZones()[zonei].name()
-         << " is not found in the boundaryRadiationProperties. "
-         << "Please add it"
-         << exit(FatalError);
-
-    return tmp<scalarField>::New();
-}
-
-
-Foam::tmp<Foam::scalarField>
 Foam::radiation::boundaryRadiationProperties::diffReflectivity
 (
     const label patchi,
@@ -412,9 +292,9 @@ Foam::radiation::boundaryRadiationProperties::diffReflectivity
     scalarField* T
 ) const
 {
-    if (radBoundaryPropertiesPtrList_.set(patchi))
+    if (radBoundaryPropertiesPtrList_[patchi])
     {
-        return radBoundaryPropertiesPtrList_[patchi].rDiff
+        return radBoundaryPropertiesPtrList_[patchi]->rDiff
         (
             bandi,
             incomingDirection,
@@ -435,17 +315,17 @@ Foam::radiation::boundaryRadiationProperties::diffReflectivity
 Foam::scalar Foam::radiation::boundaryRadiationProperties::faceDiffReflectivity
 (
     const label patchi,
-    const label facei,
+    const label faceI,
     const label bandi,
     vector incomingDirection,
     scalar T
 ) const
 {
-    if (radBoundaryPropertiesPtrList_.set(patchi))
+    if (radBoundaryPropertiesPtrList_[patchi])
     {
-        return radBoundaryPropertiesPtrList_[patchi].rDiff
+        return radBoundaryPropertiesPtrList_[patchi]->rDiff
         (
-            facei,
+            faceI,
             bandi,
             incomingDirection,
             T
@@ -471,9 +351,9 @@ Foam::radiation::boundaryRadiationProperties::specReflectivity
     scalarField* T
 ) const
 {
-    if (radBoundaryPropertiesPtrList_.set(patchi))
+    if (radBoundaryPropertiesPtrList_[patchi])
     {
-        return radBoundaryPropertiesPtrList_[patchi].rSpec
+        return radBoundaryPropertiesPtrList_[patchi]->rSpec
         (
             bandi,
             incomingDirection,
@@ -494,17 +374,17 @@ Foam::radiation::boundaryRadiationProperties::specReflectivity
 Foam::scalar Foam::radiation::boundaryRadiationProperties::faceSpecReflectivity
 (
     const label patchi,
-    const label facei,
+    const label faceI,
     const label bandi,
     vector incomingDirection,
     scalar T
 ) const
 {
-    if (radBoundaryPropertiesPtrList_.set(patchi))
+    if (radBoundaryPropertiesPtrList_[patchi])
     {
-        return radBoundaryPropertiesPtrList_[patchi].rSpec
+        return radBoundaryPropertiesPtrList_[patchi]->rSpec
         (
-            facei,
+            faceI,
             bandi,
             incomingDirection,
             T

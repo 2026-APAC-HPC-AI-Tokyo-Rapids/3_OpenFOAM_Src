@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -42,8 +42,8 @@ See Also
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_OListStream_H
-#define Foam_OListStream_H
+#ifndef OListStream_H
+#define OListStream_H
 
 #include "DynamicList.H"
 #include "OSstream.H"
@@ -470,30 +470,33 @@ public:
         //- Default construct (empty output)
         explicit OListStream
         (
-            IOstreamOption::streamFormat fmt
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
         )
         :
-            OListStream(IOstreamOption(fmt))
+            OListStream(IOstreamOption(fmt, ver))
         {}
 
         //- Construct with initial reserved number of bytes
         explicit OListStream
         (
             size_t nbytes,
-            IOstreamOption::streamFormat fmt
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
         )
         :
-            OListStream(nbytes, IOstreamOption(fmt))
+            OListStream(nbytes, IOstreamOption(fmt, ver))
         {}
 
         //- Move construct from an existing List
         OListStream
         (
             List<char>&& buffer,
-            IOstreamOption::streamFormat fmt
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
         )
         :
-            OListStream(std::move(buffer), IOstreamOption(fmt))
+            OListStream(std::move(buffer), IOstreamOption(fmt, ver))
         {}
 
         //- Move construct from an existing DynamicList
@@ -501,10 +504,11 @@ public:
         OListStream
         (
             DynamicList<char,SizeMin>&& buffer,
-            IOstreamOption::streamFormat fmt
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
         )
         :
-            OListStream(std::move(buffer), IOstreamOption(fmt))
+            OListStream(std::move(buffer), IOstreamOption(fmt, ver))
         {}
 
     #endif /* Foam_IOstream_extras */

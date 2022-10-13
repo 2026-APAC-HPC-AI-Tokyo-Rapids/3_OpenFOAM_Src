@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -577,11 +577,12 @@ Foam::pointIndexHit Foam::searchableSphere::findNearest
 
         if (nearestDistSqr >= sqr(magN - radii_[0]))
         {
-            info.hitPoint
+            info.setPoint
             (
                 origin_
               + (magN < ROOTVSMALL ? vector(radii_[0],0,0) : (radii_[0]*n/magN))
             );
+            info.setHit();
             info.setIndex(0);
         }
 
@@ -606,7 +607,7 @@ Foam::pointIndexHit Foam::searchableSphere::findNearest
 
     // TODO - quick reject for things that are too far away
 
-    point& near = info.point();
+    point& near = info.rawPoint();
     scalar distSqr{0};
 
     if (order_.shape == shapeType::OBLATE)
@@ -1072,14 +1073,14 @@ void Foam::searchableSphere::getNormal
             if (order_.shape == shapeType::SPHERE)
             {
                 // Special case (sphere)
-                normal[i] = normalised(info[i].point() - origin_);
+                normal[i] = normalised(info[i].hitPoint() - origin_);
             }
             else
             {
                 // General case
                 // Normal is (x0/r0^2, x1/r1^2, x2/r2^2)
 
-                normal[i] = scalePoint(info[i].point());
+                normal[i] = scalePoint(info[i].hitPoint());
 
                 normal[i].x() /= radii_.x();
                 normal[i].y() /= radii_.y();

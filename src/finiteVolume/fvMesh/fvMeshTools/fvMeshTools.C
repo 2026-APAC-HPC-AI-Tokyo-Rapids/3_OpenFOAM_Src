@@ -597,7 +597,7 @@ Foam::fvMeshTools::newMesh
 
     // Some processors without patches? - add patches
 
-    if (returnReduceOr(mesh.boundary().empty()))
+    if (returnReduce(mesh.boundary().empty(), orOp<bool>()))
     {
         DynamicList<polyPatch*> newPatches(patchEntries.size());
 

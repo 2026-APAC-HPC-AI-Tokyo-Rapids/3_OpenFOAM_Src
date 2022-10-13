@@ -143,7 +143,7 @@ Foam::UOPstreamBase::UOPstreamBase
 )
 :
     UPstream(commsType),
-    Ostream(fmt),
+    Ostream(fmt, IOstreamOption::currentVersion),
     toProcNo_(toProcNo),
     sendBuf_(sendBuf),
     tag_(tag),
@@ -158,7 +158,7 @@ Foam::UOPstreamBase::UOPstreamBase
 Foam::UOPstreamBase::UOPstreamBase(const int toProcNo, PstreamBuffers& buffers)
 :
     UPstream(buffers.commsType()),
-    Ostream(buffers.format()),
+    Ostream(buffers.format(), IOstreamOption::currentVersion),
     toProcNo_(toProcNo),
     sendBuf_(buffers.sendBuf_[toProcNo]),
     tag_(buffers.tag()),
@@ -304,7 +304,7 @@ Foam::Ostream& Foam::UOPstreamBase::write(const int64_t val)
 }
 
 
-Foam::Ostream& Foam::UOPstreamBase::write(const float val)
+Foam::Ostream& Foam::UOPstreamBase::write(const floatScalar val)
 {
     putChar(token::tokenType::FLOAT);
     writeToBuffer(val);
@@ -312,7 +312,7 @@ Foam::Ostream& Foam::UOPstreamBase::write(const float val)
 }
 
 
-Foam::Ostream& Foam::UOPstreamBase::write(const double val)
+Foam::Ostream& Foam::UOPstreamBase::write(const doubleScalar val)
 {
     putChar(token::tokenType::DOUBLE);
     writeToBuffer(val);

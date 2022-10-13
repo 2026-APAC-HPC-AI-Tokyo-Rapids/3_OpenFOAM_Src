@@ -36,11 +36,11 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_oneField_H
-#define Foam_oneField_H
+#ifndef oneField_H
+#define oneField_H
 
 #include "one.H"
-#include "scalarFwd.H"
+#include "scalar.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -70,10 +70,17 @@ public:
 
     // Member Functions
 
-        //- Method name compatibility with DimensionedField
         oneField field() const noexcept
         {
             return oneField{};
+        }
+
+
+    // Member Operators
+
+        one operator[](const label) const noexcept
+        {
+            return one{};
         }
 };
 

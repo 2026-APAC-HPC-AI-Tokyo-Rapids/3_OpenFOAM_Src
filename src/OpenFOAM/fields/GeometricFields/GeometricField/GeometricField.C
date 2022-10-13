@@ -99,7 +99,11 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::readFields()
 template<class Type, template<class> class PatchField, class GeoMesh>
 bool Foam::GeometricField<Type, PatchField, GeoMesh>::readIfPresent()
 {
-    if (this->isReadRequired())
+    if
+    (
+        this->readOpt() == IOobject::MUST_READ
+     || this->readOpt() == IOobject::MUST_READ_IF_MODIFIED
+    )
     {
         WarningInFunction
             << "read option IOobject::MUST_READ or MUST_READ_IF_MODIFIED"
@@ -108,7 +112,7 @@ bool Foam::GeometricField<Type, PatchField, GeoMesh>::readIfPresent()
     }
     else if
     (
-        this->isReadOptional()
+        this->readOpt() == IOobject::READ_IF_PRESENT
      && this->template typeHeaderOk<GeometricField<Type, PatchField, GeoMesh>>
         (
             true
@@ -869,7 +873,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::~GeometricField()
 template<class Type, template<class> class PatchField, class GeoMesh>
 typename
 Foam::GeometricField<Type, PatchField, GeoMesh>::Internal&
-Foam::GeometricField<Type, PatchField, GeoMesh>::internalFieldRef
+Foam::GeometricField<Type, PatchField, GeoMesh>::ref
 (
     const bool updateAccessTime
 )
@@ -1077,16 +1081,18 @@ bool Foam::GeometricField<Type, PatchField, GeoMesh>::needReference() const
 
     bool needRef = true;
 
-    for (const auto& pf : boundaryField_)
+    forAll(boundaryField_, patchi)
     {
-        if (pf.fixesValue())
+        if (boundaryField_[patchi].fixesValue())
         {
             needRef = false;
             break;
         }
     }
 
-    return returnReduceAnd(needRef);
+    reduce(needRef, andOp<bool>());
+
+    return needRef;
 }
 
 
@@ -1340,7 +1346,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::operator=
 
     // Only assign field contents not ID
 
-    internalFieldRef() = gf.internalField();
+    ref() = gf();
     boundaryFieldRef() = gf.boundaryField();
 }
 
@@ -1387,7 +1393,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::operator=
     const dimensioned<Type>& dt
 )
 {
-    internalFieldRef() = dt;
+    ref() = dt;
     boundaryFieldRef() = dt.value();
 }
 
@@ -1404,7 +1410,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::operator==
 
     // Only assign field contents not ID
 
-    internalFieldRef() = gf.internalField();
+    ref() = gf();
     boundaryFieldRef() == gf.boundaryField();
 
     tgf.clear();
@@ -1417,7 +1423,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::operator==
     const dimensioned<Type>& dt
 )
 {
-    internalFieldRef() = dt;
+    ref() = dt;
     boundaryFieldRef() == dt.value();
 }
 
@@ -1432,7 +1438,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::operator op              \
 {                                                                              \
     checkField(*this, gf, #op);                                                \
                                                                                \
-    internalFieldRef() op gf.internalField();                                  \
+    ref() op gf();                                                             \
     boundaryFieldRef() op gf.boundaryField();                                  \
 }                                                                              \
                                                                                \
@@ -1452,7 +1458,7 @@ void Foam::GeometricField<Type, PatchField, GeoMesh>::operator op              \
     const dimensioned<TYPE>& dt                                                \
 )                                                                              \
 {                                                                              \
-    internalFieldRef() op dt;                                                  \
+    ref() op dt;                                                               \
     boundaryFieldRef() op dt.value();                                          \
 }
 
@@ -1473,7 +1479,7 @@ Foam::Ostream& Foam::operator<<
     const GeometricField<Type, PatchField, GeoMesh>& gf
 )
 {
-    gf.internalField().writeData(os, "internalField");
+    gf().writeData(os, "internalField");
     os  << nl;
     gf.boundaryField().writeEntry("boundaryField", os);
 

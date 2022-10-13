@@ -38,12 +38,12 @@ Note
     template<class T>
     struct floorOp
     {
-        T operator()(const T& x) const
+        T operator()(const T& x) const WARNRETURN
         {
             T ret;
             for (direction cmpt=0; cmpt < pTraits<T>::nComponents; ++cmpt)
             {
-                setComponent(ret, cmpt) = std::floor(component(x, cmpt));
+                component(ret, cmpt) = std::floor(component(x, cmpt));
             }
             return ret;
         }

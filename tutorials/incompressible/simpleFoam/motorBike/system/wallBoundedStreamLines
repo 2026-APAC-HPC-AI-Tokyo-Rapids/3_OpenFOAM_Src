@@ -9,8 +9,10 @@
 // Interpolate U to create near-wall UNear
 near
 {
-    type    nearWallFields;
-    libs    (fieldFunctionObjects);
+    // Where to load it from
+    libs            (fieldFunctionObjects);
+
+    type nearWallFields;
 
     // Output every
     writeControl    writeTime;
@@ -37,16 +39,15 @@ near
 // Use UNear to track along wall
 wallBoundedStreamLines
 {
-    type    wallBoundedStreamLine;
-    libs    (fieldFunctionObjects);
-
-    U           UNear;           // Velocity field for tracking
-    fields      (p U k UNear);   // Fields to sample
-    setFormat   vtk;
-    direction   forward;
-    lifeTime    100;    // Steps particles can travel before being removed
-    cloud       wallBoundedParticleTracks;
-
+    // Mandatory entries
+    type            wallBoundedStreamLine;
+    libs            (fieldFunctionObjects);
+    U               UNear;           // Velocity field to use for tracking.
+    fields          (p U k UNear);   // Names of fields to sample.
+    setFormat       vtk;    // raw | gnuplot | xmgr
+    direction       forward;
+    lifeTime        100;    // Steps particles can travel before being removed
+    cloud           wallBoundedParticleTracks;
     seedSampleSet
     {
         type        patchSeed;
@@ -78,6 +79,9 @@ wallBoundedStreamLines
     // trackLength     1e-3;
     // nSubCycle       1;
     interpolationScheme cellPoint;
+
+    // Deprecated
+    // trackForward    true;
 
     // Optional (inherited) entries
     region          region0;

@@ -101,12 +101,12 @@ void Foam::fieldsDistributor::readFields
 }
 
 
-template<class BoolListType, class GeoField, class MeshSubsetter>
-void Foam::fieldsDistributor::readFieldsImpl
+template<class GeoField, class MeshSubsetter>
+void Foam::fieldsDistributor::readFields
 (
-    const BoolListType& haveMeshOnProc,
-    const MeshSubsetter* subsetter,
+    const boolList& haveMeshOnProc,
     const typename GeoField::Mesh& mesh,
+    const autoPtr<MeshSubsetter>& subsetterPtr,
     IOobjectList& allObjects,
     PtrList<GeoField>& fields,
     const bool deregister
@@ -122,7 +122,7 @@ void Foam::fieldsDistributor::readFieldsImpl
     wordList masterNames(objectNames);
     Pstream::broadcast(masterNames);
 
-    if (haveMeshOnProc.test(Pstream::myProcNo()) && objectNames != masterNames)
+    if (haveMeshOnProc[Pstream::myProcNo()] && objectNames != masterNames)
     {
         FatalErrorInFunction
             << "Objects not synchronised across processors." << nl
@@ -173,10 +173,9 @@ void Foam::fieldsDistributor::readFieldsImpl
         bool decompose = true;
         for (const int proci : Pstream::subProcs())
         {
-            if (haveMeshOnProc.test(proci))
+            if (haveMeshOnProc[proci])
             {
                 decompose = false;
-                break;
             }
         }
 
@@ -198,7 +197,7 @@ void Foam::fieldsDistributor::readFieldsImpl
 
         Pstream::parRun(oldParRun);  // Restore any changes
     }
-    else if (haveMeshOnProc.test(Pstream::myProcNo()))
+    else if (haveMeshOnProc[Pstream::myProcNo()])
     {
         // Have mesh so just try to load
         forAll(masterNames, i)
@@ -227,18 +226,20 @@ void Foam::fieldsDistributor::readFieldsImpl
 
         OPBstream toProcs(UPstream::masterNo());  // worldComm
 
-        const label nDicts = (subsetter ? fields.size() : label(0));
+        const label nDicts = (subsetterPtr ? fields.size() : label(0));
 
         toProcs << nDicts << token::BEGIN_LIST;  // Begin list
 
-        if (nDicts && subsetter)
+        if (nDicts)
         {
             // Disable communication for interpolate() method
             const bool oldParRun = Pstream::parRun(false);
 
-            for (const auto& fld : fields)
+            const auto& subsetter = subsetterPtr();
+
+            forAll(fields, i)
             {
-                tmp<GeoField> tsubfld = subsetter->interpolate(fld);
+                tmp<GeoField> tsubfld = subsetter.interpolate(fields[i]);
 
                 // Surround each with {} as dictionary entry
                 toProcs.beginBlock();
@@ -257,14 +258,15 @@ void Foam::fieldsDistributor::readFieldsImpl
         IPBstream fromMaster(UPstream::masterNo());  // worldComm
 
         // But only consume where needed...
-        if (!haveMeshOnProc.test(Pstream::myProcNo()))
+        if (!haveMeshOnProc[Pstream::myProcNo()])
         {
             fromMaster >> fieldDicts;
         }
     }
 
 
-    // Use the received dictionaries (if any) to create missing fields.
+    // Use the received dictionaries to create fields
+    // (will be empty if we didn't require them)
 
     // Disable communication when constructing from dictionary
     const bool oldParRun = Pstream::parRun(false);
@@ -322,78 +324,6 @@ void Foam::fieldsDistributor::readFieldsImpl
             }
         }
     }
-}
-
-
-template<class GeoField, class MeshSubsetter>
-void Foam::fieldsDistributor::readFields
-(
-    const bitSet& haveMeshOnProc,
-    const MeshSubsetter* subsetter,
-    const typename GeoField::Mesh& mesh,
-    IOobjectList& allObjects,
-    PtrList<GeoField>& fields,
-    const bool deregister
-)
-{
-    readFieldsImpl
-    (
-        haveMeshOnProc,
-        subsetter,
-
-        mesh,
-        allObjects,
-        fields,
-        deregister
-    );
-}
-
-
-template<class GeoField, class MeshSubsetter>
-void Foam::fieldsDistributor::readFields
-(
-    const boolList& haveMeshOnProc,
-    const MeshSubsetter* subsetter,
-    const typename GeoField::Mesh& mesh,
-    IOobjectList& allObjects,
-    PtrList<GeoField>& fields,
-    const bool deregister
-)
-{
-    readFieldsImpl
-    (
-        haveMeshOnProc,
-        subsetter,
-
-        mesh,
-        allObjects,
-        fields,
-        deregister
-    );
-}
-
-
-template<class GeoField, class MeshSubsetter>
-void Foam::fieldsDistributor::readFields
-(
-    const boolList& haveMeshOnProc,
-    const typename GeoField::Mesh& mesh,
-    const autoPtr<MeshSubsetter>& subsetter,
-    IOobjectList& allObjects,
-    PtrList<GeoField>& fields,
-    const bool deregister
-)
-{
-    readFieldsImpl
-    (
-        haveMeshOnProc,
-        subsetter.get(),
-
-        mesh,
-        allObjects,
-        fields,
-        deregister
-    );
 }
 
 

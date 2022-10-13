@@ -89,7 +89,7 @@ class RemoveParcels
         label typeId_;
 
         //- Flag to indicate whether data should be written to file
-        bool logToFile_;
+        bool log_;
 
         //- Flag to reset counters on write
         bool resetOnWrite_;

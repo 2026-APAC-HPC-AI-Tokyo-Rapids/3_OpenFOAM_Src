@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,8 +41,8 @@ Foam::fvsPatchField<Type>::fvsPatchField
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    fvsPatchFieldBase(p),
     Field<Type>(p.size()),
+    patch_(p),
     internalField_(iF)
 {}
 
@@ -55,8 +55,8 @@ Foam::fvsPatchField<Type>::fvsPatchField
     const Field<Type>& f
 )
 :
-    fvsPatchFieldBase(p),
     Field<Type>(f),
+    patch_(p),
     internalField_(iF)
 {}
 
@@ -70,8 +70,8 @@ Foam::fvsPatchField<Type>::fvsPatchField
     const fvPatchFieldMapper& mapper
 )
 :
-    fvsPatchFieldBase(ptf, p),
     Field<Type>(ptf, mapper),
+    patch_(p),
     internalField_(iF)
 {}
 
@@ -85,17 +85,18 @@ Foam::fvsPatchField<Type>::fvsPatchField
     const bool valueRequired
 )
 :
-    fvsPatchFieldBase(p, dict),
     Field<Type>(p.size()),
+    patch_(p),
     internalField_(iF)
 {
     if (valueRequired)
     {
-        const auto* hasValue = dict.findEntry("value", keyType::LITERAL);
-
-        if (hasValue)
+        if (dict.found("value"))
         {
-            Field<Type>::assign(*hasValue, p.size());
+            fvsPatchField<Type>::operator=
+            (
+                Field<Type>("value", dict, p.size())
+            );
         }
         else
         {
@@ -111,8 +112,8 @@ Foam::fvsPatchField<Type>::fvsPatchField
 template<class Type>
 Foam::fvsPatchField<Type>::fvsPatchField(const fvsPatchField<Type>& ptf)
 :
-    fvsPatchFieldBase(ptf),
     Field<Type>(ptf),
+    patch_(ptf.patch_),
     internalField_(ptf.internalField_)
 {}
 
@@ -124,8 +125,8 @@ Foam::fvsPatchField<Type>::fvsPatchField
     const DimensionedField<Type, surfaceMesh>& iF
 )
 :
-    fvsPatchFieldBase(ptf),
     Field<Type>(ptf),
+    patch_(ptf.patch_),
     internalField_(iF)
 {}
 
@@ -133,16 +134,29 @@ Foam::fvsPatchField<Type>::fvsPatchField
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
+const Foam::objectRegistry& Foam::fvsPatchField<Type>::db() const
+{
+    return patch_.boundaryMesh().mesh();
+}
+
+
+template<class Type>
 void Foam::fvsPatchField<Type>::check(const fvsPatchField<Type>& ptf) const
 {
-    fvsPatchFieldBase::checkPatch(ptf);
+    if (&patch_ != &(ptf.patch_))
+    {
+        FatalErrorInFunction
+            << "different patches for fvsPatchField<Type>s"
+            << abort(FatalError);
+    }
 }
 
 
 template<class Type>
 void Foam::fvsPatchField<Type>::autoMap(const fvPatchFieldMapper& m)
 {
-    Field<Type>::autoMap(m, internalField_.is_oriented());
+    const bool oriented = internalField_.oriented()();
+    Field<Type>::autoMap(m, oriented);
 }
 
 
@@ -183,7 +197,7 @@ void Foam::fvsPatchField<Type>::operator=
     const fvsPatchField<Type>& ptf
 )
 {
-    fvsPatchFieldBase::checkPatch(ptf);
+    check(ptf);
     Field<Type>::operator=(ptf);
 }
 
@@ -194,7 +208,7 @@ void Foam::fvsPatchField<Type>::operator+=
     const fvsPatchField<Type>& ptf
 )
 {
-    fvsPatchFieldBase::checkPatch(ptf);
+    check(ptf);
     Field<Type>::operator+=(ptf);
 }
 
@@ -205,7 +219,7 @@ void Foam::fvsPatchField<Type>::operator-=
     const fvsPatchField<Type>& ptf
 )
 {
-    fvsPatchFieldBase::checkPatch(ptf);
+    check(ptf);
     Field<Type>::operator-=(ptf);
 }
 
@@ -216,7 +230,13 @@ void Foam::fvsPatchField<Type>::operator*=
     const fvsPatchField<scalar>& ptf
 )
 {
-    fvsPatchFieldBase::checkPatch(ptf);
+    if (&patch_ != &ptf.patch())
+    {
+        FatalErrorInFunction
+            << "incompatible patches for patch fields"
+            << abort(FatalError);
+    }
+
     Field<Type>::operator*=(ptf);
 }
 
@@ -227,7 +247,12 @@ void Foam::fvsPatchField<Type>::operator/=
     const fvsPatchField<scalar>& ptf
 )
 {
-    fvsPatchFieldBase::checkPatch(ptf);
+    if (&patch_ != &ptf.patch())
+    {
+        FatalErrorInFunction
+            << abort(FatalError);
+    }
+
     Field<Type>::operator/=(ptf);
 }
 

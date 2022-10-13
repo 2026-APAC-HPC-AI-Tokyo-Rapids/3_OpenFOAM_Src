@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -34,23 +34,23 @@ Description
     from the skin friction coefficient:
 
     \f[
-        C_f = \frac{\tau_w}{0.5 \rho_{ref} |U|^2}
+        C_f = \frac{\tau_w}{0.5 \rho_\infty |U|^2}
     \f]
 
     as:
 
     \f[
-        h = 0.5 \rho_{ref} c_{p,ref} |U_{ref}| C_f
+        h = 0.5 \rho_\infty c_{p,\infty} |U_{\infty}| C_f
     \f]
 
     where
     \vartable
-      h       | Heat transfer coefficient                          [W/m^2/K]
-      \rho_{ref}  | Reference fluid density                        [kg/m^3]
-      c_{p,ref} | Reference specific heat capacity at constant pressure [J/kg/K]
-      U_{ref}     | Reference velocity                             [m/s]
-      C_f         | Skin friction coefficient                      [-]
-      \tau_w      | Wall shear stress                              [m^2/s^2]
+      h       | Convective heat transfer coefficient of the flow
+      \rho_\infty  | Reference fluid density
+      c_{p,\infty} | Reference specific heat capacity at constant pressure
+      U_{\infty}   | Reference velocity
+      C_f          | Skin friction coefficient
+      \tau_w       | Wall shear stress
     \endvartable
 
 Usage
@@ -58,43 +58,44 @@ Usage
     \verbatim
     heatTransferCoeff1
     {
-        // Inherited entries
+        // Mandatory and other optional entries
         ...
-
-        // Mandatory entries
         htcModel        ReynoldsAnalogy;
-        UInf            <vector>;
 
-        // Optional entries
-        U               <word>;
-        Cp              <word>;
-        rho             <word>;
+        // Conditional mandatory entries (runtime modifiable)
+        UInf            (10 0 0);
 
-        // Conditional mandatory entries
+        // Conditional optional entries (runtime modifiable)
+        Cp              <CpName>;
+        rho             <rhoName>;
 
-            // when Cp == CpInf
-            CpInf       <scalar>;
+        // mandatory if Cp == CpInf
+        CpInf           1005;
 
-            // when rho == rhoInf
-            rhoInf      <scalar>;
+        // mandatory if rho == rhoInf
+        rhoInf          1;
     }
     \endverbatim
 
     where the entries mean:
     \table
-      Property  | Description                            | Type | Reqd | Deflt
-      type    | Model name: ReynoldsAnalogy              | word | yes  | -
-      UInf    | Reference velocity                     | vector | yes  | -
-      U       | Name of velocity field                   | word | no   | U
+      Property  | Description                            | Type | Reqd | Dflt
+      type      | Model name: ReynoldsAnalogy            | word | yes  | -
+      UInf      | Reference velocity                   | scalar | yes  | -
       Cp      | Name of reference specific heat capacity | word | no   | Cp
-      CpInf   | Reference specific heat capacity value | scalar | choice | -
-      rho     | Name of fluid density field              | word | no   | rho
-      rhoInf  | Reference fluid density value          | scalar | choice | -
+      CpInf   | Reference specific heat capacity value | scalar | cndtnl | -
+      rho     | Name of reference fluid density          | word | no   | rho
+      rhoInf  | Reference fluid density value          | scalar | cndtnl | -
     \endtable
 
 Note
-  - In order to use a reference \c Cp, set \c Cp to \c CpInf.
-  - In order to use a reference \c rho, set \c rho to \c rhoInf.
+  - to use a reference \c Cp, set \c Cp to \c CpInf
+  - to use a reference \c rho, set \c rho to \c rhoInf
+
+See also
+  - Foam::heatTransferCoeffModel
+  - Foam::heatTransferCoeffModels::fixedReferenceTemperature
+  - Foam::heatTransferCoeffModels::localReferenceTemperature
 
 SourceFiles
     ReynoldsAnalogy.C
@@ -114,7 +115,7 @@ namespace heatTransferCoeffModels
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class ReynoldsAnalogy Declaration
+                   Class ReynoldsAnalogy Declaration
 \*---------------------------------------------------------------------------*/
 
 class ReynoldsAnalogy
@@ -131,10 +132,10 @@ protected:
         //- Reference velocity
         vector URef_;
 
-        //- Name of fluid density field
+        //- Name of density field
         word rhoName_;
 
-        //- Reference fluid density
+        //- Reference density
         scalar rhoRef_;
 
         //- Name of specific heat capacity field
@@ -146,16 +147,12 @@ protected:
 
     // Protected Member Functions
 
-        //- Return fluid density field [kg/m^3]
-        virtual tmp<scalarField> rho(const label patchi) const;
+        virtual tmp<Field<scalar>> rho(const label patchi) const;
 
-        //- Return heat capacity at constant pressure [J/kg/K]
-        virtual tmp<scalarField> Cp(const label patchi) const;
+        virtual tmp<Field<scalar>> Cp(const label patchi) const;
 
-        //- Return the effective stress tensor including the laminar stress
         virtual tmp<volSymmTensorField> devReff() const;
 
-        //- Return skin friction coefficient field [-]
         tmp<FieldField<Field, scalar>> Cf() const;
 
         //- Set the heat transfer coefficient

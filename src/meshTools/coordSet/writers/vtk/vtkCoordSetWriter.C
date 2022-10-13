@@ -84,8 +84,8 @@ Foam::coordSetWriters::vtkWriter::vtkWriter(const dictionary& options)
     vtk::outputOptions opts(vtk::formatType::INLINE_BASE64);
     opts.ascii
     (
-        IOstreamOption::ASCII
-     == IOstreamOption::formatEnum("format", options, IOstreamOption::BINARY)
+        IOstream::ASCII
+     == IOstream::formatEnum("format", options, IOstream::BINARY)
     );
 
     opts.legacy(options.getOrDefault("legacy", false));
@@ -231,7 +231,7 @@ Foam::fileName Foam::coordSetWriters::vtkWriter::write()
         else
         {
             // Set name in title
-            writer_->beginFile(outputPath_.stem());
+            writer_->beginFile(outputPath_.nameLessExt());
         }
 
         writer_->writeGeometry();

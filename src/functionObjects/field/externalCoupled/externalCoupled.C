@@ -108,7 +108,7 @@ void Foam::functionObjects::externalCoupled::readColumns
 ) const
 {
     // Get sizes for all processors
-    const globalIndex globalFaces(globalIndex::gatherOnly{}, nRows);
+    const globalIndex globalFaces(nRows, globalIndex::gatherOnly{});
 
     PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking);
 
@@ -179,7 +179,7 @@ void Foam::functionObjects::externalCoupled::readLines
 ) const
 {
     // Get sizes for all processors
-    const globalIndex globalFaces(globalIndex::gatherOnly{}, nRows);
+    const globalIndex globalFaces(nRows, globalIndex::gatherOnly{});
 
     PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking);
 
@@ -430,7 +430,7 @@ void Foam::functionObjects::externalCoupled::initCoupling()
                  || isFile(dir/"patchFaces");
             }
 
-            Pstream::broadcast(geomExists);
+            Pstream::scatter(geomExists);
 
             if (!geomExists)
             {

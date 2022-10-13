@@ -33,7 +33,14 @@ License
 template<class Type>
 bool Foam::IOField<Type>::readContents()
 {
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        (
+            readOpt() == IOobject::MUST_READ
+         || readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         readStream(typeName) >> *this;
         close();
@@ -66,7 +73,11 @@ Foam::IOField<Type>::IOField(const IOobject& io, const bool valid)
     // Check for MUST_READ_IF_MODIFIED
     warnNoRereading<IOField<Type>>();
 
-    if (isReadRequired())
+    if
+    (
+        io.readOpt() == IOobject::MUST_READ
+     || io.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+    )
     {
         Istream& is = readStream(typeName, valid);
 
@@ -76,7 +87,7 @@ Foam::IOField<Type>::IOField(const IOobject& io, const bool valid)
         }
         close();
     }
-    else if (isReadOptional())
+    else if (io.readOpt() == IOobject::READ_IF_PRESENT)
     {
         bool haveFile = headerOk();
 

@@ -31,7 +31,7 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "boolList.H"
-#include "pointHit.H"
+#include "PointHit.H"
 #include "objectHit.H"
 #include "bandCompression.H"
 
@@ -238,7 +238,8 @@ Foam::PrimitivePatch<FaceList, PointField>::projectPoints
                 else if (curHit.eligibleMiss())
                 {
                     // Calculate min distance
-                    scalar missDist = curHit.point().dist(curPoint);
+                    scalar missDist =
+                        Foam::mag(curHit.missPoint() - curPoint);
 
                     if (missDist < minDistance)
                     {
@@ -465,7 +466,8 @@ Foam::PrimitivePatch<FaceList, PointField>::projectFaceCentres
                 else if (curHit.eligibleMiss())
                 {
                     // Calculate min distance
-                    scalar missDist = curHit.point().dist(curFaceCentre);
+                    scalar missDist =
+                        Foam::mag(curHit.missPoint() - curFaceCentre);
 
                     if (missDist < minDistance)
                     {

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -167,7 +167,7 @@ Foam::boolList Foam::cellClassification::markFaces
 
     indexedOctree<treeDataFace> faceTree
     (
-        treeDataFace(mesh_, allFaces),
+        treeDataFace(false, mesh_, allFaces),
         allBb,      // overall search domain
         8,          // maxLevel
         10,         // leafsize
@@ -211,7 +211,7 @@ Foam::boolList Foam::cellClassification::markFaces
             }
             else
             {
-                label facei = faceTree.shapes().objectIndex(pHit.index());
+                label facei = faceTree.shapes().faceLabels()[pHit.index()];
 
                 if (!cutFace[facei])
                 {
@@ -221,7 +221,7 @@ Foam::boolList Foam::cellClassification::markFaces
                 }
 
                 // Restart from previous endpoint
-                pt = pHit.point() + smallVec;
+                pt = pHit.hitPoint() + smallVec;
 
                 if (((pt-start) & edgeNormal) >= edgeMag)
                 {
@@ -288,12 +288,12 @@ void Foam::cellClassification::markCells
         // Use linear search for points.
         label celli = queryMesh.findCell(outsidePts[outsidePtI], -1, false);
 
-        if (returnReduceAnd(celli < 0))
+        if (returnReduce(celli, maxOp<label>()) == -1)
         {
             FatalErrorInFunction
                 << "outsidePoint " << outsidePts[outsidePtI]
-                << " is not inside any cell" << nl
-                << "It might be on a face or outside the geometry"
+                << " is not inside any cell"
+                << nl << "It might be on a face or outside the geometry"
                 << exit(FatalError);
         }
 

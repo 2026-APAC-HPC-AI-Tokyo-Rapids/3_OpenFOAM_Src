@@ -45,11 +45,11 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
+// Forward declaration of friend functions and operators
 class polyMesh;
-class fvMesh;
 class OBJstream;
 class IOobject;
+class fvMesh;
 
 /*---------------------------------------------------------------------------*\
                         Class voxelMeshSearch Declaration
@@ -57,7 +57,7 @@ class IOobject;
 
 class voxelMeshSearch
 {
-    // Private Data
+    // Private data
 
         const polyMesh& mesh_;
 

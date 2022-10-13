@@ -117,14 +117,6 @@ Tensor<complex> eigenVectors
 Tensor<complex> eigenVectors(const tensor& T);
 
 
-//- Return inverse of a given tensor, and fall back
-//- into pseudo-inverse if the tensor is singular
-//  \param t tensor
-//
-//  \return tensor inverse of tensor
-tensor pinv(const tensor& t);
-
-
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam

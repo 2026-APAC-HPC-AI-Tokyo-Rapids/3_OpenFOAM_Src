@@ -234,10 +234,14 @@ public:
     // Additional constructors and methods (as per v2012 and earlier)
     #ifdef Foam_IOstream_extras
 
-        //- Construct with an empty digest, using given format
-        explicit OSHA1stream(IOstreamOption::streamFormat fmt)
+        //- Construct empty
+        explicit OSHA1stream
+        (
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
+        )
         :
-            OSHA1stream(IOstreamOption(fmt))
+            OSHA1stream(IOstreamOption(fmt, ver))
         {}
 
     #endif /* Foam_IOstream_extras */

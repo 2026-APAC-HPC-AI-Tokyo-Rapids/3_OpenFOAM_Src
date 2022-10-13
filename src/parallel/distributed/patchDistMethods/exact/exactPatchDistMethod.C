@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -52,13 +52,13 @@ Foam::patchDistMethods::exact::patchSurface() const
 
         Random rndGen(0);
 
-        treeBoundBox localBb(mesh_.points());
+        boundBox localBb(mesh_.points(), false);
 
         // Determine mesh bounding boxes:
         List<treeBoundBox> meshBb
         (
             1,
-            localBb.extend(rndGen, 1E-3)
+            treeBoundBox(localBb).extend(rndGen, 1E-3)
         );
 
         // Dummy bounds dictionary
@@ -171,12 +171,12 @@ bool Foam::patchDistMethods::exact::correct
 
     // Take over hits
     label nHits = 0;
-    forAll(info, celli)
+    forAll(info, cellI)
     {
-        if (info[celli].hit())
+        if (info[cellI].hit())
         {
-            const point& cc = mesh_.cellCentres()[celli];
-            y[celli] = info[celli].point().dist(cc);
+            const point& cc = mesh_.cellCentres()[cellI];
+            y[cellI] = mag(cc-info[cellI].hitPoint());
             nHits++;
         }
         //else
@@ -189,12 +189,12 @@ bool Foam::patchDistMethods::exact::correct
     if (debug)
     {
         OBJstream str(mesh_.time().timePath()/"wallPoint.obj");
-        Info<< type() << ": dumping nearest wall point to "
-            << str.name() << endl;
-        forAll(mesh_.cellCentres(), celli)
+        Info<< type() << ": dumping nearest wall point to " << str.name()
+            << endl;
+        forAll(mesh_.cellCentres(), cellI)
         {
-            const point& cc = mesh_.cellCentres()[celli];
-            str.writeLine(cc, info[celli].point());
+            const point& cc = mesh_.cellCentres()[cellI];
+            str.write(linePointRef(cc, info[cellI].hitPoint()));
         }
     }
 

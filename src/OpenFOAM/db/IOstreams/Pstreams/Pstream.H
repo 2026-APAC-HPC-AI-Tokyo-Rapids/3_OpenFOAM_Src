@@ -202,14 +202,13 @@ public:
             const label comm = UPstream::worldComm
         );
 
-        //- Reduce inplace (cf. MPI Allreduce)
-        //- applying \c cop to inplace combine \c value
+        //- Gather data, applying \c cop to inplace combine \c value
         //- from different processors.
         //- After completion all processors have the same data.
         //  Uses the specified communication schedule.
         //  Wraps combineGather/broadcast (may change in the future).
         template<class T, class CombineOp>
-        static void combineReduce
+        static void combineAllGather
         (
             const List<commsStruct>& comms,
             T& value,
@@ -218,22 +217,11 @@ public:
             const label comm = UPstream::worldComm
         );
 
-        //- Reduce inplace (cf. MPI Allreduce)
-        //- applying \c cop to inplace combine \c value
+        //- Gather data, applying \c cop to inplace combine \c value
         //- from different processors.
         //- After completion all processors have the same data.
         //  Uses linear/tree communication.
         //  Wraps combineGather/broadcast (may change in the future).
-        template<class T, class CombineOp>
-        static void combineReduce
-        (
-            T& value,
-            const CombineOp& cop,
-            const int tag = UPstream::msgType(),
-            const label comm = UPstream::worldComm
-        );
-
-        //- Same as Pstream::combineReduce
         template<class T, class CombineOp>
         static void combineAllGather
         (
@@ -241,10 +229,7 @@ public:
             const CombineOp& cop,
             const int tag = UPstream::msgType(),
             const label comm = UPstream::worldComm
-        )
-        {
-            Pstream::combineReduce(value, cop, tag, comm);
-        }
+        );
 
 
     // Combine variants working on whole List at a time.
@@ -271,15 +256,16 @@ public:
 
         //- After completion all processors have the same data.
         template<class T, class CombineOp>
-        static void listCombineReduce
+        static void listCombineAllGather
         (
+            const List<commsStruct>& comms,
             List<T>& values,
             const CombineOp& cop,
-            const int tag = UPstream::msgType(),
-            const label comm = UPstream::worldComm
+            const int tag,
+            const label comm
         );
 
-        //- Same as Pstream::listCombineReduce
+        //- After completion all processors have the same data.
         template<class T, class CombineOp>
         static void listCombineAllGather
         (
@@ -287,10 +273,7 @@ public:
             const CombineOp& cop,
             const int tag = UPstream::msgType(),
             const label comm = UPstream::worldComm
-        )
-        {
-            Pstream::listCombineReduce(values, cop, tag, comm);
-        }
+        );
 
 
     // Combine variants working on whole map at a time.
@@ -316,23 +299,19 @@ public:
             const label comm = UPstream::worldComm
         );
 
-        //- Reduce inplace (cf. MPI Allreduce)
-        //- applying \c cop to inplace combine map \c values
-        //- from different processors.
-        //- After completion all processors have the same data.
-        //  Uses the specified communication schedule.
-        //  Wraps mapCombineGather/broadcast (may change in the future).
+
         //- After completion all processors have the same data.
         template<class Container, class CombineOp>
-        static void mapCombineReduce
+        static void mapCombineAllGather
         (
+            const List<commsStruct>& comms,
             Container& values,
             const CombineOp& cop,
-            const int tag = UPstream::msgType(),
-            const label comm = UPstream::worldComm
+            const int tag,
+            const label comm
         );
 
-        //- Same as Pstream::mapCombineReduce
+        //- After completion all processors have the same data.
         template<class Container, class CombineOp>
         static void mapCombineAllGather
         (
@@ -340,10 +319,7 @@ public:
             const CombineOp& cop,
             const int tag = UPstream::msgType(),
             const label comm = UPstream::worldComm
-        )
-        {
-            Pstream::mapCombineReduce(values, cop, tag, comm);
-        }
+        );
 
 
     // Gather/scatter keeping the individual processor data separate.
@@ -369,6 +345,19 @@ public:
             List<T>& values,
             const int tag = UPstream::msgType(),
             const label comm = UPstream::worldComm
+        );
+
+        //- Gather data, but keep individual values separate.
+        //- Uses the specified communication schedule.
+        //  After completion all processors have the same data.
+        //  Wraps gatherList/scatterList (may change in the future).
+        template<class T>
+        static void allGatherList
+        (
+            const List<commsStruct>& comms,
+            List<T>& values,
+            const int tag,
+            const label comm
         );
 
         //- Gather data, but keep individual values separate.

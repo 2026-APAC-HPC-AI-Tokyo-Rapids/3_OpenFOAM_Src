@@ -286,8 +286,8 @@ void Foam::MPPICCloud<CloudType>::info()
     const scalar alphaMin = gMin(alpha().primitiveField());
     const scalar alphaMax = gMax(alpha().primitiveField());
 
-    Log_ << "    Min cell volume fraction        = " << alphaMin << nl
-         << "    Max cell volume fraction        = " << alphaMax << endl;
+    Info<< "    Min cell volume fraction        = " << alphaMin << endl;
+    Info<< "    Max cell volume fraction        = " << alphaMax << endl;
 
     if (alphaMax < SMALL)
     {
@@ -313,7 +313,7 @@ void Foam::MPPICCloud<CloudType>::info()
 
     reduce(nMin, minOp<scalar>());
 
-    Log_<< "    Min dense number of parcels     = " << nMin << endl;
+    Info<< "    Min dense number of parcels     = " << nMin << endl;
 }
 
 

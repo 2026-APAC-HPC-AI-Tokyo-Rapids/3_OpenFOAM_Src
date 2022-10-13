@@ -36,11 +36,11 @@ Note
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_UniformList_H
-#define Foam_UniformList_H
+#ifndef UniformList_H
+#define UniformList_H
 
 #include "labelFwd.H"
-#include <utility>  // For std::move
+#include <utility>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -51,26 +51,26 @@ namespace Foam
                            Class UniformList Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class Type>
+template<class T>
 class UniformList
 {
     // Private Data
 
         //- The value to be returned.
-        Type value_;
+        T value_;
 
 public:
 
     // Constructors
 
         //- Construct from given value
-        explicit UniformList(const Type& val) noexcept
+        explicit UniformList(const T& val) noexcept
         :
             value_(val)
         {}
 
         //- Move construct from given value
-        explicit UniformList(Type&& val) noexcept
+        explicit UniformList(T&& val) noexcept
         :
             value_(std::move(val))
         {}
@@ -79,13 +79,13 @@ public:
     // Member Functions
 
         //- Return the value
-        const Type& value() const noexcept
+        const T& value() const noexcept
         {
             return value_;
         }
 
         //- Non-const access to the value
-        Type& value() noexcept
+        T& value() noexcept
         {
             return value_;
         }
@@ -94,13 +94,13 @@ public:
     // Member Operators
 
         //- Implicit cast to the value
-        operator const Type&() const noexcept
+        operator const T&() const noexcept
         {
             return value_;
         }
 
         //- Return the value
-        const Type& operator[](const label) const noexcept
+        const T& operator[](const label) const noexcept
         {
             return value_;
         }

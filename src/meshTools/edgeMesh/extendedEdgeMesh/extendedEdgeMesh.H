@@ -193,10 +193,10 @@ protected:
         labelList regionEdges_;
 
         //- Search tree for all feature points
-        mutable std::unique_ptr<indexedOctree<treeDataPoint>> pointTree_;
+        mutable unique_ptr<indexedOctree<treeDataPoint>> pointTree_;
 
         //- Search tree for all edges
-        mutable std::unique_ptr<indexedOctree<treeDataEdge>> edgeTree_;
+        mutable unique_ptr<indexedOctree<treeDataEdge>> edgeTree_;
 
         //- Individual search trees for each type of edge
         mutable PtrList<indexedOctree<treeDataEdge>> edgeTreesByType_;

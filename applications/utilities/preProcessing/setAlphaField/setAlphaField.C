@@ -76,7 +76,7 @@ void isoFacesToFile
             {
                 for (const List<point>& facePts : procFaces)
                 {
-                    os.writeFace(facePts);
+                    os.write(face(identity(facePts.size())), facePts);
                 }
             }
         }
@@ -87,7 +87,7 @@ void isoFacesToFile
 
         for (const List<point>& facePts : faces)
         {
-            os.writeFace(facePts);
+            os.write(face(identity(facePts.size())), facePts);
         }
     }
 }

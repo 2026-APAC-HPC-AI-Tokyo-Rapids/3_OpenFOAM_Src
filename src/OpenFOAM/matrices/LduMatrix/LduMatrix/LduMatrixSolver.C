@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -131,9 +131,8 @@ Foam::LduMatrix<Type, DType, LUType>::solver::solver
 
     log_(1),
     minIter_(0),
-    maxIter_(lduMatrix::defaultMaxIter),
-    normType_(lduMatrix::normTypes::DEFAULT_NORM),
-    tolerance_(lduMatrix::defaultTolerance*pTraits<Type>::one),
+    maxIter_(defaultMaxIter_),
+    tolerance_(1e-6*pTraits<Type>::one),
     relTol_(Zero)
 {
     readControls();
@@ -146,8 +145,6 @@ template<class Type, class DType, class LUType>
 void Foam::LduMatrix<Type, DType, LUType>::solver::readControls()
 {
     controlDict_.readIfPresent("log", log_);
-    normType_ = lduMatrix::normTypes::DEFAULT_NORM;
-    lduMatrix::normTypesNames_.readIfPresent("norm", controlDict_, normType_);
     controlDict_.readIfPresent("minIter", minIter_);
     controlDict_.readIfPresent("maxIter", maxIter_);
     controlDict_.readIfPresent("tolerance", tolerance_);
@@ -171,45 +168,21 @@ Type Foam::LduMatrix<Type, DType, LUType>::solver::normFactor
 (
     const Field<Type>& psi,
     const Field<Type>& Apsi,
-    Field<Type>& tmpField,
-    const lduMatrix::normTypes normType
+    Field<Type>& tmpField
 ) const
 {
-    switch (normType)
-    {
-        case lduMatrix::normTypes::NO_NORM :
-        {
-            break;
-        }
+    // --- Calculate A dot reference value of psi
+    matrix_.sumA(tmpField);
+    cmptMultiply(tmpField, tmpField, gAverage(psi));
 
-        case lduMatrix::normTypes::DEFAULT_NORM :
-        case lduMatrix::normTypes::L1_SCALED_NORM :
-        {
-            // --- Calculate A dot reference value of psi
-            matrix_.sumA(tmpField);
-            cmptMultiply(tmpField, tmpField, gAverage(psi));
+    return stabilise
+    (
+        gSum(cmptMag(Apsi - tmpField) + cmptMag(matrix_.source() - tmpField)),
+        SolverPerformance<Type>::small_
+    );
 
-            return stabilise
-            (
-                gSum
-                (
-                    cmptMag(Apsi - tmpField)
-                  + cmptMag(matrix_.source() - tmpField)
-                ),
-                SolverPerformance<Type>::small_
-            );
-
-            // Equivalent at convergence:
-            // return stabilise
-            // (
-            //     2*gSumCmptMag(matrix_.source()), matrix_.small_
-            // );
-            break;
-        }
-    }
-
-    // Fall-through: no norm
-    return pTraits<Type>::one;
+    // At convergence this simpler method is equivalent to the above
+    // return stabilise(2*gSumCmptMag(matrix_.source()), matrix_.small_);
 }
 
 

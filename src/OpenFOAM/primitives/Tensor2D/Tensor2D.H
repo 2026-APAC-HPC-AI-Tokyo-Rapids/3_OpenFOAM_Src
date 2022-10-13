@@ -127,17 +127,17 @@ public:
 
     // Member Functions
 
-    // Component Access
+    // Component access
 
-        const Cmpt& xx() const noexcept { return this->v_[XX]; }
-        const Cmpt& xy() const noexcept { return this->v_[XY]; }
-        const Cmpt& yx() const noexcept { return this->v_[YX]; }
-        const Cmpt& yy() const noexcept { return this->v_[YY]; }
+        inline const Cmpt& xx() const;
+        inline const Cmpt& xy() const;
+        inline const Cmpt& yx() const;
+        inline const Cmpt& yy() const;
 
-        Cmpt& xx() noexcept { return this->v_[XX]; }
-        Cmpt& xy() noexcept { return this->v_[XY]; }
-        Cmpt& yx() noexcept { return this->v_[YX]; }
-        Cmpt& yy() noexcept { return this->v_[YY]; }
+        inline Cmpt& xx();
+        inline Cmpt& xy();
+        inline Cmpt& yx();
+        inline Cmpt& yy();
 
 
     // Column-vector access

@@ -5,8 +5,8 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2007-2022 PCOpt/NTUA
-    Copyright (C) 2013-2022 FOSS GP
+    Copyright (C) 2007-2020 PCOpt/NTUA
+    Copyright (C) 2013-2020 FOSS GP
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -85,7 +85,7 @@ public:
 
     // Constructors
 
-        //- Construct from components
+        //- From components
         objectiveNutSqr
         (
             const fvMesh& mesh,
@@ -104,14 +104,10 @@ public:
         //- Return the objective function value
         scalar J();
 
-        //- Update values to be added to the adjoint outlet velocity
-        void update_dJdv();
-
-        //- Update field to be added to the first adjoint turbulence model PDE
+        //- Update field to be added to the adjoint turbulence model PDE
+        //  The equivalent for the second turbulence model variable should
+        //  be implemented for turbulence models other than SA
         void update_dJdTMvar1();
-
-        //- Update field to be added to the second adjoint turbulence model PDE
-        void update_dJdTMvar2();
 
         //- Update field to be added to be added to volume-based
         //- sensitivity derivatives, emerging from delta ( dV ) / delta b
@@ -121,7 +117,7 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-} // End namespace objectives
+} // End namespace objectiveNutSqrNoise
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

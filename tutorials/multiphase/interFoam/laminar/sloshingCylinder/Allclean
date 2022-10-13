@@ -7,6 +7,5 @@ cleanCase0
 
 rm -rf constant/triSurface
 rm -rf constant/extendedFeatureEdgeMesh
-rm -rf oldProcessors
 
 #------------------------------------------------------------------------------

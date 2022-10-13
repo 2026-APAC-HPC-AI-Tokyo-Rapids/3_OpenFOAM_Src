@@ -26,5 +26,4 @@ EXE_LIBS = \
     -lfileFormats \
     -lsurfMesh \
     -lmeshTools \
-    ${CGAL_LIBS} \
     $(LINK_FLAGS)

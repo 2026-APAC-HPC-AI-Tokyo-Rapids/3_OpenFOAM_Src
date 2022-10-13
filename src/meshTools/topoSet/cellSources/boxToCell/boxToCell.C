@@ -72,17 +72,13 @@ namespace Foam
 // Read min/max or min/span
 static void readBoxDim(const dictionary& dict, treeBoundBox& bb)
 {
-    IOobjectOption::readOption readOpt = IOobjectOption::MUST_READ;
+    dict.readEntry<point>("min", bb.min());
 
-    dict.readEntry("min", bb.min(), keyType::LITERAL, readOpt);
-
-    if (dict.readIfPresent("span", bb.max(), keyType::LITERAL))
+    const bool hasSpan = dict.found("span");
+    if (!dict.readEntry<point>("max", bb.max(), keyType::REGEX, !hasSpan))
     {
-        bb.max() += bb.min();
-        readOpt = IOobjectOption::READ_IF_PRESENT;
+        bb.max() = bb.min() + dict.get<vector>("span");
     }
-
-    dict.readEntry("max", bb.max(), keyType::LITERAL, readOpt);
 }
 
 } // End namespace Foam

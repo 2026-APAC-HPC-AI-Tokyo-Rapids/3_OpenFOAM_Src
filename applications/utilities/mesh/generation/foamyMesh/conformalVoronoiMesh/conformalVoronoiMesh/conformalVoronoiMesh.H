@@ -83,7 +83,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
+// Forward declaration of classes
 class initialPointsMethod;
 class relaxationModel;
 class faceAreaWeightModel;

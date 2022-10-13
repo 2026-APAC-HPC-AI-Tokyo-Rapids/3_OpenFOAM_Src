@@ -66,7 +66,7 @@ static Map<Type> regionSum(const regionSplit& regions, const Field<Type>& fld)
         regionToSum(regioni, Type(Zero)) += fld[celli];
     }
 
-    Pstream::mapCombineReduce(regionToSum, plusEqOp<Type>());
+    Pstream::mapCombineAllGather(regionToSum, plusEqOp<Type>());
 
     return regionToSum;
 }
@@ -214,7 +214,7 @@ Foam::functionObjects::regionSizeDistribution::findPatchRegions
 
 
     // Make sure all the processors have the same set of regions
-    Pstream::mapCombineReduce(patchRegions, minEqOp<label>());
+    Pstream::mapCombineAllGather(patchRegions, minEqOp<label>());
 
     return patchRegions;
 }
@@ -396,12 +396,19 @@ bool Foam::functionObjects::regionSizeDistribution::read(const dictionary& dict)
         dict.subOrEmptyDict("formatOptions").optionalSubDict(setFormat)
     );
 
-    csysPtr_ = coordinateSystem::NewIfPresent(obr_, dict);
-
-    if (csysPtr_)
+    if (dict.found(coordinateSystem::typeName_()))
     {
+        csysPtr_.reset
+        (
+            coordinateSystem::New(obr_, dict, coordinateSystem::typeName_())
+        );
+
         Info<< "Transforming all vectorFields with coordinate system "
             << csysPtr_->name() << endl;
+    }
+    else
+    {
+        csysPtr_.clear();
     }
 
     if (isoPlanes_)

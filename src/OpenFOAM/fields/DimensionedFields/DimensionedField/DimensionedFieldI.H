@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,7 +38,7 @@ Foam::DimensionedField<Type, GeoMesh>::null()
 
 template<class Type, class GeoMesh>
 inline const typename GeoMesh::Mesh&
-Foam::DimensionedField<Type, GeoMesh>::mesh() const noexcept
+Foam::DimensionedField<Type, GeoMesh>::mesh() const
 {
     return mesh_;
 }
@@ -46,22 +46,21 @@ Foam::DimensionedField<Type, GeoMesh>::mesh() const noexcept
 
 template<class Type, class GeoMesh>
 inline const Foam::dimensionSet&
-Foam::DimensionedField<Type, GeoMesh>::dimensions() const noexcept
+Foam::DimensionedField<Type, GeoMesh>::dimensions() const
 {
     return dimensions_;
 }
 
 
 template<class Type, class GeoMesh>
-inline Foam::dimensionSet&
-Foam::DimensionedField<Type, GeoMesh>::dimensions() noexcept
+inline Foam::dimensionSet& Foam::DimensionedField<Type, GeoMesh>::dimensions()
 {
     return dimensions_;
 }
 
 
 template<class Type, class GeoMesh>
-inline Foam::orientedType
+inline const Foam::orientedType&
 Foam::DimensionedField<Type, GeoMesh>::oriented() const noexcept
 {
     return oriented_;
@@ -77,22 +76,18 @@ Foam::DimensionedField<Type, GeoMesh>::oriented() noexcept
 
 
 template<class Type, class GeoMesh>
-inline bool Foam::DimensionedField<Type, GeoMesh>::is_oriented() const noexcept
+inline void Foam::DimensionedField<Type, GeoMesh>::setOriented
+(
+    const bool oriented
+) noexcept
 {
-    return oriented_.is_oriented();
-}
-
-
-template<class Type, class GeoMesh>
-inline void Foam::DimensionedField<Type, GeoMesh>::setOriented(bool on) noexcept
-{
-    oriented_.setOriented(on);
+    oriented_.setOriented(oriented);
 }
 
 
 template<class Type, class GeoMesh>
 inline const Foam::Field<Type>&
-Foam::DimensionedField<Type, GeoMesh>::field() const noexcept
+Foam::DimensionedField<Type, GeoMesh>::field() const
 {
     return *this;
 }
@@ -100,7 +95,7 @@ Foam::DimensionedField<Type, GeoMesh>::field() const noexcept
 
 template<class Type, class GeoMesh>
 inline Foam::Field<Type>&
-Foam::DimensionedField<Type, GeoMesh>::field() noexcept
+Foam::DimensionedField<Type, GeoMesh>::field()
 {
     return *this;
 }

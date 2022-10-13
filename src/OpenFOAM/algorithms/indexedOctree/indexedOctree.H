@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,8 +34,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_indexedOctree_H
-#define Foam_indexedOctree_H
+#ifndef indexedOctree_H
+#define indexedOctree_H
 
 #include "treeBoundBox.H"
 #include "pointIndexHit.H"
@@ -52,61 +51,45 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
-class Istream;
+// Forward declaration of classes
 template<class Type> class indexedOctree;
 template<class Type> Ostream& operator<<(Ostream&, const indexedOctree<Type>&);
+class Istream;
 
 
 /*---------------------------------------------------------------------------*\
-                      Class indexedOctreeBase Declaration
+                        Class indexedOctreeName Declaration
 \*---------------------------------------------------------------------------*/
 
-//- Template invariant parts for indexedOctree
-//  The internal node bookkeeping is encoded follows:
-//  - 0: empty
-//  - +ve: parent
-//  - -ve: leaf
-class indexedOctreeBase
+TemplateName(indexedOctree);
+
+
+/*---------------------------------------------------------------------------*\
+                           Class indexedOctree Declaration
+\*---------------------------------------------------------------------------*/
+
+template<class Type>
+class indexedOctree
+:
+    public indexedOctreeName
 {
 public:
 
-    // Public Data Types
+    // Data types
 
         //- Tree node. Has up pointer and down pointers.
         class node
         {
         public:
 
-            //- Has exactly 8 sub-nodes (octants)
-            static constexpr direction nChildren = 8;
-
             //- Bounding box of this node
             treeBoundBox bb_;
 
-            //- Parent node (index into flat list addressing for tree)
-            label parent_ = -1;
+            //- Parent node (index into nodes_ of tree)
+            label parent_;
 
             //- IDs of the 8 nodes on all sides of the mid point
             FixedList<labelBits, 8> subNodes_;
-
-
-        // Operators
-
-            friend bool operator==(const node& a, const node& b)
-            {
-                return
-                (
-                    a.parent_ == b.parent_
-                 && a.subNodes_ == b.subNodes_
-                 && a.bb_ == b.bb_
-                );
-            }
-
-            friend bool operator!=(const node& a, const node& b)
-            {
-                return !(a == b);
-            }
 
             friend Ostream& operator<< (Ostream& os, const node& n)
             {
@@ -118,147 +101,34 @@ public:
             {
                 return is >> n.bb_ >> n.parent_ >> n.subNodes_;
             }
+
+            friend bool operator==(const node& a, const node& b)
+            {
+                return
+                    a.bb_ == b.bb_
+                 && a.parent_ == b.parent_
+                 && a.subNodes_ == b.subNodes_;
+            }
+
+            friend bool operator!=(const node& a, const node& b)
+            {
+                return !(a == b);
+            }
         };
 
 
-    // Static Functions
+private:
 
-    // Tests for node handling
-    // (0: empty, +ve: parent, -ve: leaf)
+    // Static data
 
-        //- An empty node - no content
-        static bool isEmpty(labelBits i) noexcept
-        {
-            return (i.val() == 0);
-        }
-
-        //- Node with content (leaf)
-        static bool isContent(labelBits i) noexcept
-        {
-            return (i.val() < 0);
-        }
-
-        //- A parent node
-        static bool isNode(labelBits i) noexcept
-        {
-            return (i.val() > 0);
-        }
-
-
-    // Decode/retrieve node addressing
-
-        //- Return real (dereferenced) index for a content node
-        static label getContent(labelBits i)
-        {
-            if (!isContent(i))
-            {
-                FatalErrorInFunction
-                    << abort(FatalError);
-            }
-            return (-i.val()-1);
-        }
-
-        //- Return real (dereferenced) index for a parent node
-        static label getNode(const labelBits i)
-        {
-            if (!isNode(i))
-            {
-                FatalErrorInFunction
-                    << abort(FatalError);
-            }
-            return (i.val()-1);
-        }
-
-        //- Return sub-node direction/octant
-        static direction getOctant(labelBits i) noexcept
-        {
-            return i.bits();
-        }
-
-
-protected:
-
-    // Static Data
-
-        //- Relative perturbation tolerance.
-        //  Determines when point is considered to be close to face/edge
-        //  of bb of node.
+        //- Relative perturbation tolerance. Determines when point is
+        //  considered to be close to face/edge of bb of node.
         //  The tolerance is relative to the bounding box of the smallest
         //  node.
         static scalar perturbTol_;
 
 
-    // Protected Member Functions
-
-    // Encode node addressing
-    // (only used when building)
-
-        //- From empty to subNodes_ entry
-        static labelBits emptyPlusOctant(direction octant)
-        {
-            return labelBits(0, octant);
-        }
-
-        //- From index into contents_ to subNodes_ entry
-        static labelBits contentPlusOctant(label i, direction octant)
-        {
-            return labelBits(-i-1, octant);
-        }
-
-        //- From index into nodes_ to subNodes_ entry
-        static labelBits nodePlusOctant(label i, direction octant)
-        {
-            return labelBits(i+1, octant);
-        }
-
-
-public:
-
-    //- Get the perturbation tolerance
-    static scalar& perturbTol() noexcept { return perturbTol_; }
-
-    //- Set the perturbation tolerance, return the old value
-    static scalar perturbTol(scalar tol) noexcept
-    {
-        scalar old(perturbTol_);
-        perturbTol_ = tol;
-        return old;
-    }
-
-
-    //- Runtime type information
-    ClassName("indexedOctree");
-
-
-    // Constructors
-
-        //- Default construct
-        indexedOctreeBase() = default;
-
-
-    // Output Helpers
-
-        //- Write treeBoundBox in OBJ format
-        static void writeOBJ
-        (
-            Ostream& os,
-            const treeBoundBox& bb,
-            label& vertIndex,
-            const bool writeLinesOnly = false
-        );
-};
-
-
-/*---------------------------------------------------------------------------*\
-                           Class indexedOctree Declaration
-\*---------------------------------------------------------------------------*/
-
-template<class Type>
-class indexedOctree
-:
-    public indexedOctreeBase
-{
-    // Private Data
+    // Private data
 
         //- Underlying shapes for geometric queries.
         const Type shapes_;
@@ -267,13 +137,23 @@ class indexedOctree
         List<node> nodes_;
 
         //- List of all contents (referenced by those nodes that are contents)
-        List<labelList> contents_;
+        labelListList contents_;
 
         //- Per node per octant whether is fully inside/outside/mixed.
         mutable PackedList<2> nodeTypes_;
 
-
     // Private Member Functions
+
+        //- Helper: does bb intersect a sphere around sample? Or is any
+        //  corner point of bb closer than nearestDistSqr to sample.
+        //  (bb is implicitly provided as parent bb + octant)
+        static bool overlaps
+        (
+            const treeBoundBox& parentBb,
+            const direction octant,
+            const scalar nearestDistSqr,
+            const point& sample
+        );
 
         // Construction
 
@@ -281,9 +161,9 @@ class indexedOctree
             //  according to where they are in relation to mid.
             void divide
             (
-                const labelUList& indices,
+                const labelList& indices,
                 const treeBoundBox& bb,
-                FixedList<labelList, 8>& dividedIndices
+                labelListList& result
             ) const;
 
             //- Subdivide the contents node at position contentI.
@@ -292,7 +172,7 @@ class indexedOctree
             (
                 const treeBoundBox& bb,
                 DynamicList<labelList>& contents,
-                label contentIndex
+                const label contentI
             ) const;
 
             //- Split any contents node with more than minSize elements.
@@ -447,23 +327,22 @@ class indexedOctree
                 const FindIntersectOp& fiOp
             ) const;
 
-            //- Find elements intersecting box
-            //  Store all results in elements (if non-null), or early exit
-            bool findBox
+            //- Find all elements intersecting box.
+            void findBox
             (
                 const label nodeI,
                 const treeBoundBox& searchBox,
-                labelHashSet* elements
+                labelHashSet& elements
             ) const;
 
-            //- Find elements intersecting sphere.
-            //  Store all results in elements (if non-null), or early exit
-            bool findSphere
+
+            //- Find all elements intersecting sphere.
+            void findSphere
             (
                 const label nodeI,
                 const point& centre,
                 const scalar radiusSqr,
-                labelHashSet* elements
+                labelHashSet& elements
             ) const;
 
 
@@ -482,29 +361,48 @@ class indexedOctree
             );
 
 
-    // Other
+        // Other
 
-        //- Count number of elements on this and sublevels
-        label countElements(const labelBits index) const;
+            //- Count number of elements on this and sublevels
+            label countElements(const labelBits index) const;
 
-        //- Number of leafs below given node
-        label countLeafs(const label nodeI) const;
+            //- Dump node+octant to an obj file
+            void writeOBJ(const label nodeI, const direction octant) const;
 
-        //- Write node treeBoundBoxes in OBJ format
-        void writeOBJ
-        (
-            const label nodeI,
-            Ostream& os,
-            label& vertIndex,
-            const bool leavesOnly,
-            const bool writeLinesOnly = false
-        ) const;
+            //- From index into contents_ to subNodes_ entry
+            static labelBits contentPlusOctant
+            (
+                const label i,
+                const direction octant
+            )
+            {
+                return labelBits(-i - 1, octant);
+            }
 
-        //- Dump node+octant to an obj file
-        void writeOBJ(const label nodeI, const direction octant) const;
+            //- From index into nodes_ to subNodes_ entry
+            static labelBits nodePlusOctant
+            (
+                const label i,
+                const direction octant
+            )
+            {
+                return labelBits(i + 1, octant);
+            }
 
+            //- From empty to subNodes_ entry
+            static labelBits emptyPlusOctant
+            (
+                const direction octant
+            )
+            {
+                return labelBits(0, octant);
+            }
 
 public:
+
+        //- Get the perturbation tolerance
+        static scalar& perturbTol();
+
 
     // Constructors
 
@@ -516,7 +414,7 @@ public:
         (
             const Type& shapes,
             const List<node>& nodes,
-            const List<labelList>& contents
+            const labelListList& contents
         );
 
         //- Construct from shapes
@@ -539,42 +437,88 @@ public:
             return autoPtr<indexedOctree<Type>>::New(*this);
         }
 
-
     // Member Functions
 
-    // Access
+        // Access
 
-        //- Reference to shape
-        const Type& shapes() const noexcept { return shapes_; }
-
-        //- List of all nodes
-        const List<node>& nodes() const noexcept { return nodes_; }
-
-        //- List of all contents
-        //- (referenced by those nodes that are contents)
-        const List<labelList>& contents() const noexcept
-        {
-            return contents_;
-        }
-
-        //- Per node, per octant whether is fully inside/outside/mixed.
-        PackedList<2>& nodeTypes() const noexcept
-        {
-            return nodeTypes_;
-        }
-
-        //- Top bounding box
-        const treeBoundBox& bb() const
-        {
-            if (nodes_.empty())
+            //- Reference to shape
+            const Type& shapes() const
             {
-                return treeBoundBox::null();
+                return shapes_;
             }
-            return nodes_[0].bb_;
-        }
 
-        //- Return the number of leaf nodes
-        label nLeafs() const;
+            //- List of all nodes
+            const List<node>& nodes() const
+            {
+                return nodes_;
+            }
+
+            //- List of all contents (referenced by those nodes that are
+            //  contents)
+            const labelListList& contents() const
+            {
+                return contents_;
+            }
+
+            //- Top bounding box
+            const treeBoundBox& bb() const
+            {
+                if (nodes_.empty())
+                {
+                    FatalErrorInFunction
+                        << "Tree is empty" << abort(FatalError);
+                }
+                return nodes_[0].bb_;
+            }
+
+            //- Per node, per octant whether is fully inside/outside/mixed.
+            PackedList<2>& nodeTypes() const
+            {
+                return nodeTypes_;
+            }
+
+
+        // Conversions for entries in subNodes_.
+
+            static bool isContent(const labelBits i)
+            {
+                return i.val() < 0;
+            }
+
+            static bool isEmpty(const labelBits i)
+            {
+                return i.val() == 0;
+            }
+
+            static bool isNode(const labelBits i)
+            {
+                return i.val() > 0;
+            }
+
+            static label getContent(const labelBits i)
+            {
+                if (!isContent(i))
+                {
+                    FatalErrorInFunction
+                        << abort(FatalError);
+                }
+                return -i.val()-1;
+            }
+
+            static label getNode(const labelBits i)
+            {
+                if (!isNode(i))
+                {
+                    FatalErrorInFunction
+                        << abort(FatalError);
+                }
+                return i.val() - 1;
+            }
+
+            static direction getOctant(const labelBits i)
+            {
+                return i.bits();
+            }
 
 
         // Queries
@@ -669,52 +613,18 @@ public:
                 const FindIntersectOp& fiOp
             ) const;
 
-            //- True if any shapes overlap the bounding box
-            bool overlaps(const treeBoundBox& bb) const;
+            //- Find (in no particular order) indices of all shapes inside or
+            //  overlapping bounding box (i.e. all shapes not outside box)
+            labelList findBox(const treeBoundBox& bb) const;
 
-            //- Find indices of all shapes inside or overlapping
-            //- a bounding box (i.e. all shapes not outside box)
-            //  \returns the indices (in no particular order)
-            labelList findBox
-            (
-                const treeBoundBox& bb  //!< bound box limits
-            ) const;
-
-            //- Find indices of all shapes inside or overlapping
-            //- a bounding box (i.e. all shapes not outside box)
-            //  \returns the number of elements found
-            label findBox
-            (
-                const treeBoundBox& bb, //!< bound box limits
-                labelHashSet& elements  //!< [out] elements found
-            ) const;
-
-            //- True if any shapes overlap the bounding sphere
-            bool overlaps
-            (
-                const point& centre,    //!< centre of bound sphere
-                const scalar radiusSqr  //!< radius^2 of sphere
-            ) const;
-
-            //- Find indices of all shapes inside or overlapping
-            //- a bounding sphere (i.e. all shapes not outside a sphere)
-            //  \returns the indices (in no particular order)
+            //- Find (in no particular order) indices of all shapes inside or
+            //  overlapping a bounding sphere (i.e. all shapes not outside
+            //  sphere)
             labelList findSphere
             (
-                const point& centre,    //!< centre of bound sphere
-                const scalar radiusSqr  //!< radius^2 of sphere
+                const point& centre,
+                const scalar radiusSqr
             ) const;
-
-            //- Find indices of all shapes inside or overlapping
-            //- a bounding sphere (i.e. all shapes not outside sphere)
-            //  \returns the number of elements found
-            label findSphere
-            (
-                const point& centre,    //!< centre of bound sphere
-                const scalar radiusSqr, //!< radius^2 of sphere
-                labelHashSet& elements  //!< [out] elements found
-            ) const;
-
 
             //- Find deepest node (as parent+octant) containing point. Starts
             //  off from starting index in nodes_ (use 0 to start from top)
@@ -740,6 +650,16 @@ public:
                 const vector& vec
             );
 
+            //- Helper: does bb intersect a sphere around sample? Or is any
+            //  corner point of bb closer than nearestDistSqr to sample.
+            static bool overlaps
+            (
+                const point& bbMin,
+                const point& bbMax,
+                const scalar nearestDistSqr,
+                const point& sample
+            );
+
             //- Find near pairs and apply CompareOp to them.
             //  tree2 can be *this or different tree.
             template<class CompareOp>
@@ -751,21 +671,18 @@ public:
             ) const;
 
 
-    // Write
+        // Write
 
-        //- Write (non-empty) tree boxes in OBJ format
-        void writeOBJ(Ostream& os) const;
+            //- Print tree. Either print all indices (printContent = true) or
+            //  just size of contents nodes.
+            void print
+            (
+                prefixOSstream&,
+                const bool printContents,
+                const label
+            ) const;
 
-        //- Print tree. Either print all indices (printContent = true) or
-        //  just size of contents nodes.
-        void print
-        (
-            prefixOSstream&,
-            const bool printContents,
-            const label
-        ) const;
-
-        bool write(Ostream& os) const;
+            bool write(Ostream& os) const;
 
 
     // IOstream Operators

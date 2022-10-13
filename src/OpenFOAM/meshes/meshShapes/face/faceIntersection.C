@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,7 +27,7 @@ License
 
 #include "face.H"
 #include "pointHit.H"
-#include "triangle.H"
+#include "triPointRef.H"
 #include "line.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -95,7 +94,8 @@ Foam::pointHit Foam::face::ray
             if (Foam::mag(curHit.distance()) < Foam::mag(nearestHitDist))
             {
                 nearestHitDist = curHit.distance();
-                nearest.hitPoint(curHit.point());
+                nearest.setHit();
+                nearest.setPoint(curHit.hitPoint());
             }
         }
         else if (!nearest.hit())
@@ -111,14 +111,14 @@ Foam::pointHit Foam::face::ray
                     Foam::mag
                     (
                         p + curHit.distance()*n
-                      - curHit.point()
+                      - curHit.missPoint()
                     );
 
                 if (missDist < nearestMissDist)
                 {
                     nearestMissDist = missDist;
                     nearest.setDistance(curHit.distance());
-                    nearest.setPoint(curHit.point());
+                    nearest.setPoint(curHit.missPoint());
                 }
             }
         }
@@ -181,7 +181,8 @@ Foam::pointHit Foam::face::intersection
             if (Foam::mag(curHit.distance()) < Foam::mag(nearestHitDist))
             {
                 nearestHitDist = curHit.distance();
-                nearest.hitPoint(curHit.point());
+                nearest.setHit();
+                nearest.setPoint(curHit.hitPoint());
             }
         }
     }
@@ -294,13 +295,14 @@ Foam::pointHit Foam::face::nearestPointClassify
 
             if (curHit.hit())
             {
-                nearest.hitPoint(curHit.point());
+                nearest.setHit();
+                nearest.setPoint(curHit.hitPoint());
             }
             else
             {
                 // In nearest point, miss is always eligible
                 nearest.setMiss(true);
-                nearest.setPoint(curHit.point());
+                nearest.setPoint(curHit.missPoint());
             }
         }
     }

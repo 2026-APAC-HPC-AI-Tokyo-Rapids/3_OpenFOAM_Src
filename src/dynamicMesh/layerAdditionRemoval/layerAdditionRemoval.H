@@ -77,10 +77,10 @@ class layerAdditionRemoval
         mutable scalar oldLayerThickness_;
 
         //- Point pairing
-        mutable std::unique_ptr<labelList> pointsPairingPtr_;
+        mutable unique_ptr<labelList> pointsPairingPtr_;
 
         //- Face pairing
-        mutable std::unique_ptr<labelList> facesPairingPtr_;
+        mutable unique_ptr<labelList> facesPairingPtr_;
 
         //- Layer removal trigger time index
         mutable label triggerRemoval_;

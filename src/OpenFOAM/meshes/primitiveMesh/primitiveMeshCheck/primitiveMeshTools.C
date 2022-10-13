@@ -29,8 +29,7 @@ License
 #include "primitiveMeshTools.H"
 #include "primitiveMesh.H"
 #include "syncTools.H"
-#include "pyramid.H"
-#include "tetrahedron.H"
+#include "pyramidPointFaceRef.H"
 #include "PrecisionAdaptor.H"
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
@@ -55,8 +54,8 @@ void Foam::primitiveMeshTools::updateFaceCentresAndAreas
         // and to avoid round-off error-related problems
         if (nPoints == 3)
         {
-            fCtrs[facei] = triPointRef::centre(p[f[0]], p[f[1]], p[f[2]]);
-            fAreas[facei] = triPointRef::areaNormal(p[f[0]], p[f[1]], p[f[2]]);
+            fCtrs[facei] = (1.0/3.0)*(p[f[0]] + p[f[1]] + p[f[2]]);
+            fAreas[facei] = 0.5*((p[f[1]] - p[f[0]])^(p[f[2]] - p[f[0]]));
         }
         else
         {
@@ -222,8 +221,8 @@ void Foam::primitiveMeshTools::makeFaceCentresAndAreas
         // and to avoid round-off error-related problems
         if (nPoints == 3)
         {
-            fCtrs[facei] = triPointRef::centre(p[f[0]], p[f[1]], p[f[2]]);
-            fAreas[facei] = triPointRef::areaNormal(p[f[0]], p[f[1]], p[f[2]]);
+            fCtrs[facei] = (1.0/3.0)*(p[f[0]] + p[f[1]] + p[f[2]]);
+            fAreas[facei] = 0.5*((p[f[1]] - p[f[0]])^(p[f[2]] - p[f[0]]));
         }
         else
         {

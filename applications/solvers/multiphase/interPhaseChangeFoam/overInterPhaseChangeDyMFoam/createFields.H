@@ -149,5 +149,10 @@ surfaceScalarField alphaPhi10
 // Mask field for zeroing out contributions on hole cells
 #include "createCellMask.H"
 
+surfaceScalarField faceMask
+(
+    localMin<scalar>(mesh).interpolate(cellMask)
+);
+
 // Create bool field with interpolated cells
 #include "createInterpolatedCells.H"

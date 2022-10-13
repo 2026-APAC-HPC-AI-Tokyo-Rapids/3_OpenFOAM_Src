@@ -345,7 +345,7 @@ void deleteEmptyPatches(fvMesh& mesh)
             else
             {
                 // Common patch.
-                if (returnReduceAnd(patches[patchi].empty()))
+                if (returnReduce(patches[patchi].empty(), andOp<bool>()))
                 {
                     Pout<< "Deleting patch " << patchi
                         << " name:" << patches[patchi].name()
@@ -661,8 +661,8 @@ void countExtrudePatches
     }
     // Synchronise decision. Actual numbers are not important, just make
     // sure that they're > 0 on all processors.
-    Pstream::listCombineReduce(zoneSidePatch, plusEqOp<label>());
-    Pstream::listCombineReduce(zoneZonePatch, plusEqOp<label>());
+    Pstream::listCombineAllGather(zoneSidePatch, plusEqOp<label>());
+    Pstream::listCombineAllGather(zoneZonePatch, plusEqOp<label>());
 }
 
 
@@ -1397,20 +1397,26 @@ void extrudeGeometricProperties
         {
             Pout<< "Model     :" << faceCentres[facei] << endl
                 << "regionMesh:" << regionMesh.faceCentres()[facei] << endl;
-            faceStr.writeLine
+            faceStr.write
             (
-                faceCentres[facei],
-                regionMesh.faceCentres()[facei]
+                linePointRef
+                (
+                    faceCentres[facei],
+                    regionMesh.faceCentres()[facei]
+                )
             );
         }
         forAll(cellCentres, celli)
         {
             Pout<< "Model     :" << cellCentres[celli] << endl
                 << "regionMesh:" << regionMesh.cellCentres()[celli] << endl;
-            cellStr.writeLine
+            cellStr.write
             (
-                cellCentres[celli],
-                regionMesh.cellCentres()[celli]
+                linePointRef
+                (
+                    cellCentres[celli],
+                    regionMesh.cellCentres()[celli]
+                )
             );
         }
     }
@@ -1848,7 +1854,7 @@ int main(int argc, char *argv[])
     const primitiveFacePatch extrudePatch(std::move(zoneFaces), mesh.points());
 
 
-    Pstream::listCombineReduce(isInternal, orEqOp<bool>());
+    Pstream::listCombineAllGather(isInternal, orEqOp<bool>());
 
     // Check zone either all internal or all external faces
     checkZoneInside(mesh, zoneNames, zoneID, extrudeMeshFaces, isInternal);
@@ -2309,7 +2315,7 @@ int main(int argc, char *argv[])
         }
 
         // Reduce
-        Pstream::mapCombineReduce(globalSum, plusEqOp<point>());
+        Pstream::mapCombineAllGather(globalSum, plusEqOp<point>());
 
         forAll(localToGlobalRegion, localRegionI)
         {

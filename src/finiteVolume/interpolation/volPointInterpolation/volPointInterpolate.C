@@ -89,7 +89,7 @@ void Foam::volPointInterpolation::addSeparated
         Pout<< "volPointInterpolation::addSeparated" << endl;
     }
 
-    auto& pfi = pf.internalFieldRef();
+    auto& pfi = pf.ref();
     auto& pfbf = pf.boundaryFieldRef();
 
     const label startOfRequests = UPstream::nRequests();
@@ -108,7 +108,6 @@ void Foam::volPointInterpolation::addSeparated
     }
 
     // Wait for outstanding requests
-    // (commsType == UPstream::commsTypes::nonBlocking)
     UPstream::waitRequests(startOfRequests);
 
     forAll(pfbf, patchi)

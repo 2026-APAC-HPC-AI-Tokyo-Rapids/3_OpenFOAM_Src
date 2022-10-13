@@ -99,7 +99,7 @@ Foam::label Foam::ensightCells::meshPointMapppings
 
     if (parallel)
     {
-        Pstream::reduceAnd(allCells);
+        Foam::reduce(allCells, andOp<bool>());
 
         if (allCells)
         {

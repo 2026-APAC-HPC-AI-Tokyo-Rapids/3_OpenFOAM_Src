@@ -59,12 +59,12 @@ boundaryField
 
         injectionModels ();
 
-        forces (dynamicContactAngle);
+        forces (perturbedTemperatureDependentContactAngle);
 
-        dynamicContactAngleCoeffs
+        perturbedTemperatureDependentContactAngleCoeffs
         {
             Ccf     0.085;
-            Ttheta  constant 45;
+            theta   constant 45;
             distribution
             {
                 type            normal;

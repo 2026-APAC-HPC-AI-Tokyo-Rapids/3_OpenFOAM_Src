@@ -46,15 +46,6 @@ runTimeModifiable true;
 
 functions
 {
-    turbulenceFields1
-    {
-        type            turbulenceFields;
-        libs            (fieldFunctionObjects);
-        writeControl    writeTime;
-
-        fields          (fd LESRegion);
-    }
-
     minMax1
     {
         libs            (fieldFunctionObjects);

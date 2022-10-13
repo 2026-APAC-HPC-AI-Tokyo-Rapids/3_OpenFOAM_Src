@@ -30,7 +30,7 @@ Class
 Description
     Templated 3D Vector derived from VectorSpace adding construction from
     3 components, element access using x(), y() and z() member functions and
-    the inner-product (dot-product) and cross-product operators.
+    the inner-product (dot-product) and cross product operators.
 
     A centre() member function which returns the Vector for which it is called
     is defined so that point which is a typedef to Vector\<scalar\> behaves as
@@ -112,48 +112,23 @@ public:
 
     // Member Functions
 
-    // Component Access
-
         //- Access to the vector x component
-        const Cmpt& x() const noexcept { return this->v_[X]; }
+        inline const Cmpt& x() const;
 
         //- Access to the vector y component
-        const Cmpt& y() const noexcept { return this->v_[Y]; }
+        inline const Cmpt& y() const;
 
         //- Access to the vector z component
-        const Cmpt& z() const noexcept { return this->v_[Z]; }
+        inline const Cmpt& z() const;
 
         //- Access to the vector x component
-        Cmpt& x() noexcept { return this->v_[X]; }
+        inline Cmpt& x();
 
         //- Access to the vector y component
-        Cmpt& y() noexcept { return this->v_[Y]; }
+        inline Cmpt& y();
 
         //- Access to the vector z component
-        Cmpt& z() noexcept { return this->v_[Z]; }
-
-
-    // Vector Operations
-
-        //- Return \c this (for point which is a typedef to Vector\<scalar\>)
-        inline const Vector<Cmpt>& centre
-        (
-            const Foam::UList<Vector<Cmpt>>&  /* (unused) */
-        ) const noexcept;
-
-        //- The length (L2-norm) of the vector
-        inline scalar mag() const;
-
-        //- The length (L2-norm) squared of the vector.
-        inline scalar magSqr() const;
-
-        //- The L2-norm distance from another vector.
-        //- The mag() of the difference.
-        inline scalar dist(const Vector<Cmpt>& v2) const;
-
-        //- The L2-norm distance squared from another vector.
-        //- The magSqr() of the difference.
-        inline scalar distSqr(const Vector<Cmpt>& v2) const;
+        inline Cmpt& z();
 
         //- Inplace normalise the vector by its magnitude
         //  For small magnitudes (less than ROOTVSMALL) set to zero.
@@ -164,35 +139,12 @@ public:
         //- unit vector.
         inline Vector<Cmpt>& removeCollinear(const Vector<Cmpt>& unitVec);
 
-        //- Scalar-product of \c this with another Vector.
-        inline Cmpt inner(const Vector<Cmpt>& v2) const;
 
-        //- Cross-product of \c this with another Vector.
-        inline Vector<Cmpt> cross(const Vector<Cmpt>& v2) const;
-
-
-    // Comparison Operations
-
-        //- Lexicographically compare \em a and \em b with order (x:y:z)
-        static inline bool less_xyz
+        //- Return *this (used for point which is a typedef to Vector<scalar>.
+        inline const Vector<Cmpt>& centre
         (
-            const Vector<Cmpt>& a,
-            const Vector<Cmpt>& b
-        );
-
-        //- Lexicographically compare \em a and \em b with order (y:z:x)
-        static inline bool less_yzx
-        (
-            const Vector<Cmpt>& a,
-            const Vector<Cmpt>& b
-        );
-
-        //- Lexicographically compare \em a and \em b with order (z:x:y)
-        static inline bool less_zxy
-        (
-            const Vector<Cmpt>& a,
-            const Vector<Cmpt>& b
-        );
+            const Foam::UList<Vector<Cmpt>>&  /* (unused) */
+        ) const;
 };
 
 

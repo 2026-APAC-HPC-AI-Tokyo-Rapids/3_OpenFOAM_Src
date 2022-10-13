@@ -83,13 +83,13 @@ inline const Foam::dictionary& Foam::dictionary::parent() const noexcept
 }
 
 
-inline const Foam::entry* Foam::dictionary::findEntry
+inline bool Foam::dictionary::found
 (
     const word& keyword,
     enum keyType::option matchOpt
 ) const
 {
-    return csearch(keyword, matchOpt).ptr();
+    return csearch(keyword, matchOpt).good();
 }
 
 
@@ -99,17 +99,17 @@ inline Foam::entry* Foam::dictionary::findEntry
     enum keyType::option matchOpt
 )
 {
-    return const_cast<entry*>(csearch(keyword, matchOpt).ptr());
+    return search(keyword, matchOpt).ptr();
 }
 
 
-inline bool Foam::dictionary::found
+inline const Foam::entry* Foam::dictionary::findEntry
 (
     const word& keyword,
     enum keyType::option matchOpt
 ) const
 {
-    return static_cast<bool>(findEntry(keyword, matchOpt));
+    return csearch(keyword, matchOpt).ptr();
 }
 
 
@@ -123,6 +123,16 @@ inline const Foam::entry* Foam::dictionary::findScoped
 }
 
 
+inline Foam::dictionary* Foam::dictionary::findDict
+(
+    const word& keyword,
+    enum keyType::option matchOpt
+)
+{
+    return search(keyword, matchOpt).dictPtr();
+}
+
+
 inline const Foam::dictionary* Foam::dictionary::findDict
 (
     const word& keyword,
@@ -133,23 +143,13 @@ inline const Foam::dictionary* Foam::dictionary::findDict
 }
 
 
-inline Foam::dictionary* Foam::dictionary::findDict
-(
-    const word& keyword,
-    enum keyType::option matchOpt
-)
-{
-    return const_cast<dictionary*>(csearch(keyword, matchOpt).dictPtr());
-}
-
-
 inline bool Foam::dictionary::isDict
 (
     const word& keyword,
     enum keyType::option matchOpt
 ) const
 {
-    return static_cast<bool>(findDict(keyword, matchOpt));
+    return csearch(keyword, matchOpt).isDict();
 }
 
 

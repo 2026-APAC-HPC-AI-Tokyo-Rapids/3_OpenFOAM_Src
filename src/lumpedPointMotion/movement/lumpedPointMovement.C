@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -435,23 +435,25 @@ void Foam::lumpedPointMovement::setPatchControl
     }
 
 
+    treeDataPoint treePoints
+    (
+        lumpedCentres0,
+        subsetPointIds.sortedToc(),
+        subsetPointIds.size()
+    );
+
+
     treeBoundBox bb(lumpedCentres0);
     bb.inflate(0.01);
 
     indexedOctree<treeDataPoint> ppTree
     (
-        treeDataPoint
-        (
-            lumpedCentres0,
-            subsetPointIds.sortedToc(),
-            subsetPointIds.size()   // subset is optional/required
-        ),
+        treePoints,
         bb,     // overall search domain
         8,      // maxLevel
         10,     // leafsize
         3.0     // duplicity
     );
-    const auto& treePoints = ppTree.shapes();
 
     const scalar searchDistSqr(sqr(GREAT));
 
@@ -462,7 +464,7 @@ void Foam::lumpedPointMovement::setPatchControl
 
         // Store the original pointId, not subset id
         faceToPoint[patchFacei] =
-            treePoints.objectIndex
+            treePoints.pointLabel
             (
                 ppTree.findNearest(fc, searchDistSqr).index()
             );
@@ -653,23 +655,24 @@ void Foam::lumpedPointMovement::setInterpolator
         }
     }
 
+    treeDataPoint treePoints
+    (
+        lumpedCentres0,
+        subsetPointIds.sortedToc(),
+        subsetPointIds.size()
+    );
+
     treeBoundBox bb(lumpedCentres0);
     bb.inflate(0.01);
 
     indexedOctree<treeDataPoint> ppTree
     (
-        treeDataPoint
-        (
-            lumpedCentres0,
-            subsetPointIds.sortedToc(),
-            subsetPointIds.size()   // subset is optional/required
-        ),
+        treePoints,
         bb,     // overall search domain
         8,      // maxLevel
         10,     // leafsize
         3.0     // duplicity
     );
-    const auto& treePoints = ppTree.shapes();
 
 
     // Searching
@@ -689,7 +692,7 @@ void Foam::lumpedPointMovement::setInterpolator
 
         // Nearest (original) point id
         const label nearest =
-            treePoints.objectIndex
+            treePoints.pointLabel
             (
                 ppTree.findNearest(ptOnMesh, searchDistSqr).index()
             );
@@ -845,7 +848,7 @@ Foam::List<Foam::scalar> Foam::lumpedPointMovement::areas
     // fvMesh and has pressure field
     if (isA<fvMesh>(pmesh))
     {
-        const auto& mesh = refCast<const fvMesh>(pmesh);
+        const fvMesh& mesh = dynamicCast<const fvMesh>(pmesh);
 
         // Face areas (on patches)
         const surfaceVectorField::Boundary& patchSf =
@@ -877,7 +880,7 @@ Foam::List<Foam::scalar> Foam::lumpedPointMovement::areas
         }
     }
 
-    Pstream::listCombineReduce(zoneAreas, plusEqOp<scalar>());
+    Pstream::listCombineAllGather(zoneAreas, plusEqOp<scalar>());
 
     return zoneAreas;
 }
@@ -928,7 +931,7 @@ bool Foam::lumpedPointMovement::forcesAndMoments
     // fvMesh and has pressure field
     if (isA<fvMesh>(pmesh) && pPtr)
     {
-        const auto& mesh = refCast<const fvMesh>(pmesh);
+        const fvMesh& mesh = dynamicCast<const fvMesh>(pmesh);
         const volScalarField& p = *pPtr;
 
         // Face centres (on patches)
@@ -1005,8 +1008,8 @@ bool Foam::lumpedPointMovement::forcesAndMoments
         Info<<"No pressure field" << endl;
     }
 
-    Pstream::listCombineReduce(forces, plusEqOp<vector>());
-    Pstream::listCombineReduce(moments, plusEqOp<vector>());
+    Pstream::listCombineAllGather(forces, plusEqOp<vector>());
+    Pstream::listCombineAllGather(moments, plusEqOp<vector>());
 
     return true;
 }
@@ -1311,7 +1314,7 @@ bool Foam::lumpedPointMovement::writeData
         (
             coupler().resolveFile(logName_),
             IOstreamOption(),
-            IOstreamOption::APPEND
+            true  // append
         );
 
         writeData(os, forces, moments, outputFormatType::PLAIN, timesWritten);

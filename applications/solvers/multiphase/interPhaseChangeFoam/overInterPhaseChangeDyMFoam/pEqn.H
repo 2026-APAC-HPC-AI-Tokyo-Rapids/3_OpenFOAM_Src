@@ -8,6 +8,16 @@
         fvc::flux(HbyA)
     );
 
+
+    if (ddtCorr)
+    {
+        surfaceScalarField faceMaskOld
+        (
+            localMin<scalar>(mesh).interpolate(cellMask.oldTime())
+        );
+        phiHbyA += faceMaskOld*fvc::ddtCorr(U, Uf);
+    }
+
     if (p_rgh.needReference())
     {
         fvc::makeRelative(phiHbyA, U);

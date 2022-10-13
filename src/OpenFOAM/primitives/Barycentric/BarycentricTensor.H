@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,17 +28,18 @@ Class
     Foam::BarycentricTensor
 
 Description
-    Templated 4x3 tensor derived from VectorSpace. Has 12 components.
-    Can represent a barycentric transformation as a matrix-barycentric
-    inner-product.
+    Templated 4x3 tensor derived from VectorSpace. Has 12 components. Can
+    represent a barycentric transformation as a matrix-barycentric inner-
+    product. Can alternatively represent an inverse barycentric transformation
+    as a vector-matrix inner-product.
 
 SourceFiles
     BarycentricTensorI.H
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_BarycentricTensor_H
-#define Foam_BarycentricTensor_H
+#ifndef BarycentricTensor_H
+#define BarycentricTensor_H
 
 #include "Barycentric.H"
 #include "Tensor.H"
@@ -63,8 +64,7 @@ public:
     // Typedefs
 
         //- Equivalent type of labels used for valid component indexing
-        //- (unused)
-        typedef BarycentricTensor<label> labelType;
+        typedef Tensor<label> labelType;
 
 
     // Member Constants
@@ -77,7 +77,7 @@ public:
     enum components { XA, XB, XC, XD, YA, YB, YC, YD, ZA, ZB, ZC, ZD };
 
 
-    // Generated Methods: copy construct/assignment
+    // Generated Methods
 
         //- Default construct
         BarycentricTensor() = default;
@@ -97,7 +97,6 @@ public:
         );
 
         //- Construct given four vector components (columns)
-        //  Eg, the corners of a tetrahedron
         inline BarycentricTensor
         (
             const Vector<Cmpt>& a,
@@ -109,44 +108,18 @@ public:
 
     // Member Functions
 
-    // Component Access
+        // Row-barycentric access
 
-        const Cmpt& xa() const noexcept { return this->v_[XA]; }
-        const Cmpt& xb() const noexcept { return this->v_[XB]; }
-        const Cmpt& xc() const noexcept { return this->v_[XC]; }
-        const Cmpt& xd() const noexcept { return this->v_[XD]; }
+            inline Barycentric<Cmpt> x() const;
+            inline Barycentric<Cmpt> y() const;
+            inline Barycentric<Cmpt> z() const;
 
-        const Cmpt& ya() const noexcept { return this->v_[YA]; }
-        const Cmpt& yb() const noexcept { return this->v_[YB]; }
-        const Cmpt& yc() const noexcept { return this->v_[YC]; }
-        const Cmpt& yd() const noexcept { return this->v_[YD]; }
+        // Column-vector access
 
-        const Cmpt& za() const noexcept { return this->v_[ZA]; }
-        const Cmpt& zb() const noexcept { return this->v_[ZB]; }
-        const Cmpt& zc() const noexcept { return this->v_[ZC]; }
-        const Cmpt& zd() const noexcept { return this->v_[ZD]; }
-
-
-    // Row-barycentric access
-
-        inline Barycentric<Cmpt> x() const;
-        inline Barycentric<Cmpt> y() const;
-        inline Barycentric<Cmpt> z() const;
-
-
-    // Column-vector access
-
-        inline Vector<Cmpt> a() const;
-        inline Vector<Cmpt> b() const;
-        inline Vector<Cmpt> c() const;
-        inline Vector<Cmpt> d() const;
-
-
-    // Operations
-
-        //- Tensor/barycentric inner product
-        //  (transforms barycentric coordinates to vector)
-        inline Vector<Cmpt> inner(const Barycentric<Cmpt>& bry) const;
+            inline Vector<Cmpt> a() const;
+            inline Vector<Cmpt> b() const;
+            inline Vector<Cmpt> c() const;
+            inline Vector<Cmpt> d() const;
 };
 
 

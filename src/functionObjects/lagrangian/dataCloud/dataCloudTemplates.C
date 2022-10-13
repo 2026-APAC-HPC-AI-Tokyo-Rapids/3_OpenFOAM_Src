@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -85,11 +85,11 @@ void Foam::functionObjects::dataCloud::writeListParallel
         Field<Type> recvField;
 
         // Receive and write
-        for (const int proci : Pstream::subProcs())
+        for (const int slave : Pstream::subProcs())
         {
-            IPstream fromProc(Pstream::commsTypes::blocking, proci);
+            IPstream fromSlave(Pstream::commsTypes::blocking, slave);
 
-            fromProc >> recvPoints >> recvField;
+            fromSlave >> recvPoints >> recvField;
 
             writeList(os, recvPoints, recvField);
         }
@@ -142,11 +142,11 @@ void Foam::functionObjects::dataCloud::writeListParallel
         Field<Type> recvField;
 
         // Receive and write
-        for (const int proci : Pstream::subProcs())
+        for (const int slave : Pstream::subProcs())
         {
-            IPstream fromProc(Pstream::commsTypes::blocking, proci);
+            IPstream fromSlave(Pstream::commsTypes::blocking, slave);
 
-            fromProc >> recvPoints >> recvField;
+            fromSlave >> recvPoints >> recvField;
 
             writeList(os, recvPoints, recvField);
         }
@@ -188,7 +188,7 @@ bool Foam::functionObjects::dataCloud::writeField
     const List<Type>* fldPtr = obrTmp.findObject<IOField<Type>>(fieldName_);
     const List<Type>& values = (fldPtr ? *fldPtr : List<Type>());
 
-    if (!returnReduceOr(fldPtr != nullptr))
+    if (!returnReduce((fldPtr != nullptr), orOp<bool>()))
     {
         return false;
     }

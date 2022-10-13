@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -104,14 +104,15 @@ public:
             putBackAvail_(false)
         {}
 
-        //- Construct with format (uncompressed)
+        //- Construct with format, version (compression)
         explicit Istream
         (
             IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion,
             IOstreamOption::compressionType cmp = IOstreamOption::UNCOMPRESSED
         )
         :
-            Istream(IOstreamOption(fmt, cmp))
+            Istream(IOstreamOption(fmt, ver, cmp))
         {}
 
 
@@ -155,11 +156,11 @@ public:
             //- Read a label
             virtual Istream& read(label&) = 0;
 
-            //- Read a float
-            virtual Istream& read(float&) = 0;
+            //- Read a floatScalar
+            virtual Istream& read(floatScalar&) = 0;
 
-            //- Read a double
-            virtual Istream& read(double&) = 0;
+            //- Read a doubleScalar
+            virtual Istream& read(doubleScalar&) = 0;
 
             //- Read binary block
             virtual Istream& read(char*, std::streamsize) = 0;

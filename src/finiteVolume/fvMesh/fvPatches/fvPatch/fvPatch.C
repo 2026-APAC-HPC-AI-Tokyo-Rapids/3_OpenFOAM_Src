@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -78,13 +78,12 @@ Foam::fvPatch::~fvPatch()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool Foam::fvPatch::constraintType(const word& patchType)
+bool Foam::fvPatch::constraintType(const word& pt)
 {
     return
     (
-        !patchType.empty()
-     && fvPatchField<scalar>::patchConstructorTablePtr_
-     && fvPatchField<scalar>::patchConstructorTablePtr_->found(patchType)
+        fvPatchField<scalar>::patchConstructorTablePtr_
+     && fvPatchField<scalar>::patchConstructorTablePtr_->found(pt)
     );
 }
 
@@ -105,7 +104,7 @@ Foam::wordList Foam::fvPatch::constraintTypes()
         }
     }
 
-    cTypes.resize(i);
+    cTypes.setSize(i);
 
     return cTypes;
 }
@@ -125,7 +124,20 @@ const Foam::vectorField& Foam::fvPatch::Cf() const
 
 Foam::tmp<Foam::vectorField> Foam::fvPatch::Cn() const
 {
-    return patchInternalField(boundaryMesh().mesh().cellCentres());
+    auto tcc = tmp<vectorField>::New(size());
+    auto& cc = tcc.ref();
+
+    const labelUList& faceCells = this->faceCells();
+
+    // get reference to global cell centres
+    const vectorField& gcc = boundaryMesh().mesh().cellCentres();
+
+    forAll(faceCells, facei)
+    {
+        cc[facei] = gcc[faceCells[facei]];
+    }
+
+    return tcc;
 }
 
 

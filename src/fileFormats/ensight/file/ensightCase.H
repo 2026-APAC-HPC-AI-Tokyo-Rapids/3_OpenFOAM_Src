@@ -218,18 +218,12 @@ public:
         (
             const fileName& ensightDir,
             const word& caseName,
-            const IOstreamOption::streamFormat fmt = IOstreamOption::BINARY
+            const IOstreamOption::streamFormat format = IOstreamOption::BINARY
         );
 
 
     //- Destructor
     ~ensightCase() = default;
-
-
-    // Static Functions
-
-        //- Stringified zero-padded integer value
-        static word padded(const int nwidth, const label value);
 
 
     // Member Functions
@@ -415,7 +409,7 @@ public:
     // Constructors
 
         //- Construct with the specified format (default is binary)
-        options(IOstreamOption::streamFormat fmt = IOstreamOption::BINARY);
+        options(IOstreamOption::streamFormat format = IOstreamOption::BINARY);
 
 
     // Member Functions

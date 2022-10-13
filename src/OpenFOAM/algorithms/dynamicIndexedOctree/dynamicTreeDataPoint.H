@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2015 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,12 +39,12 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_dynamicTreeDataPoint_H
-#define Foam_dynamicTreeDataPoint_H
+#ifndef dynamicTreeDataPoint_H
+#define dynamicTreeDataPoint_H
 
 #include "pointField.H"
 #include "treeBoundBox.H"
-#include "line.H"
+#include "linePointRef.H"
 #include "volumeType.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -53,7 +52,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
+// Forward declaration of classes
 template<class Type> class dynamicIndexedOctree;
 
 /*---------------------------------------------------------------------------*\
@@ -62,126 +61,100 @@ template<class Type> class dynamicIndexedOctree;
 
 class dynamicTreeDataPoint
 {
-    // Private Data
+    // Private data
 
-        //- The point field
         const DynamicList<point>& points_;
-
 
 public:
 
-    // Declare name of the class
-    ClassNameNoDebug("dynamicTreeDataPoint");
+    // Declare name of the class and its debug switch
+    ClassName("dynamicTreeDataPoint");
 
 
-    // Constructors (non-caching)
+    // Constructors
 
         //- Construct from List. Holds reference!
-        explicit dynamicTreeDataPoint(const DynamicList<point>& points);
+        dynamicTreeDataPoint(const DynamicList<point>& points);
 
 
     // Member Functions
 
-        //- Object dimension == 0 (point element)
-        int nDim() const noexcept { return 0; }
+        // Access
 
-        //- Return bounding box for the specified point indices
-        treeBoundBox bounds(const labelUList& indices) const;
+            inline label size() const
+            {
+                return points_.size();
+            }
 
-
-    // Access
-
-        //- The original point field
-        const DynamicList<point>& points() const noexcept { return points_; }
-
-        //TDB //- The subset of point ids to use
-        ///const labelList& pointLabels() const noexcept { labelList::null(); }
-
-        //- Use a subset of points
-        bool useSubset() const noexcept { return false; }
-
-        //- Is the effective point field empty?
-        bool empty() const noexcept { return points_.empty(); }
-
-        //- The size of the effective point field
-        label size() const noexcept { return points_.size(); }
-
-        //- Map from shape index to original (non-subset) point label
-        label objectIndex(label index) const noexcept { return index; }
-
-        //- Point at specified shape index
-        const point& operator[](label index) const { return points_[index]; }
-
-        //- Point at specified shape index
-        const point& centre(label index) const { return points_[index]; }
-
-        //- Representative point cloud
-        const DynamicList<point>& centres() const noexcept { return points_; }
+            //- Get representative point cloud for all shapes inside
+            //  (one point per shape)
+            const DynamicList<point>& shapePoints() const;
 
 
-    // Search
+        // Search
 
-        //- Get type (inside,outside,mixed,unknown) of point w.r.t. surface.
-        //  Only makes sense for closed surfaces.
-        volumeType getVolumeType
-        (
-            const dynamicIndexedOctree<dynamicTreeDataPoint>&,
-            const point&
-        ) const;
+            //- Get type (inside,outside,mixed,unknown) of point w.r.t. surface.
+            //  Only makes sense for closed surfaces.
+            volumeType getVolumeType
+            (
+                const dynamicIndexedOctree<dynamicTreeDataPoint>&,
+                const point&
+            ) const;
 
-        //- Does (bb of) shape at index overlap bb
-        bool overlaps
-        (
-            const label index,
-            const treeBoundBox& searchBox
-        ) const;
+            //- Does (bb of) shape at index overlap bb
+            bool overlaps
+            (
+                const label index,
+                const treeBoundBox& sampleBb
+            ) const;
 
-        //- Check if any point on shape is inside sphere.
-        bool overlaps
-        (
-            const label index,
-            const point& centre,
-            const scalar radiusSqr
-        ) const;
+            //- Check if any point on shape is inside sphere.
+            bool overlaps
+            (
+                const label index,
+                const point& centre,
+                const scalar radiusSqr
+            ) const;
 
-        //- Calculates nearest (to sample) point in shape.
-        //  Returns actual point and distance (squared)
-        void findNearest
-        (
-            const labelUList& indices,
-            const point& sample,
+            //- Calculates nearest (to sample) point in shape.
+            //  Returns actual point and distance (squared)
+            void findNearest
+            (
+                const labelUList& indices,
+                const point& sample,
 
-            scalar& nearestDistSqr,
-            label& nearestIndex,
-            point& nearestPoint
-        ) const;
+                scalar& nearestDistSqr,
+                label& nearestIndex,
+                point& nearestPoint
+            ) const;
 
-        //- Calculates nearest (to line) point in shape.
-        //  Returns point and distance (squared)
-        void findNearest
-        (
-            const labelUList& indices,
-            const linePointRef& ln,
+            //- Calculates nearest (to line) point in shape.
+            //  Returns point and distance (squared)
+            void findNearest
+            (
+                const labelUList& indices,
+                const linePointRef& ln,
 
-            treeBoundBox& tightest,
-            label& minIndex,
-            point& linePoint,
-            point& nearestPoint
-        ) const;
+                treeBoundBox& tightest,
+                label& minIndex,
+                point& linePoint,
+                point& nearestPoint
+            ) const;
 
-        //- Calculate intersection of shape with ray.
-        //  Sets result accordingly
-        bool intersects
-        (
-            const label index,
-            const point& start,
-            const point& end,
-            point& result
-        ) const
-        {
-            NotImplemented;
-            return false;
-        }
+            //- Calculate intersection of shape with ray. Sets result
+            //  accordingly
+            bool intersects
+            (
+                const label index,
+                const point& start,
+                const point& end,
+                point& result
+            ) const
+            {
+                NotImplemented;
+                return false;
+            }
+
 };
 
 

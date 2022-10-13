@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -58,7 +58,7 @@ inline Foam::edge::edge(const labelPair& pair)
 
 inline Foam::edge::edge(const FixedList<label, 2>& list)
 :
-    labelPair(list.get<0>(), list.get<1>())
+    labelPair(list.first(), list.last())
 {}
 
 
@@ -80,7 +80,7 @@ inline Foam::edge::edge
     const FixedList<label, 2>& indices
 )
 :
-    labelPair(list[indices.get<0>()], list[indices.get<1>()])
+    labelPair(list[indices.first()], list[indices.last()])
 {}
 
 
@@ -91,6 +91,29 @@ inline Foam::edge::edge(Istream& is)
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+inline Foam::label Foam::edge::start() const
+{
+    return first();
+}
+
+inline Foam::label& Foam::edge::start()
+{
+    return first();
+}
+
+
+inline Foam::label Foam::edge::end() const
+{
+    return second();
+}
+
+
+inline Foam::label& Foam::edge::end()
+{
+    return second();
+}
+
 
 inline Foam::label Foam::edge::minVertex() const
 {
@@ -104,7 +127,7 @@ inline Foam::label Foam::edge::maxVertex() const
 }
 
 
-inline bool Foam::edge::good() const noexcept
+inline bool Foam::edge::valid() const
 {
     return (first() != second() && first() >= 0 && second() >= 0);
 }
@@ -140,7 +163,7 @@ inline Foam::label Foam::edge::which(const label pointLabel) const
 }
 
 
-inline bool Foam::edge::connected(const edge& other) const
+inline bool Foam::edge::connects(const edge& other) const
 {
     return (other.found(first()) || other.found(second()));
 }
@@ -427,22 +450,6 @@ inline Foam::vector Foam::edge::unitVec(const UList<point>& pts) const
 inline Foam::scalar Foam::edge::mag(const UList<point>& pts) const
 {
     return ::Foam::mag(vec(pts));
-}
-
-
-inline Foam::Pair<Foam::point>
-Foam::edge::box(const UList<point>& pts) const
-{
-    #ifdef FULLDEBUG
-    if (first() < 0 || second() < 0)
-    {
-        FatalErrorInFunction
-            << "negative point index on edge " << *this
-            << abort(FatalError);
-    }
-    #endif
-
-    return linePointRef::box(pts[first()], pts[second()]);
 }
 
 

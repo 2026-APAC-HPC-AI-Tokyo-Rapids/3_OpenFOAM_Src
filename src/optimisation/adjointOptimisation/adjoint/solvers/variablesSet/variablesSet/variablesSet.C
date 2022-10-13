@@ -75,7 +75,7 @@ variablesSet::variablesSet
 autoPtr<variablesSet> variablesSet::clone() const
 {
     NotImplemented
-    return nullptr;
+    return autoPtr<variablesSet>();
 }
 
 

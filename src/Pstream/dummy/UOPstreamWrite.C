@@ -41,7 +41,7 @@ bool Foam::UOPstream::bufferIPCsend()
 
 bool Foam::UOPstream::write
 (
-    const UPstream::commsTypes commsType,
+    const commsTypes commsType,
     const int toProcNo,
     const char* buf,
     const std::streamsize bufSize,

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2017 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -564,9 +564,12 @@ Foam::conformationSurfaces::conformationSurfaces
 
     // Extend the global bounds to stop the bound box sitting on the surfaces
     // to be conformed to
-    //globalBounds_.inflate(rndGen, 1e-4);
+    //globalBounds_ = globalBounds_.extend(rndGen, 1e-4);
 
-    globalBounds_.grow(1e-4*globalBounds_.span());
+    vector newSpan = 1e-4*globalBounds_.span();
+
+    globalBounds_.min() -= newSpan;
+    globalBounds_.max() += newSpan;
 
     // Look at all surfaces at determine whether the locationInMesh point is
     // inside or outside each, to establish a signature for the domain to be
@@ -602,7 +605,7 @@ Foam::conformationSurfaces::conformationSurfaces
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-bool Foam::conformationSurfaces::overlaps(const boundBox& bb) const
+bool Foam::conformationSurfaces::overlaps(const treeBoundBox& bb) const
 {
     forAll(surfaces_, s)
     {
@@ -743,7 +746,7 @@ Foam::Field<bool> Foam::conformationSurfaces::wellInOutSide
                 const vector hitDir =
                     normalised
                     (
-                        info[0].point() - samplePts[i]
+                        info[0].rawPoint() - samplePts[i]
                     );
 
                 pointIndexHit surfHit;
@@ -752,7 +755,7 @@ Foam::Field<bool> Foam::conformationSurfaces::wellInOutSide
                 findSurfaceNearestIntersection
                 (
                     samplePts[i],
-                    info[0].point() - 1e-3*mag(hitDir)*hitDir,
+                    info[0].rawPoint() - 1e-3*mag(hitDir)*hitDir,
                     surfHit,
                     hitSurface
                 );
@@ -1054,7 +1057,7 @@ void Foam::conformationSurfaces::findFeaturePointNearest
 
         if (hitInfo.hit())
         {
-            minDistSqr = hitInfo.point().distSqr(sample);
+            minDistSqr = magSqr(hitInfo.hitPoint()- sample);
             fpHit = hitInfo;
             featureHit = testI;
         }
@@ -1120,9 +1123,11 @@ void Foam::conformationSurfaces::findEdgeNearest
         {
             if (hitInfo[pointi].hit())
             {
-                minDistSqr[pointi] =
-                    hitInfo[pointi].point().distSqr(samples[pointi]);
-
+                minDistSqr[pointi] = magSqr
+                (
+                    hitInfo[pointi].hitPoint()
+                  - samples[pointi]
+                );
                 edgeHits[pointi] = hitInfo[pointi];
                 featuresHit[pointi] = testI;
             }
@@ -1162,7 +1167,7 @@ void Foam::conformationSurfaces::findEdgeNearestByType
         {
             if (hitInfo[typeI].hit())
             {
-                minDistSqr[typeI] = hitInfo[typeI].point().distSqr(sample);
+                minDistSqr[typeI] = magSqr(hitInfo[typeI].hitPoint() - sample);
                 edgeHits[typeI] = hitInfo[typeI];
                 featuresHit[typeI] = testI;
             }
@@ -1202,7 +1207,6 @@ void Foam::conformationSurfaces::findAllNearestEdges
             if (hitInfo[hitI].hit())
             {
                 anyHit = true;
-                break;
             }
         }
 

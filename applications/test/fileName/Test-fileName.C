@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -47,14 +47,6 @@ Description
 #include <fstream>
 
 using namespace Foam;
-
-// Create named file with some dummy content
-void touchFileContent(const fileName& file)
-{
-    std::ofstream os(file);
-    os << "file=<" << file << ">" << nl;
-}
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -268,7 +260,7 @@ int main(int argc, char *argv[])
             "hello1",
             "hello2",
             "hello3",
-            "hello4.ext"
+            "hello4.hmm"
         };
 
         Info<< file1 << nl;
@@ -278,7 +270,7 @@ int main(int argc, char *argv[])
         {
             file1,
             "some",
-            "more/things.ext"
+            "more/things.hmm"
         };
 
         Info<< file2 << nl;
@@ -289,7 +281,7 @@ int main(int argc, char *argv[])
         {
             std::string("ffO"),
             "some",
-            "more/things.ext"
+            "more/things.hmm"
         };
         Info<< file3 << nl;
 
@@ -303,7 +295,7 @@ int main(int argc, char *argv[])
         {
             "some",
             file3,
-            "more/things.ext",
+            "more/things.hmm",
             file1
         };
         Info<< "All ==> " << file4 << nl;
@@ -336,26 +328,26 @@ int main(int argc, char *argv[])
         fileName input1("path.to/media/image.png");
 
         Info<<"File : " << input0 << " ext: "
-            << Switch(input0.has_ext())
+            << Switch(input0.hasExt())
             <<  " = " << input0.ext() << nl;
         Info<<"File : " << input1 << " ext: "
-            << Switch(input1.has_ext())
+            << Switch(input1.hasExt())
             <<  " = " << input1.ext() << nl;
         Info<<"File : " << endWithDot << " ext: "
-            << Switch(endWithDot.has_ext())
+            << Switch(endWithDot.hasExt())
             <<  " = " << endWithDot.ext() << " <-- perhaps return false?" << nl;
         Info<<"File : " << endWithSlash << " ext: "
-            << Switch(endWithSlash.has_ext())
+            << Switch(endWithSlash.hasExt())
             <<  " = " << endWithSlash.ext() << nl;
 
 
-        Info<<"Remove extension " << (input0.remove_ext());
+        Info<<"Remove extension " << (input0.removeExt());
         Info<< "  now: " << input0 << nl;
 
         Info<<"Remove extension " << (input1.removeExt());
         Info<< "  now: " << input1 << nl;
 
-        Info<<"Remove extension " << (endWithSlash.remove_ext());
+        Info<<"Remove extension " << (endWithSlash.removeExt());
         Info<< "  now: " << endWithSlash << nl;
 
         wordList exts{ "jpg", "png", "txt", word::null };
@@ -367,14 +359,14 @@ int main(int argc, char *argv[])
         Info<< nl;
 
 
-        Info<<"Test has_ext(word)" << nl
+        Info<<"Test hasExt(word)" << nl
             <<"~~~~~~~~~~~~~~~~~" << nl;
         Info<<"Has extension(s):" << nl
             << "input: " << input1 << nl;
         for (const word& e : exts)
         {
             Info<<"  '" << e << "'  -> "
-                << Switch(input1.has_ext(e)) << nl;
+                << Switch(input1.hasExt(e)) << nl;
         }
         Info<< nl;
 
@@ -383,12 +375,12 @@ int main(int argc, char *argv[])
         for (const word& e : exts)
         {
             Info<<"  '" << e << "'  -> "
-                << Switch(endWithDot.has_ext(e)) << nl;
+                << Switch(endWithDot.hasExt(e)) << nl;
         }
         Info<< nl;
 
 
-        Info<<"Test has_ext(wordRe)" << nl
+        Info<<"Test hasExt(wordRe)" << nl
             <<"~~~~~~~~~~~~~~~~~~~" << nl;
 
         // A regex with a zero length matcher doesn't work at all:
@@ -401,25 +393,25 @@ int main(int argc, char *argv[])
         Info<<"Has extension(s):" << nl
             << "input: " << endWithDot << nl;
         Info<<"    " << matcher0 << "  -> "
-            << Switch(endWithDot.has_ext(matcher0)) << nl;
+            << Switch(endWithDot.hasExt(matcher0)) << nl;
         Info<<"    " << matcher1 << "  -> "
-            << Switch(endWithDot.has_ext(matcher1)) << nl;
+            << Switch(endWithDot.hasExt(matcher1)) << nl;
         Info<<"    " << matcher2 << "  -> "
-            << Switch(endWithDot.has_ext(matcher2)) << nl;
+            << Switch(endWithDot.hasExt(matcher2)) << nl;
 
         Info<< "input: " << input1 << nl;
         Info<<"    " << matcher0 << "  -> "
-            << Switch(input1.has_ext(matcher0)) << nl;
+            << Switch(input1.hasExt(matcher0)) << nl;
         Info<<"    " << matcher1 << "  -> "
-            << Switch(input1.has_ext(matcher1)) << nl;
+            << Switch(input1.hasExt(matcher1)) << nl;
         Info<<"    " << matcher2 << "  -> "
-            << Switch(input1.has_ext(matcher2)) << nl;
+            << Switch(input1.hasExt(matcher2)) << nl;
         Info<< nl;
 
         Info<<"Remove extension(s):" << nl << "input: " << input1 << nl;
         while (!input1.empty())
         {
-            if (input1.remove_ext())
+            if (input1.removeExt())
             {
                 Info<< "   -> " << input1 << nl;
             }
@@ -595,54 +587,14 @@ int main(int argc, char *argv[])
     if (args.found("system"))
     {
         const fileName dirA("dirA");
-        const fileName dirB("dirB");
-        const fileName dirC("dirC");
-        const fileName dirD("dirD");
         const fileName lnA("lnA");
         const fileName lnB("lnB");
+        const fileName dirB("dirB");
 
-        // Purge anything existing
-        Foam::rmDir(dirA, true);
-        Foam::rmDir(dirB, true);
-        Foam::rmDir(dirC, true);
-        Foam::rmDir(dirD, true);
+        Foam::rmDir(dirA);
         Foam::rm(lnA);
         Foam::rm(lnB);
-
-        {
-            fileName name(dirA/dirB/dirC/"abc");
-            Foam::mkDir(name.path());
-            touchFileContent(name);           // Create real file
-
-            Foam::mkDir(dirB/dirB/dirB/dirB);
-            Foam::ln("test", dirB/"linkB");   // Create dead link
-
-            Foam::mkDir(dirC);
-            Foam::ln("../dirD", dirC/"linkC");  // Create real link
-
-            Foam::mkDir(dirD);
-
-            for (const fileName& d : { dirA, dirB, dirC, dirD })
-            {
-                Info<< "Directory: " << d << " = "
-                    << readDir(d, fileName::UNDEFINED, false, false) << nl;
-
-                if (Foam::rmDir(d, false, true))
-                {
-                    Info<< "   Removed empty dir" << nl;
-                }
-                else
-                {
-                    Info<< "   Could not remove empty dir" << nl;
-                }
-            }
-
-            // Force removal before continuing
-            Foam::rmDir(dirA, true);
-            Foam::rmDir(dirB, true);
-            Foam::rmDir(dirC, true);
-            Foam::rmDir(dirD, true);
-        }
+        Foam::rmDir(dirB);
 
         Info<< nl << "=========================" << nl
             << "Test some copying and deletion" << endl;
@@ -666,7 +618,9 @@ int main(int argc, char *argv[])
             );
 
             Info<<"    create: " << file << endl;
-            touchFileContent(file);
+
+            std::ofstream os(file);
+            os << "file=<" << file << ">" << nl;
         }
 
         const int oldDebug = POSIX::debug;
@@ -754,7 +708,7 @@ int main(int argc, char *argv[])
         "hello1",
         "hello2",
         "hello3",
-        "hello4.ext"
+        "hello4.hmm"
     };
 
     fileName pathName(wrdList);
@@ -764,28 +718,14 @@ int main(int argc, char *argv[])
         << "pathName.name()     = >" << pathName.name() << "<\n"
         << "pathName.path()     = "  << pathName.path() << nl
         << "pathName.ext()      = >" << pathName.ext() << "<\n"
-        << "pathName.stem       = >" << pathName.stem() << "<\n";
+        << "pathName.nameLessExt= >" << pathName.nameLessExt() << "<\n";
 
     Info<< "pathName.components() = " << pathName.components() << nl
         << "pathName.component(2) = " << pathName.component(2) << nl
         << endl;
 
-    pathName.replace_name("newName.ext");
-    Info<< "new name = " << pathName << nl;
-    Info<< "has ext      = " << Switch::name(pathName.has_ext()) << nl;
-    Info<< "has ext('')  = " << Switch::name(pathName.has_ext("")) << nl;
-    Info<< "has ext(foo) = " << Switch::name(pathName.has_ext("foo")) << nl;
-    Info<< "has ext(ext) = " << Switch::name(pathName.has_ext("ext")) << nl;
-
-    pathName.replace_ext("png");
-    Info<< "new ext = " << pathName << nl;
-
-    pathName.replace_ext("");  // Same as remove_ext
-    Info<< "new ext = " << pathName << nl;
-
-    Info<< "has path = " << Switch::name(pathName.has_path()) << nl;
-    pathName.remove_path();
-    pathName.removePath();  // second type should be a no-op
+    Info<< "hasPath = " << Switch(pathName.hasPath()) << nl;
+    pathName.removePath();
     Info<< "removed path = " << pathName << nl;
 
     Info<< nl << nl;

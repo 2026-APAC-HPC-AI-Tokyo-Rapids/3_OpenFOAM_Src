@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,15 +28,16 @@ Class
     Foam::DESModelBase
 
 Description
-    Base class for DES models providing an interfaces to DES fields.
+    Base class for DES models providing an interfaces to the LESRegion
+    function.
 
 SourceFiles
     DESModelBase.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_DESModelBase_H
-#define Foam_DESModelBase_H
+#ifndef DESModelBase_H
+#define DESModelBase_H
 
 #include "className.H"
 #include "tmp.H"
@@ -55,26 +56,20 @@ class DESModelBase
 {
 public:
 
-    //- Runtime type information
-    ClassName("DESModelBase");
-
-    // Constructors
-
-        //- Constructor
-        DESModelBase() noexcept = default;
-
+    //- Constructor
+    DESModelBase()
+    {}
 
     //- Destructor
     virtual ~DESModelBase() = default;
+
+    ClassName("DESModelBase");
 
 
     // Public Member Functions
 
         //- Return the LES field indicator
         virtual tmp<volScalarField> LESRegion() const = 0;
-
-        //- Return the shielding function
-        virtual tmp<volScalarField> fd() const = 0;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

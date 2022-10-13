@@ -18,4 +18,9 @@ numberOfSubdomains 4;
 
 method          scotch;
 
+distributed     no;
+
+roots           ( );
+
+
 // ************************************************************************* //

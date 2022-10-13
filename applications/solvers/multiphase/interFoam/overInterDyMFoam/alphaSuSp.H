@@ -7,5 +7,3 @@ volScalarField::Internal divU
   ? fvc::div(phiCN() + mesh.phi())
   : fvc::div(phiCN())
 );
-
-divU *= interpolatedCells*cellMask;

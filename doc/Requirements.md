@@ -4,7 +4,7 @@ OpenFOAM requires a functioning C++11 compiler and GNU `make` build toolchain.
 
 ### Minimum recommended versions
 
-- gcc : 4.8.5 (absolute minimum, not really recommended)
+- gcc : 4.8.5
 - cmake: 3.8 (required for ParaView and CGAL build)
 - boost: 1.48 (required for CGAL build and some functionality)
 - fftw: 3.3.7 (recommended - required for FFT-related functionality)
@@ -18,8 +18,7 @@ To check the installed versions
 | Program       | To check the version  |
 |---------------|-----------------------|
 | gcc           | `gcc --version`       |
-| clang         | `clang --version`     |
-| icc (intel)   | `icc --version`       |
+| icc           | `icc --version`       |
 | cmake         | `cmake --version`     |
 | openmpi       | `orterun --version`   |
 
@@ -48,7 +47,7 @@ affected several versions of the openmpi2 or openmpi3 series.
 - QT : 5.9 (optional - for ParaView build)
 
 
-### Ubuntu (eg, 22.04)
+### Ubuntu (eg, 20.04)
 
 Install dependencies by executing the following lines on the command line:
 ```
@@ -66,11 +65,11 @@ sudo apt-cache show libopenmpi-dev
 
 | Program   | Ubuntu    | Program version |
 |-----------|-----------|-----------------|
-| gcc       | 22.04     | 11.3.0          |
-| openmpi   | 22.04     | 4.1.2           |
-| cmake     | 22.04     | 3.22.1          |
-| flex      | 22.04     | 2.6.4           |
-| m4        | 22.04     | 1.4.18          |
+| gcc       | 20.04     | 9.3.0           |
+| openmpi   | 20.04     | 4.0.3           |
+| cmake     | 20.04     | 3.16.3          |
+| flex      | 20.04     | 2.6.4           |
+| m4        | 20.04     | 1.4.18          |
 
 
 
@@ -81,10 +80,10 @@ apt-get install libfftw3-dev libscotch-dev libptscotch-dev libboost-system-dev l
 
 | Program   | apt-cache show  | Ubuntu  | Version |
 |-----------|-----------------|---------|---------|
-| boost     | libboost-dev    | 22.04   | 1.74.0  |
-| CGAL      | libcgal-dev     | 22.04   | 5.4.1   |
-| FFTW      | libfftw3-dev    | 22.04   | 3.3.8   |
-| scotch    | libscotch-dev   | 22.04   | 6.1.3   |
+| boost     | libboost-dev    | 20.04   | 1.71.0  |
+| CGAL      | libcgal-dev     | 20.04   | 5.0.2   |
+| FFTW      | libfftw3-dev    | 20.04   | 3.3.8   |
+| scotch    | libscotch-dev   | 20.04   | 6.0.9   |
 
 
 Some libraries can be installed from the operating system, or
@@ -96,14 +95,14 @@ across various Linux distributions, but it may be desirable to use
 more system libraries on Ubuntu.
 
 
-### openSUSE (eg, Leap-15.4)
+### openSUSE (eg, Leap-15.2)
 
 Install the dependencies by copying and pasting the following lines to
 the command line:
 
 ```
 sudo zypper install -t pattern devel_C_C++
-sudo zypper install cmake gnuplot flex libfl-devel readline-devel zlib-devel openmpi4-devel
+sudo zypper install cmake gnuplot flex libfl-devel readline-devel zlib-devel openmpi-devel
 sudo zypper install gmp-devel mpfr-devel mpc-devel
 ```
 If you intend to use system components, you can also install the following:
@@ -120,12 +119,11 @@ This installs
 
 | Program   | openSUSE  | Program version |
 |-----------|-----------|-----------------|
-| gcc       | 15.4      | 7.5.0           |
-| openmpi   | 15.4      | 2.1.6           |
-| openmpi   | 15.4      | 4.1.1           |
-| cmake     | 15.4      | 3.20.4          |
-| flex      | 15.4      | 2.6.4           |
-| m4        | 15.4      | 1.4.18          |
+| gcc       | 15.2      | 7.5.0           |
+| openmpi   | 15.2      | 2.1.6           |
+| cmake     | 15.2      | 3.17.0          |
+| flex      | 15.2      | 2.6.4           |
+| m4        | 15.2      | 1.4.18          |
 
 
 #### OpenMPI
@@ -217,4 +215,4 @@ at any later stage _without_ recompiling OpenFOAM itself.
 [wiki-config]: https://develop.openfoam.com/Development/openfoam/-/wikis/configuring
 
 ---
-Copyright 2019-2022 OpenCFD Ltd
+Copyright 2019-2021 OpenCFD Ltd

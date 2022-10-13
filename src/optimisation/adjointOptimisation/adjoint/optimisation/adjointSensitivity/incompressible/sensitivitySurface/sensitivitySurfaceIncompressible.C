@@ -305,7 +305,7 @@ void sensitivitySurface::smoothSensitivities()
     dimensionedScalar one("1", dimless, 1.);
 
     // Mapping engine
-    const volSurfaceMapping vsm(aMesh);
+    volSurfaceMapping vsm(aMesh);
 
     // Source term in faMatrix needs to be an areaField
     areaScalarField sens

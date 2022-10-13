@@ -130,7 +130,7 @@ void Foam::fv::actuationDiskSource::setMonitorCells(const dictionary& dict)
                     selectedCells.insert(celli);
                 }
 
-                if (!returnReduceOr(found))
+                if (!returnReduce(found, orOp<bool>()))
                 {
                     WarningInFunction
                         << "No owner cell found for point "

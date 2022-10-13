@@ -28,6 +28,7 @@ License
 
 #include "UList.H"
 #include "SLList.H"
+#include <utility>
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
@@ -203,46 +204,28 @@ inline std::streamsize Foam::FixedList<T, N>::size_bytes() noexcept
 
 
 template<class T, unsigned N>
-template<unsigned Index>
-inline T& Foam::FixedList<T, N>::get() noexcept
-{
-    static_assert(Index < N, "Address outside FixedList range");
-    return v_[Index];
-}
-
-
-template<class T, unsigned N>
-template<unsigned Index>
-inline const T& Foam::FixedList<T, N>::get() const noexcept
-{
-    static_assert(Index < N, "Address outside FixedList range");
-    return v_[Index];
-}
-
-
-template<class T, unsigned N>
-inline T& Foam::FixedList<T, N>::front() noexcept
+inline T& Foam::FixedList<T, N>::first() noexcept
 {
     return v_[0];
 }
 
 
 template<class T, unsigned N>
-inline const T& Foam::FixedList<T, N>::front() const noexcept
+inline const T& Foam::FixedList<T, N>::first() const noexcept
 {
     return v_[0];
 }
 
 
 template<class T, unsigned N>
-inline T& Foam::FixedList<T, N>::back() noexcept
+inline T& Foam::FixedList<T, N>::last() noexcept
 {
     return v_[N-1];
 }
 
 
 template<class T, unsigned N>
-inline const T& Foam::FixedList<T, N>::back() const noexcept
+inline const T& Foam::FixedList<T, N>::last() const noexcept
 {
     return v_[N-1];
 }

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -69,9 +69,9 @@ static scalar calcProximityOfFeaturePoints
 
                 if (pHit2.hit())
                 {
-                    scalar curDist = pHit1.point().dist(pHit2.point());
+                    scalar curDist = mag(pHit1.hitPoint() - pHit2.hitPoint());
 
-                    minDist = min(minDist, curDist);
+                    minDist = min(curDist, minDist);
                 }
             }
         }
@@ -117,11 +117,12 @@ scalar calcProximityOfFeatureEdges
                     const edge& e2 = emesh.edges()[pHit2.index()];
 
                     // Don't refine if the edges are connected to each other
-                    if (!e1.connected(e2))
+                    if (!e1.connects(e2))
                     {
-                        scalar curDist = pHit1.point().dist(pHit2.point());
+                        scalar curDist =
+                            mag(pHit1.hitPoint() - pHit2.hitPoint());
 
-                        minDist = min(minDist, curDist);
+                        minDist = min(curDist, minDist);
                     }
                 }
             }

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2017 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -96,7 +96,7 @@ Foam::porosityModel::porosityModel
     cellZoneIDs_(),
     csysPtr_
     (
-        coordinateSystem::New(mesh, coeffs_, coordinateSystem::typeName)
+        coordinateSystem::New(mesh, coeffs_, coordinateSystem::typeName_())
     )
 {
     if (zoneName_.empty())
@@ -109,7 +109,10 @@ Foam::porosityModel::porosityModel
 
     Info<< "    creating porous zone: " << zoneName_ << endl;
 
-    if (returnReduceAnd(cellZoneIDs_.empty()) && Pstream::master())
+    bool foundZone = !cellZoneIDs_.empty();
+    reduce(foundZone, orOp<bool>());
+
+    if (!foundZone && Pstream::master())
     {
         FatalErrorInFunction
             << "Cannot find porous cellZone " << zoneName_ << endl

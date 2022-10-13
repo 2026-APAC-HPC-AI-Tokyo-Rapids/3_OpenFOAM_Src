@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -712,8 +712,9 @@ Foam::bitSet Foam::holeToFace::findClosure
     //        }
     //    }
     //}
+    //reduce(haveLeak, orOp<bool>());
     //
-    //if (!returnReduceOr(haveLeak))
+    //if (!haveLeak)
     //{
     //    if (debug)
     //    {
@@ -1236,10 +1237,10 @@ Foam::autoPtr<Foam::mapDistribute> Foam::holeToFace::calcClosure
     }
 
 
-    if (returnReduceAnd(closureFaces.empty()))
+    if (returnReduce(closureFaces.size(), sumOp<label>()) == 0)
     {
         closureToBlocked.clear();
-        return nullptr;
+        return autoPtr<mapDistribute>(nullptr);
     }
 
 

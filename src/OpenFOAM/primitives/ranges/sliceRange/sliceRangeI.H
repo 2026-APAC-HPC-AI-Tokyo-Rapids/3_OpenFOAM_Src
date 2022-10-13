@@ -25,6 +25,8 @@ License
 
 \*---------------------------------------------------------------------------*/
 
+#include <algorithm>
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 inline constexpr Foam::sliceRange::sliceRange() noexcept

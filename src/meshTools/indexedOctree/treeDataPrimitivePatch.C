@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,53 +28,23 @@ License
 
 #include "treeDataPrimitivePatch.H"
 #include "indexedOctree.H"
-#include "triangle.H"
+#include "triangleFuncs.H"
 #include "triSurfaceTools.H"
 #include "triFace.H"
 
-// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
-
-template<class PatchType>
-Foam::treeBoundBoxList
-Foam::treeDataPrimitivePatch<PatchType>::boxes(const PatchType& pp)
-{
-    const auto& points = pp.points();
-
-    treeBoundBoxList bbs(pp.size());
-
-    // Like std::transform with [&](const auto& f)
-    // which may not work with older C++ versions
-
-    {
-        auto iter = bbs.begin();
-
-        for (const auto& f : pp)
-        {
-            *iter = treeBoundBox(points, f);
-            ++iter;
-        }
-    }
-
-    return bbs;
-}
-
-
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
-
-template<class PatchType>
-inline Foam::treeBoundBox
-Foam::treeDataPrimitivePatch<PatchType>::getBounds(const label patchFacei) const
-{
-    return treeBoundBox(patch_.points(), patch_[patchFacei]);
-}
-
 
 template<class PatchType>
 void Foam::treeDataPrimitivePatch<PatchType>::update()
 {
     if (cacheBb_)
     {
-        bbs_ = treeDataPrimitivePatch<PatchType>::boxes(patch_);
+        bbs_.setSize(patch_.size());
+
+        forAll(patch_, i)
+        {
+            bbs_[i] = treeBoundBox(patch_.points(), patch_[i]);
+        }
     }
 }
 
@@ -145,20 +115,16 @@ findSelfIntersectOp::findSelfIntersectOp
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class PatchType>
-Foam::treeBoundBox
-Foam::treeDataPrimitivePatch<PatchType>::bounds
-(
-    const labelUList& indices
-) const
+Foam::pointField Foam::treeDataPrimitivePatch<PatchType>::shapePoints() const
 {
-    treeBoundBox bb;
+    pointField cc(patch_.size());
 
-    for (const label patchFacei : indices)
+    forAll(patch_, i)
     {
-        bb.add(patch_.points(), patch_[patchFacei]);
+        cc[i] = patch_[i].centre(patch_.points());
     }
 
-    return bb;
+    return cc;
 }
 
 
@@ -202,13 +168,14 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
     const typename PatchType::face_type& localF = patch_.localFaces()[facei];
     const typename PatchType::face_type& f = patch_[facei];
     const pointField& points = patch_.points();
+    const labelList& mp = patch_.meshPoints();
 
     // Retest to classify where on face info is. Note: could be improved. We
     // already have point.
 
     pointHit curHit = f.nearestPoint(sample, points);
     const vector area = f.areaNormal(points);
-    const point& curPt = curHit.point();
+    const point& curPt = curHit.rawPoint();
 
     //
     // 1] Check whether sample is above face
@@ -245,9 +212,7 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
 
     forAll(f, fp)
     {
-        const scalar relDistSqr = (magSqr(points[f[fp]] - curPt)/typDimSqr);
-
-        if (relDistSqr < planarTol_)
+        if ((magSqr(points[f[fp]] - curPt)/typDimSqr) < planarTol_)
         {
             // Face intersection point equals face vertex fp
 
@@ -264,9 +229,7 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
 
     const point fc(f.centre(points));
 
-    const scalar relDistSqr = (magSqr(fc - curPt)/typDimSqr);
-
-    if (relDistSqr < planarTol_)
+    if ((magSqr(fc - curPt)/typDimSqr) < planarTol_)
     {
         // Face intersection point equals face centre. Normal at face centre
         // is already average of face normals
@@ -274,7 +237,7 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
         if (debug & 2)
         {
             Pout<< " -> centre hit:" << fc
-                << " distance:" << relDistSqr << endl;
+                << " distance:" << magSqr(fc - curPt)/typDimSqr << endl;
         }
 
         return indexedOctree<treeDataPrimitivePatch>::getSide
@@ -285,33 +248,38 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
     }
 
 
+
     //
     // 3] Get the 'real' edge the face intersection is on
     //
 
-    for (const label edgei : patch_.faceEdges()[facei])
+    const labelList& fEdges = patch_.faceEdges()[facei];
+
+    forAll(fEdges, fEdgeI)
     {
-        pointHit edgeHit =
-            patch_.meshEdge(edgei).line(points).nearestDist(sample);
+        label edgeI = fEdges[fEdgeI];
+        const edge& e = patch_.edges()[edgeI];
+        const linePointRef ln(points[mp[e.start()]], points[mp[e.end()]]);
+        pointHit edgeHit = ln.nearestDist(sample);
 
-        const scalar relDistSqr = (edgeHit.point().distSqr(curPt)/typDimSqr);
-
-        if (relDistSqr < planarTol_)
+        if ((magSqr(edgeHit.rawPoint() - curPt)/typDimSqr) < planarTol_)
         {
             // Face intersection point lies on edge e
 
             // Calculate edge normal (wrong: uses face normals instead of
             // triangle normals)
+            const labelList& eFaces = patch_.edgeFaces()[edgeI];
+
             vector edgeNormal(Zero);
 
-            for (const label eFacei : patch_.edgeFaces()[edgei])
+            forAll(eFaces, i)
             {
-                edgeNormal += patch_.faceNormals()[eFacei];
+                edgeNormal += patch_.faceNormals()[eFaces[i]];
             }
 
             if (debug & 2)
             {
-                Pout<< " -> real edge hit point:" << edgeHit.point()
+                Pout<< " -> real edge hit point:" << edgeHit.rawPoint()
                     << " comparing to edge normal:" << edgeNormal
                     << endl;
             }
@@ -335,9 +303,7 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
     {
         pointHit edgeHit = linePointRef(points[f[fp]], fc).nearestDist(sample);
 
-        const scalar relDistSqr = (edgeHit.point().distSqr(curPt)/typDimSqr);
-
-        if (relDistSqr < planarTol_)
+        if ((magSqr(edgeHit.rawPoint() - curPt)/typDimSqr) < planarTol_)
         {
             // Face intersection point lies on edge between two face triangles
 
@@ -351,7 +317,7 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
 
             if (debug & 2)
             {
-                Pout<< " -> internal edge hit point:" << edgeHit.point()
+                Pout<< " -> internal edge hit point:" << edgeHit.rawPoint()
                     << " comparing to edge normal "
                     << 0.5*(nLeft + nRight)
                     << endl;
@@ -390,20 +356,20 @@ Foam::volumeType Foam::treeDataPrimitivePatch<PatchType>::getVolumeType
 }
 
 
-// Check if any point on shape is inside searchBox.
+// Check if any point on shape is inside cubeBb.
 template<class PatchType>
 bool Foam::treeDataPrimitivePatch<PatchType>::overlaps
 (
     const label index,
-    const treeBoundBox& searchBox
+    const treeBoundBox& cubeBb
 ) const
 {
     // 1. Quick rejection: bb does not intersect face bb at all
     if
     (
         cacheBb_
-      ? !searchBox.overlaps(bbs_[index])
-      : !searchBox.overlaps(getBounds(index))
+      ? !cubeBb.overlaps(bbs_[index])
+      : !cubeBb.overlaps(treeBoundBox(patch_.points(), patch_[index]))
     )
     {
         return false;
@@ -415,33 +381,41 @@ bool Foam::treeDataPrimitivePatch<PatchType>::overlaps
     const pointField& points = patch_.points();
     const typename PatchType::face_type& f = patch_[index];
 
-    if (f.size() == 3)
-    {
-        const triPointRef tri(points[f[0]], points[f[1]], points[f[2]]);
-
-        return searchBox.intersects(tri);
-    }
-
-    if (searchBox.containsAny(points, f))
+    if (cubeBb.containsAny(points, f))
     {
         return true;
     }
 
     // 3. Difficult case: all points are outside but connecting edges might
     // go through cube. Use triangle-bounding box intersection.
-
     const point fc = f.centre(points);
 
-    forAll(f, fp)
+    if (f.size() == 3)
     {
-        const triPointRef tri
+        return triangleFuncs::intersectBb
         (
-            points[f.thisLabel(fp)], points[f.nextLabel(fp)], fc
+            points[f[0]],
+            points[f[1]],
+            points[f[2]],
+            cubeBb
         );
-
-        if (searchBox.intersects(tri))
+    }
+    else
+    {
+        forAll(f, fp)
         {
-            return true;
+            bool triIntersects = triangleFuncs::intersectBb
+            (
+                points[f[fp]],
+                points[f[f.fcIndex(fp)]],
+                fc,
+                cubeBb
+            );
+
+            if (triIntersects)
+            {
+                return true;
+            }
         }
     }
 
@@ -463,7 +437,7 @@ bool Foam::treeDataPrimitivePatch<PatchType>::overlaps
     (
         cacheBb_
       ? !bbs_[index].overlaps(centre, radiusSqr)
-      : !getBounds(index).overlaps(centre, radiusSqr)
+      : !treeBoundBox(patch_.points(),patch_[index]).overlaps(centre, radiusSqr)
     )
     {
         return false;
@@ -485,38 +459,6 @@ bool Foam::treeDataPrimitivePatch<PatchType>::overlaps
 }
 
 
-// * * * * * * * * * * * * * * * * Searching * * * * * * * * * * * * * * * * //
-
-template<class PatchType>
-void Foam::treeDataPrimitivePatch<PatchType>::findNearest
-(
-    const labelUList& indices,
-    const point& sample,
-
-    scalar& nearestDistSqr,
-    label& minIndex,
-    point& nearestPoint
-) const
-{
-    const pointField& points = patch_.points();
-
-    for (const label index : indices)
-    {
-        const typename PatchType::face_type& f = patch_[index];
-
-        const pointHit nearHit = f.nearestPoint(sample, points);
-        const scalar distSqr = sqr(nearHit.distance());
-
-        if (distSqr < nearestDistSqr)
-        {
-            nearestDistSqr = distSqr;
-            minIndex = index;
-            nearestPoint = nearHit.point();
-        }
-    }
-}
-
-
 template<class PatchType>
 void Foam::treeDataPrimitivePatch<PatchType>::findNearestOp::operator()
 (
@@ -528,14 +470,25 @@ void Foam::treeDataPrimitivePatch<PatchType>::findNearestOp::operator()
     point& nearestPoint
 ) const
 {
-    tree_.shapes().findNearest
-    (
-        indices,
-        sample,
-        nearestDistSqr,
-        minIndex,
-        nearestPoint
-    );
+    const treeDataPrimitivePatch<PatchType>& shape = tree_.shapes();
+    const PatchType& patch = shape.patch();
+
+    const pointField& points = patch.points();
+
+    for (const label index : indices)
+    {
+        const typename PatchType::face_type& f = patch[index];
+
+        const pointHit nearHit = f.nearestPoint(sample, points);
+        const scalar distSqr = sqr(nearHit.distance());
+
+        if (distSqr < nearestDistSqr)
+        {
+            nearestDistSqr = distSqr;
+            minIndex = index;
+            nearestPoint = nearHit.rawPoint();
+        }
+    }
 }
 
 
@@ -677,7 +630,7 @@ bool Foam::treeDataPrimitivePatch<PatchType>::findIntersection
     {
         // Note: no extra test on whether intersection is in front of us
         // since using half_ray
-        intersectionPoint = inter.point();
+        intersectionPoint = inter.hitPoint();
 
         return true;
     }

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -45,11 +45,11 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_edge_H
-#define Foam_edge_H
+#ifndef edge_H
+#define edge_H
 
 #include "labelPair.H"
-#include "line.H"
+#include "linePointRef.H"
 #include "pointField.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -107,30 +107,27 @@ public:
 
     // Access
 
-        //- The first vertex
-        label a() const noexcept { return labelPair::first(); }
+        //- Return first vertex label
+        using labelPair::first;
 
-        //- The second vertex
-        label b() const noexcept { return labelPair::second(); }
+        //- Return last (second) vertex label
+        using labelPair::last;
 
-        //- The first vertex
-        label& a() noexcept { return labelPair::first(); }
+        //- Return second (last) vertex label
+        using labelPair::second;
 
-        //- The second vertex
-        label& b() noexcept { return labelPair::second(); }
 
-        //- The start (first) vertex label
-        label start() const noexcept { return labelPair::first(); }
+        //- Return start (first) vertex label
+        inline label start() const;
 
-        //- The end (last/second) vertex label
-        label end() const noexcept { return labelPair::second(); }
+        //- Return start (first) vertex label
+        inline label& start();
 
-        //- The start (first) vertex label
-        label& start() noexcept { return labelPair::first(); }
+        //- Return end (last/second) vertex label
+        inline label end() const;
 
-        //- The end (second/last) vertex label
-        label& end() noexcept { return labelPair::second(); }
-
+        //- Return end (last/second) vertex label
+        inline label& end();
 
         //- Return reverse edge as copy.
         //  No special handling of negative point labels.
@@ -147,11 +144,8 @@ public:
         //  No special handling of negative point labels.
         inline label maxVertex() const;
 
-        //- True if the vertices are unique and non-negative.
-        inline bool good() const noexcept;
-
-        //- True if the vertices are unique and non-negative.
-        bool valid() const noexcept { return good(); }
+        //- Return true if the vertices are unique and non-negative.
+        inline bool valid() const;
 
         //- Return true if point label is found in edge.
         //  Always false for a negative label.
@@ -161,8 +155,9 @@ public:
         //  Always return -1 for a negative label.
         inline label which(const label pointLabel) const;
 
-        //- True if the edge has at least one vertex in common with other
-        inline bool connected(const edge& other) const;
+        //- Do the edges share a common vertex index?
+        //  Negative point labels never connect.
+        inline bool connects(const edge& other) const;
 
         //- Return vertex common with other edge or -1 on failure
         //  Negative point labels are never considered common between edges.
@@ -171,10 +166,6 @@ public:
         //- Given the point label for one vertex, return the other one.
         //  No special treatment for negative point labels.
         inline label otherVertex(const label pointLabel) const;
-
-        //- Do the edges share a common vertex index?
-        //  Negative point labels never connect.
-        bool connects(const edge& other) const { return connected(other); }
 
 
     // Editing
@@ -267,9 +258,6 @@ public:
         //- Return scalar magnitude of the edge.
         //  No special handling of negative point labels.
         inline scalar mag(const UList<point>& pts) const;
-
-        //- The enclosing (bounding) box for the edge
-        inline Pair<point> box(const UList<point>& pts) const;
 
         //- Return edge line
         //  No special handling of negative point labels.

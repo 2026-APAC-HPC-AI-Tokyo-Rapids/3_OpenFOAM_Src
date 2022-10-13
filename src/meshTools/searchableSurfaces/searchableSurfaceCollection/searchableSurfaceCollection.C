@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -95,17 +95,18 @@ void Foam::searchableSurfaceCollection::findNearest
                 (
                     cmptMultiply
                     (
-                        hitInfo[pointi].point(),
+                        hitInfo[pointi].rawPoint(),
                         scale_[surfI]
                     )
                 );
 
-                scalar distSqr = globalPt.distSqr(samples[pointi]);
+                scalar distSqr = magSqr(globalPt - samples[pointi]);
 
                 if (distSqr < minDistSqr[pointi])
                 {
                     minDistSqr[pointi] = distSqr;
-                    nearestInfo[pointi].hitPoint(globalPt);
+                    nearestInfo[pointi].setPoint(globalPt);
+                    nearestInfo[pointi].setHit();
                     nearestInfo[pointi].setIndex
                     (
                         hitInfo[pointi].index()
@@ -165,7 +166,8 @@ void Foam::searchableSurfaceCollection::sortHits
             label localI = nHits[surfI]++;
             surfInfo[surfI][localI] = pointIndexHit
             (
-                info[pointi],
+                info[pointi].hit(),
+                info[pointi].rawPoint(),
                 index-indexOffset_[surfI]
             );
             infoMap[surfI][localI] = pointi;
@@ -204,12 +206,35 @@ Foam::searchableSurfaceCollection::searchableSurfaceCollection
 
             sDict.readEntry("scale", scale_[surfI]);
 
-            // Mandatory 'transform' sub-dictionary
-            transform_.set
-            (
-                surfI,
-                new coordSystem::cartesian(sDict, "transform")
-            );
+            const dictionary& coordDict = sDict.subDict("transform");
+
+            const dictionary* compatDict =
+                coordDict.findDict
+                (
+                    coordinateSystem::typeName_(),
+                    keyType::LITERAL
+                );
+
+            if (compatDict)
+            {
+                // Deprecated form
+                if (error::master())
+                {
+                    std::cerr
+                        << "--> FOAM IOWarning :" << nl
+                        << "    Found [v1806] '"
+                        << coordinateSystem::typeName_()
+                        << "' entry within transform dictionary" << nl
+                        << std::endl;
+                    error::warnAboutAge("sub-dictionary", 1806);
+                }
+
+                transform_.set(surfI, new coordSystem::cartesian(*compatDict));
+            }
+            else
+            {
+                transform_.set(surfI, new coordSystem::cartesian(coordDict));
+            }
 
             const word subGeomName(sDict.get<word>("surface"));
             //Pout<< "Trying to find " << subGeomName << endl;
@@ -249,7 +274,7 @@ Foam::searchableSurfaceCollection::searchableSurfaceCollection
     indexOffset_.setSize(surfI+1);
 
     // Bounds is the overall bounds - prepare for min/max ops
-    bounds().reset();
+    bounds() = boundBox::invertedBox;
 
     forAll(subGeom_, surfI)
     {
@@ -499,12 +524,12 @@ void Foam::searchableSurfaceCollection::findLine
                 (
                     cmptMultiply
                     (
-                        hitInfo[pointi].point(),
+                        hitInfo[pointi].rawPoint(),
                         scale_[surfI]
                     )
                 );
                 info[pointi] = hitInfo[pointi];
-                info[pointi].point() = nearest[pointi];
+                info[pointi].rawPoint() = nearest[pointi];
                 info[pointi].setIndex
                 (
                     hitInfo[pointi].index()
@@ -529,7 +554,7 @@ void Foam::searchableSurfaceCollection::findLine
                 {
                     n /= mag(n);
 
-                    scalar s = ((info[pointi].point()-start[pointi])&n);
+                    scalar s = ((info[pointi].rawPoint()-start[pointi])&n);
 
                     if (s < 0 || s > 1)
                     {

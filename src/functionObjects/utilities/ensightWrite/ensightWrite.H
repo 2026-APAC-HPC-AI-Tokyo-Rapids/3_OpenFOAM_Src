@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -46,7 +46,6 @@ Description
         width           12;
 
         fields          (U p);
-        // excludeFields  ("force.*");
 
         selection
         {
@@ -86,7 +85,6 @@ Description
         Property    | Description                           | Required | Default
         type        | Type name: ensightWrite               | yes |
         fields      | Fields to output                      | yes |
-        excludeFields | Exclude fields from output (wordRe list) | no  |
         boundary    | Convert boundary fields               | no  | true
         internal    | Convert internal fields               | no  | true
         nodeValues  | Write values at nodes                 | no  | false
@@ -108,7 +106,6 @@ Description
         region      | Name for a single region              | no  | region0
         faceZones   | Select faceZones to write             | no  |
         patches     | Limit to listed patches (wordRe list) | no  |
-        excludePatches | Exclude specified patches          | no  |
         selection   | Cell selection (topoSet actions)      | no  | empty dict
     \endtable
 
@@ -130,18 +127,16 @@ See also
 
 SourceFiles
     ensightWrite.C
-    ensightWriteImpl.C
-    ensightWriteUpdate.C
+    ensightWriteTemplates.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_functionObjects_ensightWrite_H
-#define Foam_functionObjects_ensightWrite_H
+#ifndef functionObjects_ensightWrite_H
+#define functionObjects_ensightWrite_H
 
 #include "fvMeshFunctionObject.H"
 #include "ensightCase.H"
 #include "ensightMesh.H"
-#include "ensightOutputFwd.H"
 
 #include "interpolation.H"
 #include "volFields.H"
@@ -185,11 +180,8 @@ class ensightWrite
         //- Track changes in mesh geometry
         enum polyMesh::readUpdateState meshState_;
 
-        //- Requested selection of fields to process
+        //- Requested names of fields to process
         wordRes selectFields_;
-
-        //- Requested selection of fields to block
-        wordRes blockFields_;
 
         //- Dictionary of volume selections
         dictionary selection_;
@@ -231,21 +223,21 @@ class ensightWrite
 
     // Write
 
-        //- Write selected volume fields.
-        template<class Type>
-        label writeVolFieldsImpl
-        (
-            ensightOutput::floatBufferType& scratch,
-            const fvMeshSubset& proxy,
-            const wordHashSet& candidateNames
-        );
-
         //- Write all volume fields
         label writeAllVolFields
         (
             const fvMeshSubset& proxy,
-            const wordHashSet& candidateNames
+            const wordHashSet& acceptField
         );
+
+        //- Write selected volume fields.
+        template<class Type>
+        label writeVolFields
+        (
+            const fvMeshSubset& proxy,
+            const wordHashSet& acceptField
+        );
+
 
         //- No copy construct
         ensightWrite(const ensightWrite&) = delete;
@@ -301,6 +293,12 @@ public:
 
 } // End namespace functionObjects
 } // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#ifdef NoRepository
+    #include "ensightWriteTemplates.C"
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

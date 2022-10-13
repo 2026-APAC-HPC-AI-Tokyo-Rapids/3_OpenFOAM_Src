@@ -117,9 +117,13 @@ bool Foam::functionObjects::properties::foundObjectProperty
     const word& entryName
 ) const
 {
-    const dictionary* dictptr = findDict(objectName);
+    if (found(objectName))
+    {
+        const dictionary& baseDict = subDict(objectName);
+        return baseDict.found(entryName);
+    }
 
-    return (dictptr && dictptr->found(entryName));
+    return false;
 }
 
 
@@ -130,15 +134,13 @@ bool Foam::functionObjects::properties::getObjectDict
     dictionary& dict
 ) const
 {
-    const dictionary* dictptr = findDict(objectName);
-
-    if (dictptr)
+    if (found(objectName))
     {
-        dictptr = dictptr->findDict(entryName);
+        const dictionary& baseDict = subDict(objectName);
 
-        if (dictptr)
+        if (baseDict.found(entryName) && baseDict.isDict(entryName))
         {
-            dict = *dictptr;
+            dict = baseDict.subDict(entryName);
             return true;
         }
     }
@@ -152,9 +154,12 @@ bool Foam::functionObjects::properties::hasResultObject
     const word& objectName
 ) const
 {
-    const dictionary* dictptr = findDict(resultsName_);
+    if (found(resultsName_))
+    {
+        return subDict(resultsName_).found(objectName);
+    }
 
-    return (dictptr && dictptr->found(objectName));
+    return false;
 }
 
 

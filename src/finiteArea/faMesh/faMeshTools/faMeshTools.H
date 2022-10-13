@@ -31,7 +31,6 @@ Description
 
 SourceFiles
     faMeshTools.C
-    faMeshToolsChecks.C
     faMeshToolsProcAddr.C
     faMeshToolsTemplates.C
 
@@ -51,6 +50,7 @@ namespace Foam
 
 // Forward Declarations
 class mapDistributePolyMesh;
+class writeHandler;
 class polyMesh;
 class IOobject;
 
@@ -133,13 +133,6 @@ public:
     (
         const GeometricField<Type, faePatchField, edgeMesh>& fld,
         const bool primitiveOrdering = false
-    );
-
-    //- Report mesh information
-    static void printMeshChecks
-    (
-        const faMesh& mesh,
-        const int verbose = 1
     );
 };
 

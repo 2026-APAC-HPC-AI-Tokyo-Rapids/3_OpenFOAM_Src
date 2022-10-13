@@ -12,19 +12,19 @@
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
 #
 # Script
-#     wmake/scripts/makeTargetDir
+#     makeTargetDir
 #
 # Description
-#     Makes a directory hierarchy for the given target file(s)
+#     Makes a directory hierarchy for the given target file
 #
-#     Usage: makeTargetDir file1 [..fileN]
+#     Usage: makeTargetDir <file>
 #
 #------------------------------------------------------------------------------
 
 for target
 do
-    dir="${target%/*}"
-    [ "$dir" = "$target" ] || [ -d "$dir" ] || mkdir -p "$dir"
+    dir=${target%/*}
+    [ -d "$dir" ] || [ "$dir" = "$target" ] || mkdir -p "$dir"
 done
 
 #------------------------------------------------------------------------------

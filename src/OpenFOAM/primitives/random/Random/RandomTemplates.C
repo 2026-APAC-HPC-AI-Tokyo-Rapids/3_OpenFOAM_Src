@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -92,14 +92,14 @@ void Foam::Random::shuffle(UList<Type>& values)
 template<class Type>
 Type Foam::Random::globalSample01()
 {
-    Type value(Zero);
+    Type value = -GREAT*pTraits<Type>::one;
 
     if (Pstream::master())
     {
         value = sample01<Type>();
     }
 
-    Pstream::broadcast(value);
+    Pstream::scatter(value);
 
     return value;
 }
@@ -108,14 +108,14 @@ Type Foam::Random::globalSample01()
 template<class Type>
 Type Foam::Random::globalGaussNormal()
 {
-    Type value(Zero);
+    Type value = -GREAT*pTraits<Type>::one;
 
     if (Pstream::master())
     {
         value = GaussNormal<Type>();
     }
 
-    Pstream::broadcast(value);
+    Pstream::scatter(value);
 
     return value;
 }
@@ -124,14 +124,14 @@ Type Foam::Random::globalGaussNormal()
 template<class Type>
 Type Foam::Random::globalPosition(const Type& start, const Type& end)
 {
-    Type value(Zero);
+    Type value = -GREAT*pTraits<Type>::one;
 
     if (Pstream::master())
     {
         value = position<Type>(start, end);
     }
 
-    Pstream::broadcast(value);
+    Pstream::scatter(value);
 
     return value;
 }
@@ -140,12 +140,14 @@ Type Foam::Random::globalPosition(const Type& start, const Type& end)
 template<class Type>
 void Foam::Random::globalRandomise01(Type& value)
 {
+    value = -GREAT*pTraits<Type>::one;
+
     if (Pstream::master())
     {
         value = sample01<Type>();
     }
 
-    Pstream::broadcast(value);
+    Pstream::scatter(value);
 }
 
 

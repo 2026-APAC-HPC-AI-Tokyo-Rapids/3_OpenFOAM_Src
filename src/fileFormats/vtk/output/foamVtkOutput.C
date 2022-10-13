@@ -130,7 +130,7 @@ void Foam::vtk::writeListParallel
 )
 {
     // Gather sizes (offsets irrelevant)
-    const globalIndex procAddr(globalIndex::gatherOnly{}, values.size());
+    const globalIndex procAddr(values.size(), globalIndex::gatherOnly{});
 
     if (Pstream::master())
     {
@@ -146,40 +146,33 @@ void Foam::vtk::writeListParallel
 
         for (const label proci : procAddr.subProcs())
         {
-            const label procSize = procAddr.localSize(proci);
+            recvData.resize_nocopy(procAddr.localSize(proci));
+            UIPstream::read
+            (
+                UPstream::commsTypes::scheduled,
+                proci,
+                recvData.data_bytes(),
+                recvData.size_bytes()
+            );
 
-            if (procSize)
+            // With value offset
+            const label offsetId = procOffset.localStart(proci);
+            for (const label val : recvData)
             {
-                recvData.resize_nocopy(procSize);
-                UIPstream::read
-                (
-                    UPstream::commsTypes::scheduled,
-                    proci,
-                    recvData.data_bytes(),
-                    recvData.size_bytes()
-                );
-
-                // With value offset
-                const label offsetId = procOffset.localStart(proci);
-                for (const label val : recvData)
-                {
-                    vtk::write(fmt, val + offsetId);
-                }
+                vtk::write(fmt, val + offsetId);
             }
         }
     }
     else
     {
-        if (values.size())
-        {
-            UOPstream::write
-            (
-                UPstream::commsTypes::scheduled,
-                UPstream::masterNo(),
-                values.cdata_bytes(),
-                values.size_bytes()
-            );
-        }
+        // Send
+        UOPstream::write
+        (
+            UPstream::commsTypes::scheduled,
+            UPstream::masterNo(),
+            values.cdata_bytes(),
+            values.size_bytes()
+        );
     }
 }
 

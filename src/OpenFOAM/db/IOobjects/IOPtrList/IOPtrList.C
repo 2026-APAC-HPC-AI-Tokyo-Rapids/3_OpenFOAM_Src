@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,7 +36,14 @@ Foam::IOPtrList<T>::IOPtrList(const IOobject& io, const INew& inewt)
 :
     regIOobject(io)
 {
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        (
+            io.readOpt() == IOobject::MUST_READ
+         || io.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || (io.readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         // For if MUST_READ_IF_MODIFIED
         addWatch();
@@ -52,7 +59,14 @@ Foam::IOPtrList<T>::IOPtrList(const IOobject& io)
 :
     regIOobject(io)
 {
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        (
+            io.readOpt() == IOobject::MUST_READ
+         || io.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || (io.readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         // For if MUST_READ_IF_MODIFIED
         addWatch();
@@ -83,7 +97,14 @@ Foam::IOPtrList<T>::IOPtrList(const IOobject& io, const PtrList<T>& content)
 :
     regIOobject(io)
 {
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        (
+            io.readOpt() == IOobject::MUST_READ
+         || io.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || (io.readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         // For if MUST_READ_IF_MODIFIED
         addWatch();
@@ -105,7 +126,14 @@ Foam::IOPtrList<T>::IOPtrList(const IOobject& io, PtrList<T>&& content)
 {
     PtrList<T>::transfer(content);
 
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        (
+            io.readOpt() == IOobject::MUST_READ
+         || io.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || (io.readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         // For if MUST_READ_IF_MODIFIED
         addWatch();

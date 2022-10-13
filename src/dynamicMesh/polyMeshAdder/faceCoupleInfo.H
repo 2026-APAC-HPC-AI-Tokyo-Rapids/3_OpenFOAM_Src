@@ -165,10 +165,10 @@ class faceCoupleInfo
         static const scalar angleTol_;
 
         //- Master patch
-        std::unique_ptr<indirectPrimitivePatch> masterPatchPtr_;
+        unique_ptr<indirectPrimitivePatch> masterPatchPtr_;
 
         //- Slave patch
-        std::unique_ptr<indirectPrimitivePatch> slavePatchPtr_;
+        unique_ptr<indirectPrimitivePatch> slavePatchPtr_;
 
 
         //- Description of cut.
@@ -186,7 +186,7 @@ class faceCoupleInfo
         //  Orientation of cutFaces should be same as masterFaces!
         pointField cutPoints_;
 
-        std::unique_ptr<primitiveFacePatch> cutFacesPtr_;
+        unique_ptr<primitiveFacePatch> cutFacesPtr_;
 
         //- Additional point coupling information. Is between points on
         //  boundary of both meshes.

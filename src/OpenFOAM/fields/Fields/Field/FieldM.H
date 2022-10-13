@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,8 +30,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_FieldM_H
-#define Foam_FieldM_H
+#ifndef FieldM_H
+#define FieldM_H
 
 #include "error.H"
 #include "ListLoopM.H"
@@ -124,16 +123,11 @@ void checkFields
     List_CONST_ACCESS(typeF2, f2, f2P);                                        \
                                                                                \
     /* Loop: f1 OP FUNC(f2) */                                                 \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (f1P[i]) OP FUNC(f2P[i]);                                              \
     }
 
-
-// Member function : this f1 OP f2.FUNC()
 
 #define TFOR_ALL_F_OP_F_FUNC(typeF1, f1, OP, typeF2, f2, FUNC)                 \
                                                                                \
@@ -145,10 +139,7 @@ void checkFields
     List_CONST_ACCESS(typeF2, f2, f2P);                                        \
                                                                                \
     /* Loop: f1 OP f2.FUNC() */                                                \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (f1P[i]) OP (f2P[i]).FUNC();                                           \
     }
@@ -167,10 +158,7 @@ void checkFields
     List_CONST_ACCESS(typeF3, f3, f3P);                                        \
                                                                                \
     /* Loop: f1 OP FUNC(f2, f3) */                                             \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (f1P[i]) OP FUNC((f2P[i]), (f3P[i]));                                  \
     }
@@ -188,10 +176,7 @@ void checkFields
     List_CONST_ACCESS(typeF2, f2, f2P);                                        \
                                                                                \
     /* Loop: s OP FUNC(f1, f2) */                                              \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas, reduction... */                                                \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (s) OP FUNC((f1P[i]), (f2P[i]));                                       \
     }
@@ -209,10 +194,7 @@ void checkFields
     List_CONST_ACCESS(typeF2, f2, f2P);                                        \
                                                                                \
     /* Loop: f1 OP FUNC(f2, s) */                                              \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (f1P[i]) OP FUNC((f2P[i]), (s));                                       \
     }
@@ -226,10 +208,7 @@ void checkFields
     List_CONST_ACCESS(typeF, f, fP);                                           \
                                                                                \
     /* Loop: s1 OP FUNC(f, s2) */                                              \
-    const label loopLen = (f).size();                                          \
-                                                                               \
-    /* pragmas, reduction... */                                                \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f, i)                                                         \
     {                                                                          \
         (s1) OP FUNC((fP[i]), (s2));                                           \
     }
@@ -247,10 +226,7 @@ void checkFields
     List_CONST_ACCESS(typeF2, f2, f2P);                                        \
                                                                                \
     /* Loop: f1 OP1 f2 OP2 f3 */                                               \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (f1P[i]) OP FUNC((s), (f2P[i]));                                       \
     }
@@ -264,10 +240,7 @@ void checkFields
     List_ACCESS(typeF1, f1, f1P);                                              \
                                                                                \
     /* Loop: f1 OP FUNC(s1, s2) */                                             \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (f1P[i]) OP FUNC((s1), (s2));                                          \
     }
@@ -285,10 +258,7 @@ void checkFields
     List_CONST_ACCESS(typeF2, f2, f2P);                                        \
                                                                                \
     /* Loop: f1 OP f2 FUNC(s) */                                               \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (f1P[i]) OP (f2P[i]) FUNC((s));                                        \
     }
@@ -307,10 +277,7 @@ void checkFields
     List_CONST_ACCESS(typeF3, f3, f3P);                                        \
                                                                                \
     /* Loop: f1 OP1 f2 OP2 f3 */                                               \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (f1P[i]) OP1 (f2P[i]) OP2 (f3P[i]);                                    \
     }
@@ -328,10 +295,7 @@ void checkFields
     List_CONST_ACCESS(typeF2, f2, f2P);                                        \
                                                                                \
     /* Loop: f1 OP1 s OP2 f2 */                                                \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (f1P[i]) OP1 (s) OP2 (f2P[i]);                                         \
     }
@@ -349,10 +313,7 @@ void checkFields
     List_CONST_ACCESS(typeF2, f2, f2P);                                        \
                                                                                \
     /* Loop f1 OP1 s OP2 f2 */                                                 \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (f1P[i]) OP1 (f2P[i]) OP2 (s);                                         \
     }
@@ -370,14 +331,10 @@ void checkFields
     List_CONST_ACCESS(typeF2, f2, f2P);                                        \
                                                                                \
     /* Loop: f1 OP f2 */                                                       \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (f1P[i]) OP (f2P[i]);                                                  \
     }
-
 
 // Member operator : this field f1 OP1 OP2 f2
 
@@ -391,10 +348,7 @@ void checkFields
     List_CONST_ACCESS(typeF2, f2, f2P);                                        \
                                                                                \
     /* Loop: f1 OP1 OP2 f2 */                                                  \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (f1P[i]) OP1 OP2 (f2P[i]);                                             \
     }
@@ -408,10 +362,7 @@ void checkFields
     List_ACCESS(typeF, f, fP);                                                 \
                                                                                \
     /* Loop: f OP s */                                                         \
-    const label loopLen = (f).size();                                          \
-                                                                               \
-    /* pragmas... */                                                           \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f, i)                                                         \
     {                                                                          \
         (fP[i]) OP (s);                                                        \
     }
@@ -427,10 +378,7 @@ void checkFields
     List_CONST_ACCESS(typeF, f, fP);                                           \
                                                                                \
     /* Loop: s OP f */                                                         \
-    const label loopLen = (f).size();                                          \
-                                                                               \
-    /* pragmas, reduction... */                                                \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f, i)                                                         \
     {                                                                          \
         (s) OP (fP[i]);                                                        \
     }
@@ -444,11 +392,8 @@ void checkFields
     List_CONST_ACCESS(typeF1, f1, f1P);                                        \
     List_CONST_ACCESS(typeF2, f2, f2P);                                        \
                                                                                \
-    /* Loop: s OP1 f1 OP2 f2 */                                                \
-    const label loopLen = (f1).size();                                         \
-                                                                               \
-    /* pragmas, reduction... */                                                \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    /* Loop: s OP f */                                                         \
+    List_FOR_ALL(f1, i)                                                        \
     {                                                                          \
         (s) OP1 (f1P[i]) OP2 (f2P[i]);                                         \
     }
@@ -462,10 +407,7 @@ void checkFields
     List_CONST_ACCESS(typeF, f, fP);                                           \
                                                                                \
     /* Loop: s OP FUNC(f) */                                                   \
-    const label loopLen = (f).size();                                          \
-                                                                               \
-    /* pragmas, reduction... */                                                \
-    for (label i = 0; i < loopLen; ++i)                                        \
+    List_FOR_ALL(f, i)                                                         \
     {                                                                          \
         (s) OP FUNC(fP[i]);                                                    \
     }

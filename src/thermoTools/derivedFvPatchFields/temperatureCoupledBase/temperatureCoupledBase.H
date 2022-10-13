@@ -46,11 +46,11 @@ Description
       \table
         Property     | Description                          | Required | Default
         kappaMethod  | Thermal conductivity method          | yes |
-        kappa        | Name of thermal conductivity field   | partly |
-        alpha        | Name of thermal diffusivity field    | partly |
-        alphaAni     | Name of non-isotropic alpha          | partly |
-        kappaValue   | Function1 supplying kappa            | partly |
-        alphaValue   | Function1 supplying alpha            | partly |
+        kappa        | Name of thermal conductivity field   | no  |
+        alpha        | Name of thermal diffusivity field    | no  |
+        alphaAni     | Name of non-isotropic alpha          | no  |
+        kappaValue   | Function1 supplying kappa            | no  |
+        alphaValue   | Function1 supplying alpha            | no  |
       \endtable
 
 Usage
@@ -130,11 +130,11 @@ protected:
         //- Name of thermal conductivity field (if looked up from database)
         const word kappaName_;
 
+        //- Name of the non-Isotropic alpha (default: Anialpha)
+        const word alphaAniName_;
+
         //- Name of thermal diffusivity
         const word alphaName_;
-
-        //- Name of the non-isotropic alpha (for directional solidThermo)
-        const word alphaAniName_;
 
         //- Function1 for kappa
         autoPtr<PatchFunction1<scalar>> kappaFunction1_;
@@ -147,22 +147,14 @@ public:
 
     // Constructors
 
-        //- Default construct from patch, using fluidThermo (default)
-        //- or specified method
-        explicit temperatureCoupledBase
-        (
-            const fvPatch& patch,
-            const KMethodType method = KMethodType::mtFluidThermo
-        );
-
-        //- Construct from patch, method type and field names
+        //- Construct from patch and K name
         temperatureCoupledBase
         (
             const fvPatch& patch,
-            const KMethodType method,
+            const word& calculationMethod,
             const word& kappaName,
-            const word& alphaName,
-            const word& alphaAniName
+            const word& alphaAniName,
+            const word& alphaName
         );
 
         //- Construct from patch and dictionary
@@ -179,15 +171,18 @@ public:
             const temperatureCoupledBase& base
         );
 
-        //- Copy construct
-        temperatureCoupledBase(const temperatureCoupledBase& base);
+        //- Construct as copy
+        temperatureCoupledBase
+        (
+            const temperatureCoupledBase&
+        );
 
 
     //- Destructor
     virtual ~temperatureCoupledBase() = default;
 
 
-    // Member Functions
+    // Member functions
 
         //- Method to obtain K
         word KMethod() const
@@ -196,13 +191,13 @@ public:
         }
 
         //- Name of thermal conductivity field
-        const word& kappaName() const noexcept
+        const word& kappaName() const
         {
             return kappaName_;
         }
 
         //- Name of thermal diffusivity field
-        const word& alphaName() const noexcept
+        const word& alphaName() const
         {
             return alphaName_;
         }

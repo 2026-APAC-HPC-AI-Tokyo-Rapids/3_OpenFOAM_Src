@@ -30,7 +30,6 @@ License
 #include "cellSet.H"
 #include "cellBitSet.H"
 #include "volFields.H"
-#include "cellCellStencilObject.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -49,12 +48,11 @@ const Foam::Enum
 >
 Foam::fv::cellSetOption::selectionModeTypeNames_
 ({
-    { selectionModeType::smAll, "all" },
     { selectionModeType::smGeometric, "geometric" },
     { selectionModeType::smPoints, "points" },
     { selectionModeType::smCellSet, "cellSet" },
     { selectionModeType::smCellZone, "cellZone" },
-    { selectionModeType::smCellType, "cellType" }
+    { selectionModeType::smAll, "all" },
 });
 
 
@@ -62,14 +60,8 @@ Foam::fv::cellSetOption::selectionModeTypeNames_
 
 void Foam::fv::cellSetOption::setSelection(const dictionary& dict)
 {
-    selectionNames_.clear();
-
     switch (selectionMode_)
     {
-        case smAll:
-        {
-            break;
-        }
         case smGeometric:
         {
             geometricSelection_ = dict.subDict("selection");
@@ -82,24 +74,15 @@ void Foam::fv::cellSetOption::setSelection(const dictionary& dict)
         }
         case smCellSet:
         {
-            selectionNames_.resize(1);
-            dict.readEntry("cellSet", selectionNames_.first());
+            dict.readEntry("cellSet", zoneName_);
             break;
         }
         case smCellZone:
         {
-            if
-            (
-                !dict.readIfPresent("cellZones", selectionNames_)
-             || selectionNames_.empty()
-            )
-            {
-                selectionNames_.resize(1);
-                dict.readEntry("cellZone", selectionNames_.first());
-            }
+            dict.readEntry("cellZone", zoneName_);
             break;
         }
-        case smCellType:
+        case smAll:
         {
             break;
         }
@@ -127,15 +110,14 @@ void Foam::fv::cellSetOption::setVol()
     }
     reduce(sumVol, sumOp<scalar>());
 
-    const scalar old(V_);
+    const scalar VOld = V_;
     V_ = sumVol;
 
-    // Compare volume values, stringified using current write precision
-    if
-    (
-        Time::timeName(old, IOstream::defaultPrecision())
-     != Time::timeName(V_, IOstream::defaultPrecision())
-    )
+    // Convert both volumes to representation using current writeprecision
+    word VOldName(Time::timeName(VOld, IOstream::defaultPrecision()));
+    word VName(Time::timeName(V_, IOstream::defaultPrecision()));
+
+    if (VName != VOldName)
     {
         Info<< indent
             << "- selected " << returnReduce(cells_.size(), sumOp<label>())
@@ -148,13 +130,6 @@ void Foam::fv::cellSetOption::setCellSelection()
 {
     switch (selectionMode_)
     {
-        case smAll:
-        {
-            Info<< indent << "- selecting all cells" << endl;
-
-            cells_ = identity(mesh_.nCells());
-            break;
-        }
         case smGeometric:
         {
             Info<< indent << "- selecting cells geometrically" << endl;
@@ -186,7 +161,7 @@ void Foam::fv::cellSetOption::setCellSelection()
                     selectedCells.insert(celli);
                 }
 
-                if (!returnReduceOr(found))
+                if (!returnReduce(found, orOp<bool>()))
                 {
                     WarningInFunction
                         << "No owner cell found for point " << p << endl;
@@ -199,60 +174,46 @@ void Foam::fv::cellSetOption::setCellSelection()
         case smCellSet:
         {
             Info<< indent
-                << "- selecting cells using cellSet "
-                << zoneName() << endl;
+                << "- selecting cells using cellSet " << zoneName_ << endl;
 
-            cells_ = cellSet(mesh_, zoneName()).sortedToc();
+            cells_ = cellSet(mesh_, zoneName_).sortedToc();
             break;
         }
         case smCellZone:
         {
             Info<< indent
-                << "- selecting cells using cellZones "
-                << flatOutput(selectionNames_) << nl;
+                << "- selecting cells using cellZone " << zoneName_ << endl;
 
-            const auto& zones = mesh_.cellZones();
-
-            // Also handles groups, multiple zones etc ...
-            labelList zoneIDs = zones.indices(selectionNames_);
+            // Also handles groups, multiple zones (as wordRe match) ...
+            labelList zoneIDs = mesh_.cellZones().indices(zoneName_);
 
             if (zoneIDs.empty())
             {
                 FatalErrorInFunction
-                    << "No matching cellZones: "
-                    << flatOutput(selectionNames_) << nl
+                    << "No matching cellZones: " << zoneName_ << nl
                     << "Valid zones : "
-                    << flatOutput(zones.names()) << nl
+                    << flatOutput(mesh_.cellZones().names()) << nl
                     << "Valid groups: "
-                    << flatOutput(zones.groupNames())
+                    << flatOutput(mesh_.cellZones().groupNames())
                     << nl
                     << exit(FatalError);
             }
 
             if (zoneIDs.size() == 1)
             {
-                cells_ = zones[zoneIDs.first()];
-                // TBD: Foam::sort(cells_);
+                cells_ = mesh_.cellZones()[zoneIDs.first()];
             }
             else
             {
-                cells_ = zones.selection(zoneIDs).sortedToc();
+                cells_ = mesh_.cellZones().selection(zoneIDs).sortedToc();
             }
             break;
         }
-        case smCellType:
+        case smAll:
         {
-            labelHashSet selectedCells;
-            const cellCellStencilObject& overlap = Stencil::New(mesh_);
-            const labelList& cellTypes = overlap.cellTypes();
-            forAll(cellTypes, celli)
-            {
-                if (cellTypes[celli] == cellCellStencil::POROUS)
-                {
-                    selectedCells.insert(celli);
-                }
-                cells_ = selectedCells.sortedToc();
-            }
+            Info<< indent << "- selecting all cells" << endl;
+
+            cells_ = identity(mesh_.nCells());
             break;
         }
         default:
@@ -266,7 +227,11 @@ void Foam::fv::cellSetOption::setCellSelection()
         }
     }
 
-    if (smAll != selectionMode_ && returnReduceAnd(cells_.empty()))
+    if
+    (
+        smAll != selectionMode_
+     && returnReduce(cells_.empty(), andOp<bool>())
+    )
     {
         WarningInFunction
             << "No cells selected!" << endl;
@@ -288,7 +253,7 @@ Foam::fv::cellSetOption::cellSetOption
     timeStart_(-1),
     duration_(0),
     selectionMode_(selectionModeTypeNames_.get("selectionMode", coeffs_)),
-    selectionNames_(),
+    zoneName_(),
     points_(),
     geometricSelection_(),
     V_(0)
@@ -321,7 +286,6 @@ bool Foam::fv::cellSetOption::isActive()
             (
                 selectionMode_ == smGeometric
              || selectionMode_ == smPoints
-             || selectionMode_ == smCellType
             )
             {
                 // Geometric selection mode(s)
@@ -343,8 +307,6 @@ bool Foam::fv::cellSetOption::read(const dictionary& dict)
 {
     if (fv::option::read(dict))
     {
-        timeStart_ = -1;
-
         if (coeffs_.readIfPresent("timeStart", timeStart_))
         {
             coeffs_.readEntry("duration", duration_);

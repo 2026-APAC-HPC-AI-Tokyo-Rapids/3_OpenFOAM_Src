@@ -50,8 +50,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_Polynomial_H
-#define Foam_Polynomial_H
+#ifndef Polynomial_H
+#define Polynomial_H
 
 #include "word.H"
 #include "scalar.H"
@@ -125,10 +125,10 @@ public:
         // Access
 
             //- Return true if the log term is active
-            bool logActive() const noexcept;
+            bool logActive() const;
 
             //- Return the log coefficient
-            scalar logCoeff() const noexcept;
+            scalar logCoeff() const;
 
 
         // Evaluation

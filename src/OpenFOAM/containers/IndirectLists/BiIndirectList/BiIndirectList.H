@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_BiIndirectList_H
-#define Foam_BiIndirectList_H
+#ifndef BiIndirectList_H
+#define BiIndirectList_H
 
 #include "List.H"
 
@@ -57,7 +57,8 @@ class BiIndirectList
         UList<T>& posList_;
         UList<T>& negList_;
 
-        labelList addr_;
+        labelList addressing_;
+
 
 public:
 
@@ -82,56 +83,50 @@ public:
 
     // Member Functions
 
-    // Access
+        // Access
 
-        //- The number of elements in the list
-        label size() const noexcept { return addr_.size(); }
+            //- The number of elements in the list
+            inline label size() const noexcept;
 
-        //- True if the list is empty (ie, size() is zero).
-        bool empty() const noexcept { return addr_.empty(); }
+            //- True if the list is empty (ie, size() is zero).
+            inline bool empty() const noexcept;
 
-        //- The list of positive values (without addressing)
-        const UList<T>& posList() const noexcept { return posList_; }
+            inline const UList<T>& posList() const noexcept;
+            inline const UList<T>& negList() const noexcept;
 
-        //- The list of negative values (without addressing)
-        const UList<T>& negList() const noexcept { return negList_; }
+            //- Return the list addressing
+            inline const labelList& addressing() const noexcept;
 
-        //- The addressing used for the list
-        const labelList& addressing() const noexcept { return addr_; }
-
-        //- Calculate index given whether index is into posList or negList
-        static label posIndex(const label i) noexcept { return i; }
-        static label negIndex(const label i) noexcept { return (-i-1); }
+            //- Calculate index given whether index is into posList or negList
+            inline static label posIndex(const label i);
+            inline static label negIndex(const label i);
 
 
-    // Edit
+        // Edit
 
-        //- Copy reset addressing
-        inline void resetAddressing(const labelUList& addr);
+            //- Copy reset addressing
+            inline void resetAddressing(const labelUList& addr);
 
-        //- Move reset addressing
-        inline void resetAddressing(labelList&& addr);
-
-        //- Return the addressed elements as a List
-        inline List<T> list() const;
+            //- Move reset addressing
+            inline void resetAddressing(labelList&& addr);
 
 
-    // Member Operators
+        // Member Operators
 
-        //- Return the addressed elements as a List
-        List<T> operator()() const { return this->list(); }
+            //- Return the addressed elements as a List
+            inline List<T> operator()() const;
 
-        //- Return non-const access to an element
-        inline T& operator[](const label i);
+            //- Return non-const access to an element
+            inline T& operator[](const label i);
 
-        //- Return const access to an element
-        inline const T& operator[](const label i) const;
+            //- Return const access to an element
+            inline const T& operator[](const label i) const;
 
-        //- Assignment to UList of addressed elements
-        inline void operator=(const UList<T>& ae);
+            //- Assignment to UList of addressed elements
+            inline void operator=(const UList<T>& ae);
 
-        //- Assignment of all entries to the given value
-        inline void operator=(const T& val);
+            //- Assignment of all entries to the given value
+            inline void operator=(const T& val);
 };
 
 

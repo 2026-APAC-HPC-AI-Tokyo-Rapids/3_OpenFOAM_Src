@@ -282,7 +282,7 @@ void Foam::fvMeshDistribute::mapExposedFaces
     forAllIters(flds, iter)
     {
         fldType& fld = *iter();
-        const bool oriented = fld.is_oriented();
+        const bool oriented = fld.oriented()();
 
         typename fldType::Boundary& bfld = fld.boundaryFieldRef();
 
@@ -398,9 +398,13 @@ void Foam::fvMeshDistribute::getFieldNames
     if (syncPar && Pstream::parRun())
     {
         // Check and report error(s) on master
-        // - don't need indexing on master itself
 
-        const globalIndex procAddr(globalIndex::gatherNonLocal{}, list.size());
+        const globalIndex procAddr
+        (
+            // Don't need to collect master itself
+            (Pstream::master() ? 0 : list.size()),
+            globalIndex::gatherOnly{}
+        );
 
         const wordList allNames(procAddr.gather(list));
 

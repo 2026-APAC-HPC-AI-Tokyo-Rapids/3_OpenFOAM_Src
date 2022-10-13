@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -272,18 +272,18 @@ void evaluate
         );
         io.typeHeaderOk<IOobject>(false);
 
-        if (!io.hasHeaderClass() || io.isHeaderClass<IOobject>())
+        oldFieldType = io.headerClassName();
+
+        if (oldFieldType == IOobject::typeName)
         {
             FatalErrorInFunction
-                << "Field '" << fieldName
-                << "' seems to be missing. Use 'create'" << nl
+                << "Field " << fieldName << "(type: " << oldFieldType
+                << ") seems to be missing. Use 'create'" << nl
                 << exit(FatalError);
         }
 
-        oldFieldType = io.headerClassName();
-
         Info<< "Modify field: " << fieldName
-            << " (type: " << oldFieldType << ')';
+            << " (type " << oldFieldType << ')';
     }
 
 
@@ -494,7 +494,6 @@ void evaluate
 
 int main(int argc, char *argv[])
 {
-    // Normally without functionObjects, with -withFunctionObjects to enable
     argList::noFunctionObjects(true);
 
     // No -constant, no special treatment for 0/
@@ -560,6 +559,7 @@ int main(int argc, char *argv[])
         " (command-line operation)",
         true // Advanced option
     );
+    argList::addOptionCompat("dimensions", {"dimension", 2012});
 
     argList::addBoolOption
     (
@@ -741,7 +741,7 @@ int main(int argc, char *argv[])
             );
         }
 
-        if (args.allowFunctionObjects())
+        if (args.found("withFunctionObjects"))
         {
             runTime.functionObjects().start();
         }
@@ -767,10 +767,14 @@ int main(int argc, char *argv[])
             ctrl.streamOpt.format(runTime.writeFormat());
             if (args.found("ascii"))
             {
-                ctrl.streamOpt.format(IOstreamOption::ASCII);
+                ctrl.streamOpt.format(IOstream::ASCII);
             }
 
-            expressions::exprString valueExpr_(args["expression"]);
+            expressions::exprString valueExpr_
+            (
+                args["expression"],
+                dictionary::null
+            );
 
             expressions::exprString maskExpr_;
             args.readIfPresent("field-mask", maskExpr_);
@@ -834,7 +838,7 @@ int main(int argc, char *argv[])
                 ctrl.streamOpt.format(runTime.writeFormat());
                 if (args.found("ascii"))
                 {
-                    ctrl.streamOpt.format(IOstreamOption::ASCII);
+                    ctrl.streamOpt.format(IOstream::ASCII);
                 }
 
                 if (ctrl.createNew && ctrl.keepPatches)
@@ -855,7 +859,14 @@ int main(int argc, char *argv[])
 
                 const word fieldName(dict.get<word>("field"));
 
-                expressions::exprString valueExpr_("expression", dict);
+                auto valueExpr_
+                (
+                    expressions::exprString::getEntry
+                    (
+                        "expression",
+                        dict
+                    )
+                );
 
                 expressions::exprString maskExpr_;
                 {
@@ -872,9 +883,19 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                // Optional: "dimensions"
                 dimensionSet dims;
-                ctrl.hasDimensions = dims.readIfPresent("dimensions", dict);
+                {
+                    const entry* dimPtr = dict.findCompat
+                    (
+                        "dimensions", {{"dimension", 2012}},
+                        keyType::LITERAL
+                    );
+                    if (dimPtr)
+                    {
+                        dimPtr->stream() >> dims;
+                    }
+                    ctrl.hasDimensions = bool(dimPtr);
+                }
 
                 if (args.verbose() && !timei)
                 {

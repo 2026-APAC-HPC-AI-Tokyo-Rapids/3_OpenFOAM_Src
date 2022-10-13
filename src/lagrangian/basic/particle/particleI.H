@@ -31,11 +31,31 @@ License
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
+void Foam::particle::stationaryTetGeometry
+(
+    vector& centre,
+    vector& base,
+    vector& vertex1,
+    vector& vertex2
+) const
+{
+    const triFace triIs(currentTetIndices().faceTriIs(mesh_));
+    const vectorField& ccs = mesh_.cellCentres();
+    const pointField& pts = mesh_.points();
+
+    centre = ccs[celli_];
+    base = pts[triIs[0]];
+    vertex1 = pts[triIs[1]];
+    vertex2 = pts[triIs[2]];
+}
+
+
 inline Foam::barycentricTensor Foam::particle::stationaryTetTransform() const
 {
-    const tetPointRef tet = currentTetIndices().tet(mesh_);
+    vector centre, base, vertex1, vertex2;
+    stationaryTetGeometry(centre, base, vertex1, vertex2);
 
-    return barycentricTensor(tet.a(), tet.b(), tet.c(), tet.d());
+    return barycentricTensor(centre, base, vertex1, vertex2);
 }
 
 
@@ -227,8 +247,10 @@ inline Foam::Pair<Foam::scalar> Foam::particle::stepFractionSpan() const
 
         return Pair<scalar>(tFrac, dtFrac);
     }
-
-    return Pair<scalar>(0, 1);
+    else
+    {
+        return Pair<scalar>(0, 1);
+    }
 }
 
 
@@ -252,8 +274,10 @@ inline Foam::barycentricTensor Foam::particle::currentTetTransform() const
     {
         return movingTetTransform(0)[0];
     }
-
-    return stationaryTetTransform();
+    else
+    {
+        return stationaryTetTransform();
+    }
 }
 
 
@@ -315,7 +339,7 @@ void Foam::particle::patchData(vector& n, vector& U) const
         Pair<vector> centre, base, vertex1, vertex2;
         movingTetGeometry(1, centre, base, vertex1, vertex2);
 
-        n = triPointRef::unitNormal(base[0], vertex1[0], vertex2[0]);
+        n = triPointRef(base[0], vertex1[0], vertex2[0]).unitNormal();
 
         // Interpolate the motion of the three face vertices to the current
         // coordinates
@@ -330,7 +354,10 @@ void Foam::particle::patchData(vector& n, vector& U) const
     }
     else
     {
-        n = currentTetIndices().faceTri(mesh_).unitNormal();
+        vector centre, base, vertex1, vertex2;
+        stationaryTetGeometry(centre, base, vertex1, vertex2);
+
+        n = triPointRef(base, vertex1, vertex2).unitNormal();
 
         U = Zero;
     }

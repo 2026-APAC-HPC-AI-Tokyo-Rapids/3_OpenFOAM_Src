@@ -41,8 +41,7 @@ Author
 
 SourceFiles
     faePatchField.C
-    faePatchFieldBase.C
-    faePatchFieldNew.C
+    newPatchField.C
 
 \*---------------------------------------------------------------------------*/
 
@@ -64,84 +63,14 @@ class dictionary;
 class faPatchFieldMapper;
 class edgeMesh;
 
-template<class Type> class faePatchField;
-template<class Type> class calculatedFaePatchField;
+template<class Type>
+class faePatchField;
+
+template<class Type>
+class calculatedFaePatchField;
 
 template<class Type>
 Ostream& operator<<(Ostream&, const faePatchField<Type>&);
-
-
-/*---------------------------------------------------------------------------*\
-                      Class faePatchFieldBase Declaration
-\*---------------------------------------------------------------------------*/
-
-//- Template invariant parts for faePatchField
-class faePatchFieldBase
-{
-    // Private Data
-
-        //- Reference to patch
-        const faPatch& patch_;
-
-protected:
-
-    // Protected Member Functions
-
-        //- Read dictionary entries.
-        //  Useful when initially constructed without a dictionary
-        virtual void readDict(const dictionary& dict);
-
-
-public:
-
-    //- Debug switch to disallow the use of generic faePatchField
-    static int disallowGenericPatchField;
-
-    //- Runtime type information
-    TypeName("faePatchField");
-
-
-    // Constructors
-
-        //- Construct from patch
-        explicit faePatchFieldBase(const faPatch& p);
-
-        //- Construct from patch and patch type
-        explicit faePatchFieldBase(const faPatch& p, const word& patchType);
-
-        //- Construct from patch and dictionary
-        faePatchFieldBase(const faPatch& p, const dictionary& dict);
-
-        //- Copy construct with new patch
-        faePatchFieldBase(const faePatchFieldBase& rhs, const faPatch& p);
-
-        //- Copy construct
-        faePatchFieldBase(const faePatchFieldBase& rhs);
-
-
-    //- Destructor
-    virtual ~faePatchFieldBase() = default;
-
-
-    // Member Functions
-
-    // Access
-
-        //- The associated objectRegistry
-        /// const objectRegistry& db() const;
-
-        //- Return the patch
-        const faPatch& patch() const noexcept
-        {
-            return patch_;
-        }
-
-
-    // Check
-
-        //- Check that patches are identical
-        void checkPatch(const faePatchFieldBase& rhs) const;
-};
 
 
 /*---------------------------------------------------------------------------*\
@@ -151,10 +80,12 @@ public:
 template<class Type>
 class faePatchField
 :
-    public faePatchFieldBase,
     public Field<Type>
 {
     // Private Data
+
+        //- Reference to a patch
+        const faPatch& patch_;
 
         //- Reference to internal field
         const DimensionedField<Type, edgeMesh>& internalField_;
@@ -170,6 +101,13 @@ public:
 
     //- Type for a \em calculated patch
     typedef calculatedFaePatchField<Type> Calculated;
+
+
+    //- Runtime type information
+    TypeName("faePatchField");
+
+    //- Debug switch to disallow the use of
+    static int disallowGenericFaePatchField;
 
 
     // Declare run-time constructor selection tables
@@ -251,18 +189,18 @@ public:
         //- Construct as copy
         faePatchField(const faePatchField<Type>&);
 
+        //- Construct and return a clone
+        virtual tmp<faePatchField<Type>> clone() const
+        {
+            return tmp<faePatchField<Type>>(new faePatchField<Type>(*this));
+        }
+
         //- Construct as copy setting internal field reference
         faePatchField
         (
             const faePatchField<Type>&,
             const DimensionedField<Type, edgeMesh>&
         );
-
-        //- Construct and return a clone
-        virtual tmp<faePatchField<Type>> clone() const
-        {
-            return tmp<faePatchField<Type>>(new faePatchField<Type>(*this));
-        }
 
         //- Construct and return a clone setting internal field reference
         virtual tmp<faePatchField<Type>> clone
@@ -333,15 +271,35 @@ public:
         );
 
 
-    // Member Functions
+    // Member functions
 
-        //- The type name for calculated patch fields
-        static const word& calculatedType();
+        // Access
 
+            //- Return local objectRegistry
+            const objectRegistry& db() const;
 
-        // Attributes
+            //- Return patch
+            const faPatch& patch() const
+            {
+                return patch_;
+            }
 
-            //- True if this patch field fixes a value.
+            //- Return dimensioned internal field reference
+            const DimensionedField<Type, edgeMesh>& internalField() const
+            {
+                return internalField_;
+            }
+
+            //- Return internal field reference
+            const Field<Type>& primitiveField() const
+            {
+                return internalField_;
+            }
+
+            //- Return the type of the calculated for of faePatchField
+            static const word& calculatedType();
+
+            //- Return true if this patch field fixes a value.
             //  Needed to check if a level has to be specified while solving
             //  Poissons equations.
             virtual bool fixesValue() const
@@ -349,33 +307,14 @@ public:
                 return false;
             }
 
-            //- True if this patch field is coupled
+            //- Return true if this patch field is coupled
             virtual bool coupled() const
             {
                 return false;
             }
 
 
-        // Access
-
-            //- Return local objectRegistry
-            const objectRegistry& db() const;
-
-            //- Return dimensioned internal field reference
-            const DimensionedField<Type, edgeMesh>& internalField()
-            const noexcept
-            {
-                return internalField_;
-            }
-
-            //- Return internal field reference
-            const Field<Type>& primitiveField() const noexcept
-            {
-                return internalField_;
-            }
-
-
-        // Mapping
+        // Mapping functions
 
             //- Map (and resize as needed) from self given a mapping object
             virtual void autoMap
@@ -395,13 +334,13 @@ public:
         virtual void write(Ostream&) const;
 
 
-    // Check
+        // Check
 
-        //- Check faePatchField<Type> against given faePatchField<Type>
-        void check(const faePatchField<Type>&) const;
+            //- Check faePatchField<Type> against given faePatchField<Type>
+            void check(const faePatchField<Type>&) const;
 
 
-    // Member Operators
+    // Member operators
 
         virtual void operator=(const UList<Type>&);
 
@@ -431,7 +370,7 @@ public:
         virtual void operator==(const Type&);
 
 
-    // Ostream Operator
+    // Ostream operator
 
         friend Ostream& operator<< <Type>(Ostream&, const faePatchField<Type>&);
 };
@@ -448,9 +387,6 @@ public:
     #include "calculatedFaePatchField.H"
 #endif
 
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-// Runtime selection macros
 
 #define makeFaePatchTypeFieldTypeName(typePatchTypeField)                      \
                                                                                \

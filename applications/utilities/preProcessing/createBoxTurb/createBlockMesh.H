@@ -1,3 +1,5 @@
+const cellModel& hex = cellModel::ref(cellModel::HEX);
+
 cellShapeList cellShapes;
 faceListList boundary;
 pointField points;
@@ -6,8 +8,20 @@ pointField points;
 
     block b
     (
-        cellShape(cellModel::HEX, identity(8)),
-        pointField(boundBox(point::zero, L).hexCorners()),
+        cellShape(hex, identity(8)),
+        pointField
+        (
+            {
+                point(0, 0, 0),
+                point(L.x(), 0, 0),
+                point(L.x(), L.y(), 0),
+                point(0, L.y(), 0),
+                point(0, 0, L.z()),
+                point(L.x(), 0, L.z()),
+                point(L.x(), L.y(), L.z()),
+                point(0, L.y(), L.z())
+            }
+        ),
         blockEdgeList(),
         blockFaceList(),
         N

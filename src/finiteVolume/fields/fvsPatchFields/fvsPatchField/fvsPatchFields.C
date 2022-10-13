@@ -36,6 +36,12 @@ namespace Foam
 
 #define makeFvsPatchField(fvsPatchTypeField)                                   \
                                                                                \
+defineNamedTemplateTypeNameAndDebug(fvsPatchTypeField, 0);                     \
+template<>                                                                     \
+int fvsPatchTypeField::disallowGenericFvsPatchField                            \
+(                                                                              \
+    debug::debugSwitch("disallowGenericFvsPatchField", 0)                      \
+);                                                                             \
 defineTemplateRunTimeSelectionTable(fvsPatchTypeField, patch);                 \
 defineTemplateRunTimeSelectionTable(fvsPatchTypeField, patchMapper);           \
 defineTemplateRunTimeSelectionTable(fvsPatchTypeField, dictionary);

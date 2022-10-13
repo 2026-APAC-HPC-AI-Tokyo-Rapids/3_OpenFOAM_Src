@@ -67,7 +67,7 @@ correction
 
         const face& f = faces[facei];
 
-        scalar at = triPointRef
+        scalar at = triangle<point, const point&>
         (
             pi,
             points[f[0]],
@@ -84,7 +84,7 @@ correction
 
         for (label pointi=1; pointi<f.size(); pointi++)
         {
-            at = triPointRef
+            at = triangle<point, const point&>
             (
                 pi,
                 points[f[pointi]],
@@ -129,7 +129,7 @@ correction
 
                 const face& f = faces[facei+fvp.start()];
 
-                scalar at = triPointRef
+                scalar at = triangle<point, const point&>
                 (
                     pi,
                     points[f[0]],
@@ -146,7 +146,7 @@ correction
 
                 for (label pointi=1; pointi<f.size(); pointi++)
                 {
-                    at = triPointRef
+                    at = triangle<point, const point&>
                     (
                         pi,
                         points[f[pointi]],

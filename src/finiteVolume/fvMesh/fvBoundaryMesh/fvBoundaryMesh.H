@@ -135,10 +135,10 @@ public:
         using fvPatchList::operator[];
 
         //- Return const reference to fvPatch by name.
-        const fvPatch& operator[](const word& patchName) const;
+        const fvPatch& operator[](const word&) const;
 
         //- Return reference to fvPatch by name.
-        fvPatch& operator[](const word& patchName);
+        fvPatch& operator[](const word&);
 
 
     // Housekeeping

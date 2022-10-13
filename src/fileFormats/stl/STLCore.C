@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -72,7 +72,7 @@ bool Foam::fileFormats::STLCore::isBinaryName
     return
     (
         format == STLFormat::UNKNOWN
-      ? filename.has_ext("stlb")
+      ? filename.hasExt("stlb")
       : format == STLFormat::BINARY
     );
 }
@@ -92,9 +92,7 @@ int Foam::fileFormats::STLCore::detectBinaryHeader
     // Handle compressed (.gz) or uncompressed input files
 
     ifstreamPointer isPtr(filename);
-    const bool unCompressed =
-        (IOstreamOption::UNCOMPRESSED == isPtr.whichCompression());
-
+    const bool unCompressed(IOstream::UNCOMPRESSED == isPtr.whichCompression());
     auto& is = *isPtr;
 
     if (!is.good())
@@ -160,8 +158,7 @@ Foam::fileFormats::STLCore::readBinaryHeader
     // Handle compressed (.gz) or uncompressed input files
     {
         ifstreamPointer isPtr(filename);
-        unCompressed =
-            (IOstreamOption::UNCOMPRESSED == isPtr.whichCompression());
+        unCompressed = (IOstream::UNCOMPRESSED == isPtr.whichCompression());
 
         // Take ownership
         streamPtr.reset(isPtr.release());
@@ -236,7 +233,7 @@ void Foam::fileFormats::STLCore::writeBinaryHeader
     char header[STLHeaderSize];
     sprintf(header, "STL binary file %u facets", nTris);
 
-    // Fill trailing with zeroes (to avoid writing junk)
+    // avoid trailing junk
     for (size_t i = strlen(header); i < STLHeaderSize; ++i)
     {
         header[i] = 0;

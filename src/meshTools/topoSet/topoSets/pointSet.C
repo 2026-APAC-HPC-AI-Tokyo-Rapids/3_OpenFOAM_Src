@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -45,9 +45,9 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-Foam::pointSet::pointSet(const IOobject& io)
+Foam::pointSet::pointSet(const IOobject& obj)
 :
-    topoSet(io, typeName)
+    topoSet(obj, typeName)
 {}
 
 
@@ -55,11 +55,11 @@ Foam::pointSet::pointSet
 (
     const polyMesh& mesh,
     const word& name,
-    IOobjectOption::readOption rOpt,
-    IOobjectOption::writeOption wOpt
+    readOption r,
+    writeOption w
 )
 :
-    topoSet(mesh, typeName, name, rOpt, wOpt)
+    topoSet(mesh, typeName, name, r, w)
 {
     check(mesh.nPoints());
 }
@@ -70,10 +70,10 @@ Foam::pointSet::pointSet
     const polyMesh& mesh,
     const word& name,
     const label size,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 :
-    topoSet(mesh, name, size, wOpt)
+    topoSet(mesh, name, size, w)
 {}
 
 
@@ -82,10 +82,10 @@ Foam::pointSet::pointSet
     const polyMesh& mesh,
     const word& name,
     const topoSet& set,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 :
-    topoSet(mesh, name, set, wOpt)
+    topoSet(mesh, name, set, w)
 {}
 
 
@@ -94,10 +94,10 @@ Foam::pointSet::pointSet
     const polyMesh& mesh,
     const word& name,
     const labelHashSet& labels,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 :
-    topoSet(mesh, name, labels, wOpt)
+    topoSet(mesh, name, labels, w)
 {}
 
 
@@ -106,10 +106,10 @@ Foam::pointSet::pointSet
     const polyMesh& mesh,
     const word& name,
     labelHashSet&& labels,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 :
-    topoSet(mesh, name, std::move(labels), wOpt)
+    topoSet(mesh, name, std::move(labels), w)
 {}
 
 
@@ -118,10 +118,10 @@ Foam::pointSet::pointSet
     const polyMesh& mesh,
     const word& name,
     const labelUList& labels,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 :
-    topoSet(mesh, name, labels, wOpt)
+    topoSet(mesh, name, labels, w)
 {}
 
 

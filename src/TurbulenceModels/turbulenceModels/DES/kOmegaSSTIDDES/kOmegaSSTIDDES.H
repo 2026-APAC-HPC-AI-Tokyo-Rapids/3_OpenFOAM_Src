@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,17 +31,15 @@ Group
     grpDESTurbulence
 
 Description
-    k-omega-SST IDDES turbulence model for
-    incompressible and compressible flows.
+    k-omega-SST IDDES turbulence model for incompressible and compressible
+    flows
 
     Reference:
     \verbatim
-        Gritskevich, M. S., Garbaruk, A. V.,
-        Schütze, J., & Menter, F. R. (2012).
-        Development of DDES and IDDES formulations for
-        the k-ω shear stress transport model.
-        Flow, turbulence and combustion, 88(3), 431-449.
-        DOI:10.1007/s10494-011-9378-4
+        Gritskevich, M.S., Garbaruk, A.V., Schuetze, J., Menter, F.R. (2011)
+        Development of DDES and IDDES Formulations for the k-omega
+        Shear Stress Transport Model, Flow, Turbulence and Combustion,
+        pp. 1-19
     \endverbatim
 
 SourceFiles
@@ -49,8 +47,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_kOmegaSSTIDDES_H
-#define Foam_kOmegaSSTIDDES_H
+#ifndef kOmegaSSTIDDES_H
+#define kOmegaSSTIDDES_H
 
 #include "kOmegaSSTDES.H"
 
@@ -79,6 +77,12 @@ class kOmegaSSTIDDES
         tmp<volScalarField> ft(const volScalarField& magGradU) const;
         tmp<volScalarField> fl(const volScalarField& magGradU) const;
 
+        tmp<volScalarField> rd
+        (
+            const volScalarField& nur,
+            const volScalarField& magGradU
+        ) const;
+
         //- Delay function
         tmp<volScalarField> fdt(const volScalarField& magGradU) const;
 
@@ -91,7 +95,7 @@ class kOmegaSSTIDDES
 
 protected:
 
-    // Protected Data
+    // Protected data
 
         // Model coefficients
 
@@ -99,16 +103,14 @@ protected:
             dimensionedScalar Cdt2_;
             dimensionedScalar Cl_;
             dimensionedScalar Ct_;
-            Switch fe_;
 
+        // Fields
 
-        //- IDDES delta
-        const IDDESDelta& IDDESDelta_;
-
+            const IDDESDelta& IDDESDelta_;
 
     // Protected Member Functions
 
-        //- Return the length scale
+        //- Length scale
         virtual tmp<volScalarField> dTilda
         (
             const volScalarField& magGradU,
@@ -151,9 +153,6 @@ public:
 
         //- Re-read model coefficients if they have changed
         virtual bool read();
-
-        //- Return the shielding function
-        virtual tmp<volScalarField> fd() const;
 };
 
 

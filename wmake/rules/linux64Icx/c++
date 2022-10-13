@@ -1,11 +1,9 @@
 #------------------------------------------------------------------------------
 include $(GENERAL_RULES)/Icx/c++
 
-c++ARCH    := -fp-model precise
+c++ARCH     = -fp-model precise
 
-ifneq (,$(strip $(WM_COMPILE_OPTION)))
-    sinclude $(DEFAULT_RULES)/c++$(WM_COMPILE_OPTION)
-endif
+include $(DEFAULT_RULES)/c++$(WM_COMPILE_OPTION)
 
 c++FLAGS    = \
     $(c++ARCH) $(GFLAGS) $(c++WARN) $(c++OPT) $(c++DBUG) $(ptFLAGS) \

@@ -34,8 +34,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_DTRMParticle_H
-#define Foam_DTRMParticle_H
+#ifndef DTRMParticle_H
+#define DTRMParticle_H
 
 #include "particle.H"
 #include "IOstream.H"
@@ -50,12 +50,11 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
 class DTRMParticle;
-
-Ostream& operator<<(Ostream&, const DTRMParticle&);
-
 using namespace Foam::radiation;
+
+// Forward declaration of friend functions
+Ostream& operator<<(Ostream&, const DTRMParticle&);
 
 /*---------------------------------------------------------------------------*\
                         Class DTRMParticle Declaration
@@ -131,7 +130,7 @@ public:
             );
 
 
-        // Member Functions
+        // Member functions
 
             inline const interpolationCell<scalar>& aInterp() const;
             inline const interpolationCell<scalar>& eInterp() const;
@@ -233,34 +232,37 @@ public:
     // Access
 
         //- Return const access to the initial position
-        const point& p0() const noexcept { return p0_; }
+        inline const point& p0() const;
 
         //- Return const access to the target position
-        const point& p1() const noexcept { return p1_; }
+        inline const point& p1() const;
 
         //- Return const access to the initial intensity
-        scalar I0() const noexcept { return I0_; }
+        inline scalar I0() const;
 
         //- Return const access to the current intensity
-        scalar I() const noexcept { return I_; }
+        inline scalar I() const;
 
         //- Return const access dA
-        scalar dA() const noexcept { return dA_; }
+        inline scalar dA() const;
 
 
     // Edit
 
         //- Return access to the target position
-        point& p1() noexcept { return p1_; }
+        inline point& p1();
 
         //- Return access to the initial intensity
-        scalar& I0() noexcept { return I0_; }
+        inline scalar& I0();
 
         //- Return access to the current intensity
-        scalar& I() noexcept { return I_; }
+        inline scalar& I();
 
         //- Return access to dA
-        scalar& dA() noexcept { return dA_; }
+        inline scalar& dA();
+
+        //- Return access to reflectedId
+        inline label& reflectedId();
 
 
    // Tracking

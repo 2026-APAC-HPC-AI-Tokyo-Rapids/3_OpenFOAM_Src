@@ -121,7 +121,7 @@ Foam::faFieldReconstructor::reconstructField
             {
                 // Regular patch. Fast looping
 
-                if (!patchFields.set(curBPatch))
+                if (!patchFields(curBPatch))
                 {
                     patchFields.set
                     (
@@ -195,7 +195,7 @@ Foam::faFieldReconstructor::reconstructField
                             }
                         }
 
-                        if (!patchFields.set(curBPatch))
+                        if (!patchFields(curBPatch))
                         {
                             patchFields.set
                             (
@@ -230,7 +230,7 @@ Foam::faFieldReconstructor::reconstructField
         if
         (
             isA<emptyFaPatch>(mesh_.boundary()[patchI])
-         && !patchFields.set(patchI)
+         && !patchFields(patchI)
         )
         {
             patchFields.set
@@ -362,7 +362,7 @@ Foam::faFieldReconstructor::reconstructField
             {
                 // Regular patch. Fast looping
 
-                if (!patchFields.set(curBPatch))
+                if (!patchFields(curBPatch))
                 {
                     patchFields.set
                     (
@@ -439,7 +439,7 @@ Foam::faFieldReconstructor::reconstructField
                                 }
                             }
 
-                            if (!patchFields.set(curBPatch))
+                            if (!patchFields(curBPatch))
                             {
                                 patchFields.set
                                 (
@@ -481,7 +481,7 @@ Foam::faFieldReconstructor::reconstructField
         if
         (
             isA<emptyFaPatch>(mesh_.boundary()[patchI])
-         && !patchFields.set(patchI)
+         && !patchFields(patchI)
         )
         {
             patchFields.set

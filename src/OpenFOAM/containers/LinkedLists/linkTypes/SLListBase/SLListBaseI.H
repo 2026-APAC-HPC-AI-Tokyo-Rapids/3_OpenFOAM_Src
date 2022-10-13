@@ -83,7 +83,7 @@ inline bool Foam::SLListBase::empty() const noexcept
 
 
 inline Foam::SLListBase::link*
-Foam::SLListBase::front()
+Foam::SLListBase::first()
 {
     if (!size_)
     {
@@ -96,7 +96,7 @@ Foam::SLListBase::front()
 
 
 inline const Foam::SLListBase::link*
-Foam::SLListBase::front() const
+Foam::SLListBase::first() const
 {
     if (!size_)
     {
@@ -109,7 +109,7 @@ Foam::SLListBase::front() const
 
 
 inline Foam::SLListBase::link*
-Foam::SLListBase::back()
+Foam::SLListBase::last()
 {
     if (!size_)
     {
@@ -122,7 +122,7 @@ Foam::SLListBase::back()
 
 
 inline const Foam::SLListBase::link*
-Foam::SLListBase::back() const
+Foam::SLListBase::last() const
 {
     if (!size_)
     {

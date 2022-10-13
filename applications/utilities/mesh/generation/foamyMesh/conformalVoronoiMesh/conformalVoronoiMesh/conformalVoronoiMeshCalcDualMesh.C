@@ -488,7 +488,7 @@ Foam::label Foam::conformalVoronoiMesh::mergeIdenticalDualVertices
 ////
 ////                if (surfHit.hit())
 ////                {
-////                    pt += (surfHit.point() - pt)
+////                    pt += (surfHit.hitPoint() - pt)
 ////                         *pow
 ////                          (
 ////                              foamyHexMeshControls()
@@ -753,7 +753,7 @@ Foam::conformalVoronoiMesh::createPolyMeshFromPoints
 
     forAll(patches, p)
     {
-        label nPatchFaces = patchDicts[p].get<label>("nFaces");
+        label totalPatchSize = patchDicts[p].get<label>("nFaces");
 
         if
         (
@@ -762,7 +762,7 @@ Foam::conformalVoronoiMesh::createPolyMeshFromPoints
         )
         {
             // Do not create empty processor patches
-            if (nPatchFaces)
+            if (totalPatchSize > 0)
             {
                 patchDicts[p].set("transform", "coincidentFullMatch");
 
@@ -781,8 +781,9 @@ Foam::conformalVoronoiMesh::createPolyMeshFromPoints
         else
         {
             // Check that the patch is not empty on every processor
+            reduce(totalPatchSize, sumOp<label>());
 
-            if (returnReduceOr(nPatchFaces))
+            if (totalPatchSize > 0)
             {
                 patches[nValidPatches] = polyPatch::New
                 (
@@ -969,7 +970,7 @@ Foam::labelHashSet Foam::conformalVoronoiMesh::findOffsetPatchFaces
             if
             (
                 pHit.hit()
-             && (pHit.point().dist(faceCentre) > allowedOffset*targetSize)
+             && (mag(pHit.hitPoint() - faceCentre) > allowedOffset*targetSize)
             )
             {
                 offsetBoundaryCells.insert(fCell[pLFI]);
@@ -1362,10 +1363,10 @@ void Foam::conformalVoronoiMesh::indexDualVertices
                         if (debug)
                         {
                             Info<< "Dual        = " << dual << nl
-                                << "    Nearest = " << fpHit.point() << endl;
+                                << "    Nearest = " << fpHit.hitPoint() << endl;
                         }
 
-                        pts[cit->cellIndex()] = fpHit.point();
+                        pts[cit->cellIndex()] = fpHit.hitPoint();
                     }
                 }
             }
@@ -1401,7 +1402,7 @@ void Foam::conformalVoronoiMesh::indexDualVertices
 //                        );
 //
 //                        pointFromPoint nearestPointOnTet =
-//                            tet.nearestPoint(dual).point();
+//                            tet.nearestPoint(dual).rawPoint();
 //
 //                        // Get nearest point on surface from tet.
 //                        geometryToConformTo_.findSurfaceNearest
@@ -1432,18 +1433,21 @@ void Foam::conformalVoronoiMesh::indexDualVertices
 //                         && (mag(snapDir & norm[0]) > 0.5)
 //                        )
 //                        {
-//                            snapping1.writeLine
+//                            snapping1.write
 //                            (
-//                                dual,
-//                                nearestPointOnTet
-//                            );
-//                            snapping2.writeLine
-//                            (
-//                                nearestPointOnTet,
-//                                hitInfo.point()
+//                                linePointRef(dual, nearestPointOnTet)
 //                            );
 //
-//                            pts[cit->cellIndex()] = hitInfo.point();
+//                            snapping2.write
+//                            (
+//                                linePointRef
+//                                (
+//                                    nearestPointOnTet,
+//                                    hitInfo.hitPoint()
+//                                )
+//                            );
+//
+//                            pts[cit->cellIndex()] = hitInfo.hitPoint();
 //                        }
 //                    }
 //                }
@@ -1760,10 +1764,9 @@ void Foam::conformalVoronoiMesh::createFacesOwnerNeighbourAndPatches
 
                     if ((*vcit)->real())
                     {
-                        featurePointDualsStr.writeLine
+                        featurePointDualsStr.write
                         (
-                            topoint(vit->point()),
-                            (*vcit)->dual()
+                            linePointRef(topoint(vit->point()), (*vcit)->dual())
                         );
                     }
                 }
@@ -1864,7 +1867,7 @@ void Foam::conformalVoronoiMesh::createFacesOwnerNeighbourAndPatches
                         << " " << vc2->dual()
                         << endl;
 
-                    startCellStr.writeLine(vc1->dual(), vc2->dual());
+                    startCellStr.write(linePointRef(vc1->dual(), vc2->dual()));
 
                     // Get patch by getting face between cells and the two
                     // points on the face that are not the feature vertex

@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -89,9 +89,9 @@ Usage
       T         | Name of operand temperature field    | word  | no   | T
       emissivity | Surface emissivity for radiative flux to ambient <!--
                  -->                                   | scalar | no  | 0
-      Q         | Fixed heat power [W]                 | Function1 | cndtnl | -
-      q         | Fixed heat flux [W/m2]               | Function1 | cndtnl | -
-      h         | Heat transfer coefficient [W/m^2/K]  | Function1 | cndtnl | -
+      Q         | Fixed heat power [W]                 | scalar | cndtnl | -
+      q         | Fixed heat flux [W/m2]               | scalar | cndtnl | -
+      h         | Heat transfer coefficient [W/m^2/K]  | scalar | cndtnl | -
       Ta        | Ambient temperature [K]           | Function1 | cndtnl | -
     \endtable
 
@@ -114,8 +114,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_fa_externalHeatFluxSource_H
-#define Foam_fa_externalHeatFluxSource_H
+#ifndef fa_externalHeatFluxSource_H
+#define fa_externalHeatFluxSource_H
 
 #include "faOption.H"
 #include "Function1.H"
@@ -164,13 +164,13 @@ private:
         word TName_;
 
         //- Heat power [W]
-        autoPtr<Function1<scalar>> Q_;
+        scalar Q_;
 
         //- Heat flux [W/m2]
-        autoPtr<Function1<scalar>> q_;
+        scalar q_;
 
         //- Heat transfer coefficient [W/m2K]
-        autoPtr<Function1<scalar>> h_;
+        scalar h_;
 
         //- Ambient temperature [K]
         autoPtr<Function1<scalar>> Ta_;
@@ -187,13 +187,13 @@ public:
 
     // Constructors
 
-        //- Construct from explicit source name and mesh
+         //- Construct from explicit source name and mesh
         externalHeatFluxSource
         (
             const word& sourceName,
             const word& modelType,
             const dictionary& dict,
-            const fvMesh& mesh
+            const fvPatch& patch
         );
 
         //- No copy construct

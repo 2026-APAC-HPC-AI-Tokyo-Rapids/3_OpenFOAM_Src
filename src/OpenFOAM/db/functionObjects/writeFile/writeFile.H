@@ -31,23 +31,23 @@ Description
     Base class for writing single files from the function objects.
 
 Usage
+
     \verbatim
-    <dictName>
+    <userDefinedSubDictName1>
     {
-        // Inherited entries
+        // Mandatory and other optional entries
         ...
 
-        // Optional entries
-        writePrecision    <int>;
-        writeToFile       <bool>;
-        useUserTime       <bool>;
-        updateHeader      <bool>;
+        // Optional (inherited) entries (runtime modifiable)
+        writePrecision    8;
+        writeToFile       true;
+        useUserTime       true;
     }
     \endverbatim
 
     where the entries mean:
     \table
-      Property        | Description                      | Type | Reqd | Deflt
+      Property        | Description                      | Type | Reqd | Dflt
       writePrecision  | Number of decimal points | int  | no  | \<system dflt\>
       writeToFile     | Produce text file output?        | bool | no  | true
       useUserTime     | Use user time (e.g. degrees)?    | bool | no  | true
@@ -60,9 +60,12 @@ Note
     unaffected by these changes.
     Use the \c updateHeader flag to override the default behaviour.
 
+See also
+    - Foam::functionObject
+    - Foam::functionObjects::logFiles
+
 SourceFiles
     writeFile.C
-    writeFileTemplates.C
 
 \*---------------------------------------------------------------------------*/
 
@@ -88,7 +91,7 @@ class writeFile
 {
 protected:
 
-    // Protected Data
+    // Protected data
 
         //- Reference to the region objectRegistry
         const objectRegistry& fileObr_;
@@ -134,22 +137,15 @@ protected:
         //- Return the base directory for the current time value
         fileName baseTimeDir() const;
 
-        //- Return the full path for the supplied file name
-        fileName filePath(const fileName& fName) const;
-
-        //- Return autoPtr to a new file using file name
-        //  Note: no check for if the file already exists
-        virtual autoPtr<OFstream> newFile(const fileName& fName) const;
-
         //- Return autoPtr to a new file for a given time
-        virtual autoPtr<OFstream> newFileAtTime
+        virtual autoPtr<OFstream> createFile
         (
             const word& name,
             scalar timeValue
         ) const;
 
         //- Return autoPtr to a new file using the simulation start time
-        virtual autoPtr<OFstream> newFileAtStartTime
+        virtual autoPtr<OFstream> createFile
         (
             const word& name
         ) const;
@@ -163,35 +159,6 @@ protected:
 
         //- No copy assignment
         void operator=(const writeFile&) = delete;
-
-
-    // Housekeeping
-
-        //- Deprecated(2022-09) Return autoPtr to a new file for a given time
-        //
-        //  \deprecated(2022-09) - use newFileAtTime function
-        FOAM_DEPRECATED_FOR(2022-09, "newFileAtTime function")
-        virtual autoPtr<OFstream> createFile
-        (
-            const word& name,
-            scalar timeValue
-        ) const
-        {
-            return newFileAtTime(name, timeValue);
-        }
-
-        //- Deprecated(2022-09) Return autoPtr to a new file
-        //- using the simulation start time
-        //
-        //  \deprecated(2022-09) - use newFileAtStartTime function
-        FOAM_DEPRECATED_FOR(2022-09, "newFileAtStartTime function")
-        virtual autoPtr<OFstream> createFile
-        (
-            const word& name
-        ) const
-        {
-            return newFileAtStartTime(name);
-        }
 
 
 public:
@@ -240,12 +207,6 @@ public:
 
         //- Flag to allow writing to file
         virtual bool writeToFile() const;
-
-        //- Flag to allow writing to the file
-        virtual bool canWriteToFile() const;
-
-        //- Flag to allow resetting the file
-        virtual bool canResetFile() const;
 
         //- Flag to allow writing the header
         virtual bool canWriteHeader() const;

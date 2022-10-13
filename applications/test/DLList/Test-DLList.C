@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -67,11 +67,11 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i<10; i++)
     {
-        myList.push_back(1.3*i);
+        myList.append(1.3*i);
     }
 
-    myList.push_back(100.3);
-    myList.push_back(500.3);
+    myList.append(100.3);
+    myList.append(500.3);
 
     Info<< "DLList<scalar>" << nl;
     Info<< nl << "flat-output: " << flatOutput(myList) << nl;
@@ -144,23 +144,23 @@ int main(int argc, char *argv[])
         Info<< " => " << flatOutput(myList) << nl;
     }
 
-    myList.push_back(500.3);
-    myList.push_back(200.3);
-    myList.push_back(100.3);
+    myList.append(500.3);
+    myList.append(200.3);
+    myList.append(100.3);
 
     Info<< nl << "Testing swapUp and swapDown:" << nl;
     Info<< " => " << flatOutput(myList) << nl;
 
     {
-        myList.swapUp(myList.DLListBase::front());
-        myList.swapUp(myList.DLListBase::back());
+        myList.swapUp(myList.DLListBase::first());
+        myList.swapUp(myList.DLListBase::last());
 
         Info<< nl << "swapUp => " << flatOutput(myList) << nl;
     }
 
     {
-        myList.swapDown(myList.DLListBase::front());
-        myList.swapDown(myList.DLListBase::back());
+        myList.swapDown(myList.DLListBase::first());
+        myList.swapDown(myList.DLListBase::last());
 
         Info<< nl << "swapDown => " << flatOutput(myList) << nl;
     }
@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
 
         for (int i = 0; i<5; i++)
         {
-            labList.push_back(identity(6));
+            labList.append(identity(6));
         }
 
         Info<< nl
@@ -221,16 +221,16 @@ int main(int argc, char *argv[])
         List<label> content1 = identity(10);
 
         Info<< nl
-            << " move push_back ";
+            << " move append ";
         printAddress(content1);
 
-        labList.push_back(std::move(content1));
+        labList.append(std::move(content1));
 
         Info<< " content " << flatOutput(content1) << nl
             << " list" << labList  << nl;
 
         printAddresses(labList);
-        // labList.push_back(content1);
+        // labList.append(content1);
     }
 
     Info<< nl << "Done." << endl;

@@ -28,6 +28,8 @@ License
 #include "HashOps.H"
 #include "bitSet.H"
 
+#include <algorithm>
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 Foam::labelHashSet Foam::HashSetOps::used(const bitSet& select)

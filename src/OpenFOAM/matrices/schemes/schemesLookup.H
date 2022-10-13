@@ -173,7 +173,7 @@ public:
         schemesLookup
         (
             const objectRegistry& obr,
-            IOobjectOption::readOption rOpt,
+            const IOobject::readOption rOpt,
             const word& dictName,
             const dictionary* fallback = nullptr
         );

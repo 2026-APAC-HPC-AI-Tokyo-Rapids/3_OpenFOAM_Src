@@ -155,7 +155,7 @@ void Foam::dynamicRefineFvMesh::calculateProtectedCells
             }
         }
 
-        if (!returnReduceOr(hasExtended))
+        if (!returnReduce(hasExtended, orOp<bool>()))
         {
             break;
         }
@@ -1250,7 +1250,7 @@ bool Foam::dynamicRefineFvMesh::init(const bool doInit)
         checkEightAnchorPoints(protectedCell_);
     }
 
-    if (!returnReduceOr(protectedCell_.any()))
+    if (!returnReduce(protectedCell_.any(), orOp<bool>()))
     {
         protectedCell_.clear();
     }
@@ -1388,7 +1388,12 @@ bool Foam::dynamicRefineFvMesh::updateTopology()
                 )
             );
 
-            if (returnReduceOr(cellsToRefine.size()))
+            const label nCellsToRefine = returnReduce
+            (
+                cellsToRefine.size(), sumOp<label>()
+            );
+
+            if (nCellsToRefine > 0)
             {
                 // Refine/update mesh and map fields
                 autoPtr<mapPolyMesh> map = refine(cellsToRefine);
@@ -1442,7 +1447,13 @@ bool Foam::dynamicRefineFvMesh::updateTopology()
                 )
             );
 
-            if (returnReduceOr(pointsToUnrefine.size()))
+            const label nSplitPoints = returnReduce
+            (
+                pointsToUnrefine.size(),
+                sumOp<label>()
+            );
+
+            if (nSplitPoints > 0)
             {
                 // Refine/update mesh
                 unrefine(pointsToUnrefine);

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -311,7 +311,8 @@ void Foam::createShellMesh::calcPointRegions
         }
 
 
-        if (returnReduceAnd(changedFaces.empty()))
+        label nChangedFaces = returnReduce(changedFaces.size(), sumOp<label>());
+        if (nChangedFaces == 0)
         {
             break;
         }
@@ -373,7 +374,8 @@ void Foam::createShellMesh::calcPointRegions
         );
 
 
-        if (returnReduceAnd(changedEdges.empty()))
+        label nChangedEdges = returnReduce(changedEdges.size(), sumOp<label>());
+        if (nChangedEdges == 0)
         {
             break;
         }

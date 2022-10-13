@@ -30,6 +30,11 @@ License
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class Cmpt>
+inline Foam::SpatialTensor<Cmpt>::SpatialTensor()
+{}
+
+
+template<class Cmpt>
 inline Foam::SpatialTensor<Cmpt>::SpatialTensor(const Foam::zero)
 :
     SpatialTensor::msType(Zero)

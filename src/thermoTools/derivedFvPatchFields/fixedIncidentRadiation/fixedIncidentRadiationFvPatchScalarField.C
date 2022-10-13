@@ -45,7 +45,14 @@ fixedIncidentRadiationFvPatchScalarField
 )
 :
     fixedGradientFvPatchScalarField(p, iF),
-    temperatureCoupledBase(patch()),  // default method (fluidThermo)
+    temperatureCoupledBase
+    (
+        patch(),
+        "undefined",
+        "undefined",
+        "undefined-K",
+        "undefined-alpha"
+    ),
     qrIncident_(p.size(), Zero)
 {}
 

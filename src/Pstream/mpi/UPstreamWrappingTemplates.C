@@ -179,7 +179,16 @@ void Foam::PstreamDetail::allReduce
                 << Foam::abort(FatalError);
         }
 
-        *requestID = PstreamGlobals::push_request(request);
+        if (PstreamGlobals::freedRequests_.size())
+        {
+            *requestID = PstreamGlobals::freedRequests_.remove();
+            PstreamGlobals::outstandingRequests_[*requestID] = request;
+        }
+        else
+        {
+            *requestID = PstreamGlobals::outstandingRequests_.size();
+            PstreamGlobals::outstandingRequests_.append(request);
+        }
     }
 #endif
 
@@ -290,7 +299,16 @@ void Foam::PstreamDetail::allToAll
                 << Foam::abort(FatalError);
         }
 
-        *requestID = PstreamGlobals::push_request(request);
+        if (PstreamGlobals::freedRequests_.size())
+        {
+            *requestID = PstreamGlobals::freedRequests_.remove();
+            PstreamGlobals::outstandingRequests_[*requestID] = request;
+        }
+        else
+        {
+            *requestID = PstreamGlobals::outstandingRequests_.size();
+            PstreamGlobals::outstandingRequests_.append(request);
+        }
     }
 #endif
 
@@ -431,7 +449,16 @@ void Foam::PstreamDetail::allToAllv
                 << Foam::abort(FatalError);
         }
 
-        *requestID = PstreamGlobals::push_request(request);
+        if (PstreamGlobals::freedRequests_.size())
+        {
+            *requestID = PstreamGlobals::freedRequests_.remove();
+            PstreamGlobals::outstandingRequests_[*requestID] = request;
+        }
+        else
+        {
+            *requestID = PstreamGlobals::outstandingRequests_.size();
+            PstreamGlobals::outstandingRequests_.append(request);
+        }
     }
 #endif
 
@@ -541,7 +568,16 @@ void Foam::PstreamDetail::gather
                 << Foam::abort(FatalError);
         }
 
-        *requestID = PstreamGlobals::push_request(request);
+        if (PstreamGlobals::freedRequests_.size())
+        {
+            *requestID = PstreamGlobals::freedRequests_.remove();
+            PstreamGlobals::outstandingRequests_[*requestID] = request;
+        }
+        else
+        {
+            *requestID = PstreamGlobals::outstandingRequests_.size();
+            PstreamGlobals::outstandingRequests_.append(request);
+        }
     }
 #endif
 
@@ -650,7 +686,16 @@ void Foam::PstreamDetail::scatter
                 << Foam::abort(FatalError);
         }
 
-        *requestID = PstreamGlobals::push_request(request);
+        if (PstreamGlobals::freedRequests_.size())
+        {
+            *requestID = PstreamGlobals::freedRequests_.remove();
+            PstreamGlobals::outstandingRequests_[*requestID] = request;
+        }
+        else
+        {
+            *requestID = PstreamGlobals::outstandingRequests_.size();
+            PstreamGlobals::outstandingRequests_.append(request);
+        }
     }
 #endif
 
@@ -785,7 +830,16 @@ void Foam::PstreamDetail::gatherv
                 << Foam::abort(FatalError);
         }
 
-        *requestID = PstreamGlobals::push_request(request);
+        if (PstreamGlobals::freedRequests_.size())
+        {
+            *requestID = PstreamGlobals::freedRequests_.remove();
+            PstreamGlobals::outstandingRequests_[*requestID] = request;
+        }
+        else
+        {
+            *requestID = PstreamGlobals::outstandingRequests_.size();
+            PstreamGlobals::outstandingRequests_.append(request);
+        }
     }
 #endif
 
@@ -914,7 +968,16 @@ void Foam::PstreamDetail::scatterv
                 << Foam::abort(FatalError);
         }
 
-        *requestID = PstreamGlobals::push_request(request);
+        if (PstreamGlobals::freedRequests_.size())
+        {
+            *requestID = PstreamGlobals::freedRequests_.remove();
+            PstreamGlobals::outstandingRequests_[*requestID] = request;
+        }
+        else
+        {
+            *requestID = PstreamGlobals::outstandingRequests_.size();
+            PstreamGlobals::outstandingRequests_.append(request);
+        }
     }
 #endif
 

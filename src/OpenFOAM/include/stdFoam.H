@@ -32,7 +32,6 @@ Description
 #ifndef Foam_stdFoam_H
 #define Foam_stdFoam_H
 
-#include <algorithm>
 #include <initializer_list>
 #include <memory>
 #include <utility>
@@ -52,15 +51,6 @@ Description
 # define FOAM_DEPRECATED(since)
 # define FOAM_DEPRECATED_FOR(since, replacement)
 #endif
-
-// Compile-time warning about unused result
-// FUTURE: check __has_cpp_attribute(nodiscard) and define with [[nodiscard]]
-#if defined(__GNUC__)
-# define FOAM_NODISCARD __attribute__((warn_unused_result))
-#else
-# define FOAM_NODISCARD
-#endif
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

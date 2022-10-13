@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015-2016 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2019,2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -201,7 +201,9 @@ void Foam::decompositionConstraints::singleProcessorFaceSets::add
             }
         }
 
-        if (returnReduceOr(store))
+        reduce(store, orOp<bool>());
+
+        if (store)
         {
             specifiedProcessorFaces.append(new labelList(fz.sortedToc()));
             specifiedProcessor.append(destProcI);
@@ -249,8 +251,8 @@ void Foam::decompositionConstraints::singleProcessorFaceSets::add
 
     if (decompositionConstraint::debug & 2)
     {
-        Info<< type() << " : unblocked "
-            << returnReduce(nUnblocked, sumOp<label>()) << " faces" << endl;
+        reduce(nUnblocked, sumOp<label>());
+        Info<< type() << " : unblocked " << nUnblocked << " faces" << endl;
     }
 
     syncTools::syncFaceList(mesh, blockedFace, andEqOp<bool>());
@@ -343,8 +345,9 @@ void Foam::decompositionConstraints::singleProcessorFaceSets::apply
 
     if (decompositionConstraint::debug & 2)
     {
-        Info<< type() << " : changed decomposition on "
-            << returnReduce(nChanged, sumOp<label>()) << " cells" << endl;
+        reduce(nChanged, sumOp<label>());
+        Info<< type() << " : changed decomposition on " << nChanged
+            << " cells" << endl;
     }
 }
 

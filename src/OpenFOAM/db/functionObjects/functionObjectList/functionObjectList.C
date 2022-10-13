@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -778,7 +778,7 @@ bool Foam::functionObjectList::execute()
 
         propsDictPtr_->writeObject
         (
-            IOstreamOption(IOstreamOption::ASCII, time_.writeCompression()),
+            IOstreamOption(IOstream::ASCII, time_.writeCompression()),
             true
         );
 
@@ -1014,7 +1014,7 @@ bool Foam::functionObjectList::read()
 
                 if (key == "useNamePrefix")  // As per functionObject
                 {
-                    Switch sw(dEntry.stream().front());
+                    Switch sw(dEntry.stream().peekFirst());
                     if (sw.good())
                     {
                         functionObject::defaultUseNamePrefix = sw;
@@ -1171,7 +1171,7 @@ bool Foam::functionObjectList::read()
                 FatalIOError.throwing(oldThrowingIOerr);
 
                 // Require valid functionObject on all processors
-                if (!returnReduceAnd(bool(objPtr)))
+                if (!returnReduce(bool(objPtr), andOp<bool>()))
                 {
                     objPtr.reset(nullptr);
                     ok = false;

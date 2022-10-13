@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -212,7 +212,7 @@ void Foam::ensightMesh::correct()
         const word& zoneName = czNames[zoneId];
         const cellZone& zn = mesh_.cellZones()[zoneId];
 
-        if (returnReduceOr(!zn.empty()))
+        if (returnReduce(!zn.empty(), orOp<bool>()))
         {
             // Ensure full mesh coverage
             cellSelection.resize(mesh_.nCells());
@@ -264,7 +264,7 @@ void Foam::ensightMesh::correct()
             // Unzoned cells - flip selection from zoned to unzoned
             cellSelection.flip();
 
-            if (returnReduceOr(cellSelection.any()))
+            if (returnReduce(cellSelection.any(), orOp<bool>()))
             {
                 ensightCells& part = cellZoneParts_(internalZone);
 
@@ -295,7 +295,7 @@ void Foam::ensightMesh::correct()
 
     // Face exclusion based on cellZones
 
-    if (returnReduceOr(!cellSelection.empty()))
+    if (returnReduce(!cellSelection.empty(), orOp<bool>()))
     {
         // Ensure full mesh coverage
         excludeFace.resize(mesh_.nFaces());
@@ -314,7 +314,7 @@ void Foam::ensightMesh::correct()
     }
 
 
-    // Face exclusion for empty types and neighbour side of coupled
+    // Face exclusion for empty/processor types
     // so they are ignored for face zones
 
     if (fzoneIds.size())
@@ -324,16 +324,15 @@ void Foam::ensightMesh::correct()
 
         for (const polyPatch& p : mesh_.boundaryMesh())
         {
-            const auto* cpp = isA<coupledPolyPatch>(p);
+            const auto* procPatch = isA<processorPolyPatch>(p);
 
-            if
-            (
-                isA<emptyPolyPatch>(p)
-             || (cpp && !cpp->owner())
-            )
+            if (isA<emptyPolyPatch>(p))
             {
-                // Ignore empty patch
-                // Ignore neighbour side of coupled
+                excludeFace.set(p.range());
+            }
+            else if (procPatch && !procPatch->owner())
+            {
+                // Exclude neighbour-side, retain owner-side only
                 excludeFace.set(p.range());
             }
         }

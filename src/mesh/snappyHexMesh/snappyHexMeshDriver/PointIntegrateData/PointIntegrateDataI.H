@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -271,7 +271,7 @@ inline Foam::Ostream& Foam::operator<<
     const PointIntegrateData<DataType>& rhs
 )
 {
-    if (os.format() == IOstreamOption::ASCII)
+    if (os.format() == IOstream::ASCII)
     {
         return os << rhs.valid_ << token::SPACE << rhs.data();
     }

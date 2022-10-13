@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017-2018 OpenFOAM Foundation
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -77,19 +77,11 @@ class hostCollatedFileOperation
 :
     public collatedFileOperation
 {
-    // Private Data
-
-        //- Communicator allocated/managed by us
-        label managedComm_;
-
-
-    // Private Member Functions
-
-        //- Any initialisation steps after constructing
-        void init(bool verbose);
+   // Private Member Functions
 
         //- Get the list of processors part of this set
         static labelList subRanks(const label n);
+
 
 public:
 

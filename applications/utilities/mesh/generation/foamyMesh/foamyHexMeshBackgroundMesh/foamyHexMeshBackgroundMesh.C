@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -73,7 +73,7 @@ scalar getMergeDistance
     Info<< "Merge tolerance : " << mergeTol << nl
         << "Write tolerance : " << writeTol << endl;
 
-    if (runTime.writeFormat() == IOstreamOption::ASCII && mergeTol < writeTol)
+    if (runTime.writeFormat() == IOstream::ASCII && mergeTol < writeTol)
     {
         FatalErrorInFunction
             << "Your current settings specify ASCII writing with "
@@ -353,7 +353,7 @@ tmp<scalarField> signedDistance
         forAll(volType, i)
         {
             label pointi = surfIndices[i];
-            scalar dist = points[pointi].dist(nearest[pointi].hitPoint());
+            scalar dist = mag(points[pointi] - nearest[pointi].hitPoint());
 
             volumeType vT = volType[i];
 
@@ -727,12 +727,14 @@ int main(int argc, char *argv[])
 
     pointField mergedPoints;
     faceList mergedFaces;
+    labelList pointMergeMap;
     PatchTools::gatherAndMerge
     (
         tolDim,
         primitivePatch(SubList<face>(isoFaces), isoPoints),
         mergedPoints,
-        mergedFaces
+        mergedFaces,
+        pointMergeMap
     );
 
     if (Pstream::master())

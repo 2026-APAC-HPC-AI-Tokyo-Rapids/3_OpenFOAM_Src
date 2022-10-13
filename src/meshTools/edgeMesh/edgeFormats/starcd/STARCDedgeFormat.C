@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -69,7 +69,7 @@ void Foam::fileFormats::STARCDedgeFormat::writeCase
     const label nEdges
 )
 {
-    const word caseName = os.name().stem();
+    const word caseName = os.name().nameLessExt();
 
     os  << "! STARCD file written " << clock::dateTime().c_str() << nl
         << "! " << pointLst.size() << " points, " << nEdges << " lines" << nl
@@ -114,7 +114,7 @@ bool Foam::fileFormats::STARCDedgeFormat::read
 {
     clear();
 
-    const fileName prefix(filename.lessExt());
+    fileName baseName = filename.lessExt();
 
     // STARCD index of points
     List<label> pointId;
@@ -122,7 +122,7 @@ bool Foam::fileFormats::STARCDedgeFormat::read
     // Read points from .vrt file
     readPoints
     (
-        IFstream(starFileName(prefix, STARCDCore::VRT_FILE))(),
+        IFstream(starFileName(baseName, STARCDCore::VRT_FILE))(),
         storedPoints(),
         pointId
     );
@@ -141,7 +141,7 @@ bool Foam::fileFormats::STARCDedgeFormat::read
 
     // Read .cel file
     // ~~~~~~~~~~~~~~
-    IFstream is(starFileName(prefix, STARCDCore::CEL_FILE));
+    IFstream is(starFileName(baseName, STARCDCore::CEL_FILE));
     if (!is.good())
     {
         FatalErrorInFunction
@@ -240,22 +240,22 @@ void Foam::fileFormats::STARCDedgeFormat::write
 )
 {
     // ASCII only, allow output compression
-    streamOpt.format(IOstreamOption::ASCII);
+    streamOpt.format(IOstream::ASCII);
 
     const pointField& pointLst = mesh.points();
     const edgeList& edgeLst = mesh.edges();
 
-    const fileName prefix(filename.lessExt());
+    fileName baseName = filename.lessExt();
 
     // The .vrt file
     {
-        OFstream os(starFileName(prefix, STARCDCore::VRT_FILE), streamOpt);
+        OFstream os(starFileName(baseName, STARCDCore::VRT_FILE), streamOpt);
         writePoints(os, pointLst);
     }
 
     // The .cel file
     {
-        OFstream os(starFileName(prefix, STARCDCore::CEL_FILE), streamOpt);
+        OFstream os(starFileName(baseName, STARCDCore::CEL_FILE), streamOpt);
         writeHeader(os, STARCDCore::HEADER_CEL);
         writeLines(os, edgeLst);
     }
@@ -263,7 +263,7 @@ void Foam::fileFormats::STARCDedgeFormat::write
     // Write a simple .inp file. Never compressed
     writeCase
     (
-        OFstream(starFileName(prefix, STARCDCore::INP_FILE))(),
+        OFstream(starFileName(baseName, STARCDCore::INP_FILE))(),
         pointLst,
         edgeLst.size()
     );

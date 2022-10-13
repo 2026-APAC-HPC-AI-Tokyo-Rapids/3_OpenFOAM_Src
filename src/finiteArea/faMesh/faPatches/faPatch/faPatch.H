@@ -264,7 +264,7 @@ public:
     // Static Member Functions
 
         //- Return true if the given type is a constraint type
-        static bool constraintType(const word& patchType);
+        static bool constraintType(const word& pt);
 
         //- Return a list of all the constraint patch types
         static wordList constraintTypes();
@@ -308,30 +308,23 @@ public:
         //- Patch start in edge list
         label start() const;
 
-        //- Patch size is the number of edge labels, but can be overloaded
+        //- Patch size is the number of edge labels
         virtual label size() const
         {
             return labelList::size();
         }
 
         //- Return label of edge in patch from global edge label
-        label whichEdge(const label edgei) const
+        inline label whichEdge(const label l) const
         {
-            return edgei - start();
+            return l - start();
         }
 
-        //- Slice List to patch, using the virtual patch size
+        //- Slice list to patch
         template<class T>
         typename List<T>::subList patchSlice(const List<T>& l) const
         {
             return typename List<T>::subList(l, size(), start());
-        }
-
-        //- Slice List to patch, using the number of patch edges
-        template<class T>
-        typename List<T>::subList patchRawSlice(const List<T>& l) const
-        {
-            return typename List<T>::subList(l, nEdges(), start());
         }
 
 
@@ -421,21 +414,12 @@ public:
 
         // Evaluation
 
-            //- Extract internal field next to patch using edgeFaces mapping
-            template<class Type>
-            inline void patchInternalField
-            (
-                const UList<Type>& f,
-                const labelUList& edgeFaces,
-                Field<Type>& pfld
-            ) const;
-
             //- Return given internal field next to patch as patch field
             template<class Type>
             tmp<Field<Type>> patchInternalField(const UList<Type>&) const;
 
             //- Return given internal field next to patch as patch field
-            //- using provided addressing
+            //  providing addressing
             template<class Type>
             tmp<Foam::Field<Type>> patchInternalField
             (
@@ -443,28 +427,24 @@ public:
                 const labelUList& edgeFaces
             ) const;
 
-            //- Extract internal field next to patch as patch field
-            template<class Type>
-            void patchInternalField(const UList<Type>&, Field<Type>&) const;
-
-            //- Return the patch field of the GeometricField
-            //- corresponding to this patch.
-            template<class GeometricField, class AnyType = bool>
+            //- Return the corresponding patchField of the named field
+            template<class GeometricField, class Type>
             const typename GeometricField::Patch& patchField
             (
-                const GeometricField& gf
+                const GeometricField&
             ) const;
 
-            //- Lookup the named field from the local registry and
-            //- return the patch field corresponding to this patch.
+            //- Lookup and return the patchField of the named field from the
+            //- local objectRegistry.
             //  N.B.  The dummy pointer arguments are used if this function is
             //  instantiated within a templated function to avoid a bug in gcc.
-            template<class GeometricField, class AnyType = bool>
+            //  See inletOutletFvPatchField.C and outletInletFvPatchField.C
+            template<class GeometricField, class Type>
             const typename GeometricField::Patch& lookupPatchField
             (
                 const word& name,
                 const GeometricField* = nullptr,
-                const AnyType* = nullptr
+                const Type* = nullptr
             ) const;
 
 

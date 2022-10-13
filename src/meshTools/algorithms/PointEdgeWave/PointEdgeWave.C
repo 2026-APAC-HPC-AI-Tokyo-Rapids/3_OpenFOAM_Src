@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,6 +38,12 @@ License
 #include "pointFields.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+
+template<class Type, class TrackingData>
+Foam::scalar Foam::PointEdgeWave<Type, TrackingData>::propagationTol_ = 0.01;
+
+template<class Type, class TrackingData>
+int Foam::PointEdgeWave<Type, TrackingData>::dummyTrackData_ = 12345;
 
 namespace Foam
 {
@@ -148,7 +154,7 @@ void Foam::PointEdgeWave<Type, TrackingData>::transform
 // Update info for pointi, at position pt, with information from
 // neighbouring edge.
 // Updates:
-//      - changedPoint_, changedPoints_,
+//      - changedPoint_, changedPoints_, nChangedPoints_,
 //      - statistics: nEvals_, nUnvisitedPoints_
 template<class Type, class TrackingData>
 bool Foam::PointEdgeWave<Type, TrackingData>::updatePoint
@@ -176,9 +182,10 @@ bool Foam::PointEdgeWave<Type, TrackingData>::updatePoint
 
     if (propagate)
     {
-        if (changedPoint_.set(pointi))
+        if (!changedPoint_[pointi])
         {
-            changedPoints_.push_back(pointi);
+            changedPoint_[pointi] = true;
+            changedPoints_[nChangedPoints_++] = pointi;
         }
     }
 
@@ -194,7 +201,7 @@ bool Foam::PointEdgeWave<Type, TrackingData>::updatePoint
 // Update info for pointi, at position pt, with information from
 // same point.
 // Updates:
-//      - changedPoint_, changedPoints_,
+//      - changedPoint_, changedPoints_, nChangedPoints_,
 //      - statistics: nEvals_, nUnvisitedPoints_
 template<class Type, class TrackingData>
 bool Foam::PointEdgeWave<Type, TrackingData>::updatePoint
@@ -220,9 +227,10 @@ bool Foam::PointEdgeWave<Type, TrackingData>::updatePoint
 
     if (propagate)
     {
-        if (changedPoint_.set(pointi))
+        if (!changedPoint_[pointi])
         {
-            changedPoints_.push_back(pointi);
+            changedPoint_[pointi] = true;
+            changedPoints_[nChangedPoints_++] = pointi;
         }
     }
 
@@ -235,15 +243,15 @@ bool Foam::PointEdgeWave<Type, TrackingData>::updatePoint
 }
 
 
-// Update info for edgei, at position pt, with information from
+// Update info for edgeI, at position pt, with information from
 // neighbouring point.
 // Updates:
-//      - changedEdge_, changedEdges_,
+//      - changedEdge_, changedEdges_, nChangedEdges_,
 //      - statistics: nEvals_, nUnvisitedEdge_
 template<class Type, class TrackingData>
 bool Foam::PointEdgeWave<Type, TrackingData>::updateEdge
 (
-    const label edgei,
+    const label edgeI,
     const label neighbourPointi,
     const Type& neighbourInfo,
     Type& edgeInfo
@@ -257,7 +265,7 @@ bool Foam::PointEdgeWave<Type, TrackingData>::updateEdge
         edgeInfo.updateEdge
         (
             mesh_,
-            edgei,
+            edgeI,
             neighbourPointi,
             neighbourInfo,
             propagationTol_,
@@ -266,9 +274,10 @@ bool Foam::PointEdgeWave<Type, TrackingData>::updateEdge
 
     if (propagate)
     {
-        if (changedEdge_.set(edgei))
+        if (!changedEdge_[edgeI])
         {
-            changedEdges_.push_back(edgei);
+            changedEdge_[edgeI] = true;
+            changedEdges_[nChangedEdges_++] = edgeI;
         }
     }
 
@@ -288,11 +297,11 @@ Foam::label Foam::PointEdgeWave<Type, TrackingData>::countPatchType() const
 {
     label nPatches = 0;
 
-    for (const polyPatch& p : mesh_.boundaryMesh())
+    forAll(mesh_.boundaryMesh(), patchi)
     {
-        if (isA<PatchType>(p))
+        if (isA<PatchType>(mesh_.boundaryMesh()[patchi]))
         {
-            ++nPatches;
+            nPatches++;
         }
     }
     return nPatches;
@@ -329,7 +338,7 @@ void Foam::PointEdgeWave<Type, TrackingData>::handleProcPatches()
         forAll(neighbPoints, thisPointi)
         {
             label meshPointi = procPatch.meshPoints()[thisPointi];
-            if (changedPoint_.test(meshPointi))
+            if (changedPoint_[meshPointi])
             {
                 patchInfo.append(allPointInfo_[meshPointi]);
                 thisPoints.append(thisPointi);
@@ -422,8 +431,10 @@ void Foam::PointEdgeWave<Type, TrackingData>::handleCyclicPatches()
     DynamicList<label> nbrPoints;
     DynamicList<label> thisPoints;
 
-    for (const polyPatch& patch : mesh_.boundaryMesh())
+    forAll(mesh_.boundaryMesh(), patchi)
     {
+        const polyPatch& patch = mesh_.boundaryMesh()[patchi];
+
         const cyclicPolyPatch* cpp = isA<cyclicPolyPatch>(patch);
 
         if (cpp)
@@ -449,7 +460,7 @@ void Foam::PointEdgeWave<Type, TrackingData>::handleCyclicPatches()
                     label nbrPointi = pairs[pairI][1];
                     label meshPointi = meshPoints[nbrPointi];
 
-                    if (changedPoint_.test(meshPointi))
+                    if (changedPoint_[meshPointi])
                     {
                         nbrInfo.append(allPointInfo_[meshPointi]);
                         nbrPoints.append(nbrPointi);
@@ -472,7 +483,7 @@ void Foam::PointEdgeWave<Type, TrackingData>::handleCyclicPatches()
 
             //if (debug)
             //{
-            //    Pout<< "Cyclic patch " << patch.index() << ' ' << patch.name()
+            //    Pout<< "Cyclic patch " << patchi << ' ' << patch.name()
             //        << "  Changed : " << nbrInfo.size()
             //        << endl;
             //}
@@ -575,16 +586,21 @@ Foam::label Foam::PointEdgeWave<Type, TrackingData>::handleCollocatedPoints()
                 }
 
                 // Update database of changed points
-                if (changedPoint_.set(meshPointi))
+                if (!changedPoint_[meshPointi])
                 {
-                    changedPoints_.push_back(meshPointi);
+                    changedPoint_[meshPointi] = true;
+                    changedPoints_[nChangedPoints_++] = meshPointi;
                 }
             }
         }
     }
 
-    // Sum changedPoints over all procs
-    return returnReduce(nChangedPoints(), sumOp<label>());
+    // Sum nChangedPoints over all procs
+    label totNChanged = nChangedPoints_;
+
+    reduce(totNChanged, sumOp<label>());
+
+    return totNChanged;
 }
 
 
@@ -606,13 +622,20 @@ Foam::PointEdgeWave<Type, TrackingData>::PointEdgeWave
     TrackingData& td
 )
 :
-    PointEdgeWaveBase(mesh),
-
+    mesh_(mesh),
     allPointInfo_(allPointInfo),
     allEdgeInfo_(allEdgeInfo),
     td_(td),
+    changedPoint_(mesh_.nPoints(), false),
+    changedPoints_(mesh_.nPoints()),
+    nChangedPoints_(0),
+    changedEdge_(mesh_.nEdges(), false),
+    changedEdges_(mesh_.nEdges()),
+    nChangedEdges_(0),
     nCyclicPatches_(countPatchType<cyclicPolyPatch>()),
-    nEvals_(0)
+    nEvals_(0),
+    nUnvisitedPoints_(mesh_.nPoints()),
+    nUnvisitedEdges_(mesh_.nEdges())
 {
     if (allPointInfo_.size() != mesh_.nPoints())
     {
@@ -640,7 +663,7 @@ Foam::PointEdgeWave<Type, TrackingData>::PointEdgeWave
     if (debug)
     {
         Info<< typeName << ": Seed points               : "
-            << returnReduce(nChangedPoints(), sumOp<label>()) << endl;
+            << returnReduce(nChangedPoints_, sumOp<label>()) << endl;
     }
 
     // Iterate until nothing changes
@@ -650,9 +673,9 @@ Foam::PointEdgeWave<Type, TrackingData>::PointEdgeWave
     {
         FatalErrorInFunction
             << "Maximum number of iterations reached. Increase maxIter." << endl
-            << "    maxIter:" << maxIter << nl
-            << "    nChangedPoints:" << nChangedPoints() << nl
-            << "    nChangedEdges:" << nChangedEdges() << endl
+            << "    maxIter:" << maxIter << endl
+            << "    nChangedPoints:" << nChangedPoints_ << endl
+            << "    nChangedEdges:" << nChangedEdges_ << endl
             << exit(FatalError);
     }
 }
@@ -667,17 +690,38 @@ Foam::PointEdgeWave<Type, TrackingData>::PointEdgeWave
     TrackingData& td
 )
 :
-    PointEdgeWaveBase(mesh),
-
+    mesh_(mesh),
     allPointInfo_(allPointInfo),
     allEdgeInfo_(allEdgeInfo),
     td_(td),
+    changedPoint_(mesh_.nPoints(), false),
+    changedPoints_(mesh_.nPoints()),
+    nChangedPoints_(0),
+    changedEdge_(mesh_.nEdges(), false),
+    changedEdges_(mesh_.nEdges()),
+    nChangedEdges_(0),
     nCyclicPatches_(countPatchType<cyclicPolyPatch>()),
-    nEvals_(0)
+    nEvals_(0),
+    nUnvisitedPoints_(mesh_.nPoints()),
+    nUnvisitedEdges_(mesh_.nEdges())
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+template<class Type, class TrackingData>
+Foam::label Foam::PointEdgeWave<Type, TrackingData>::nUnvisitedPoints() const
+{
+    return nUnvisitedPoints_;
+}
+
+
+template<class Type, class TrackingData>
+Foam::label Foam::PointEdgeWave<Type, TrackingData>::nUnvisitedEdges() const
+{
+    return nUnvisitedEdges_;
+}
+
 
 // Copy point information into member data
 template<class Type, class TrackingData>
@@ -704,9 +748,10 @@ void Foam::PointEdgeWave<Type, TrackingData>::setPointInfo
 
         // Mark pointi as changed, both on list and on point itself.
 
-        if (changedPoint_.set(pointi))
+        if (!changedPoint_[pointi])
         {
-            changedPoints_.push_back(pointi);
+            changedPoint_[pointi] = true;
+            changedPoints_[nChangedPoints_++] = pointi;
         }
     }
 
@@ -719,22 +764,29 @@ void Foam::PointEdgeWave<Type, TrackingData>::setPointInfo
 template<class Type, class TrackingData>
 Foam::label Foam::PointEdgeWave<Type, TrackingData>::edgeToPoint()
 {
-    for (const label edgei : changedEdges_)
+    for
+    (
+        label changedEdgeI = 0;
+        changedEdgeI < nChangedEdges_;
+        changedEdgeI++
+    )
     {
-        if (!changedEdge_.test(edgei))
+        label edgeI = changedEdges_[changedEdgeI];
+
+        if (!changedEdge_[edgeI])
         {
             FatalErrorInFunction
-                << "edge " << edgei
+                << "edge " << edgeI
                 << " not marked as having been changed" << nl
                 << "This might be caused by multiple occurrences of the same"
                 << " seed point." << abort(FatalError);
         }
 
 
-        const Type& neighbourWallInfo = allEdgeInfo_[edgei];
+        const Type& neighbourWallInfo = allEdgeInfo_[edgeI];
 
         // Evaluate all connected points (= edge endpoints)
-        const edge& e = mesh_.edges()[edgei];
+        const edge& e = mesh_.edges()[edgeI];
 
         forAll(e, eI)
         {
@@ -745,7 +797,7 @@ Foam::label Foam::PointEdgeWave<Type, TrackingData>::edgeToPoint()
                 updatePoint
                 (
                     e[eI],
-                    edgei,
+                    edgeI,
                     neighbourWallInfo,
                     currentWallInfo
                 );
@@ -753,11 +805,11 @@ Foam::label Foam::PointEdgeWave<Type, TrackingData>::edgeToPoint()
         }
 
         // Reset status of edge
-        changedEdge_.unset(edgei);
+        changedEdge_[edgeI] = false;
     }
 
     // Handled all changed edges by now
-    changedEdges_.clear();
+    nChangedEdges_ = 0;
 
     if (nCyclicPatches_ > 0)
     {
@@ -772,11 +824,15 @@ Foam::label Foam::PointEdgeWave<Type, TrackingData>::edgeToPoint()
 
     //if (debug)
     //{
-    //    Pout<< "Changed points            : " << nChangedPoints() << nl;
+    //    Pout<< "Changed points            : " << nChangedPoints_ << endl;
     //}
 
-    // Sum changedPoints over all procs
-    return returnReduce(nChangedPoints(), sumOp<label>());
+    // Sum nChangedPoints over all procs
+    label totNChanged = nChangedPoints_;
+
+    reduce(totNChanged, sumOp<label>());
+
+    return totNChanged;
 }
 
 
@@ -786,9 +842,16 @@ Foam::label Foam::PointEdgeWave<Type, TrackingData>::pointToEdge()
 {
     const labelListList& pointEdges = mesh_.pointEdges();
 
-    for (const label pointi : changedPoints_)
+    for
+    (
+        label changedPointi = 0;
+        changedPointi < nChangedPoints_;
+        changedPointi++
+    )
     {
-        if (!changedPoint_.test(pointi))
+        label pointi = changedPoints_[changedPointi];
+
+        if (!changedPoint_[pointi])
         {
             FatalErrorInFunction
                 << "Point " << pointi
@@ -801,15 +864,18 @@ Foam::label Foam::PointEdgeWave<Type, TrackingData>::pointToEdge()
 
         // Evaluate all connected edges
 
-        for (const label edgei : pointEdges[pointi])
+        const labelList& edgeLabels = pointEdges[pointi];
+        forAll(edgeLabels, edgeLabelI)
         {
-            Type& currentWallInfo = allEdgeInfo_[edgei];
+            label edgeI = edgeLabels[edgeLabelI];
+
+            Type& currentWallInfo = allEdgeInfo_[edgeI];
 
             if (!currentWallInfo.equal(neighbourWallInfo, td_))
             {
                 updateEdge
                 (
-                    edgei,
+                    edgeI,
                     pointi,
                     neighbourWallInfo,
                     currentWallInfo
@@ -818,19 +884,23 @@ Foam::label Foam::PointEdgeWave<Type, TrackingData>::pointToEdge()
         }
 
         // Reset status of point
-        changedPoint_.unset(pointi);
+        changedPoint_[pointi] = false;
     }
 
     // Handled all changed points by now
-    changedPoints_.clear();
+    nChangedPoints_ = 0;
 
     //if (debug)
     //{
-    //    Pout<< "Changed edges             : " << nChangedEdges() << endl;
+    //    Pout<< "Changed edges             : " << nChangedEdges_ << endl;
     //}
 
-    // Sum changedEdges over all procs
-    return returnReduce(nChangedEdges(), sumOp<label>());
+    // Sum nChangedPoints over all procs
+    label totNChanged = nChangedEdges_;
+
+    reduce(totNChanged, sumOp<label>());
+
+    return totNChanged;
 }
 
 

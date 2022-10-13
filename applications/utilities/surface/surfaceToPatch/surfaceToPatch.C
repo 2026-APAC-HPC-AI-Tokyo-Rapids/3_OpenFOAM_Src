@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -58,7 +58,7 @@ label addPatch(polyMesh& mesh, const word& patchName)
     {
         const polyBoundaryMesh& patches = mesh.boundaryMesh();
 
-        polyPatchList newPatches(patches.size() + 1);
+        List<polyPatch*> newPatches(patches.size() + 1);
 
         patchi = 0;
 
@@ -67,25 +67,20 @@ label addPatch(polyMesh& mesh, const word& patchName)
         {
             const polyPatch& pp = patches[i];
 
-            newPatches.set
-            (
-                patchi,
+            newPatches[patchi] =
                 pp.clone
                 (
                     patches,
                     patchi,
                     pp.size(),
                     pp.start()
-                )
-            );
+                ).ptr();
 
             patchi++;
         }
 
         // Add zero-sized patch
-        newPatches.set
-        (
-            patchi,
+        newPatches[patchi] =
             new polyPatch
             (
                 patchName,
@@ -94,8 +89,7 @@ label addPatch(polyMesh& mesh, const word& patchName)
                 patchi,
                 patches,
                 polyPatch::typeName
-            )
-        );
+            );
 
         mesh.removeBoundary();
         mesh.addPatches(newPatches);

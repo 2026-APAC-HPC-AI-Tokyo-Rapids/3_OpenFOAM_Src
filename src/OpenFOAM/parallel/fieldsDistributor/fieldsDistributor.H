@@ -38,7 +38,6 @@ SourceFiles
 #define Foam_fieldsDistributor_H
 
 #include "IOobjectList.H"
-#include "bitSet.H"
 #include "boolList.H"
 #include "PtrList.H"
 #include "GeometricField.H"
@@ -54,22 +53,6 @@ namespace Foam
 
 class fieldsDistributor
 {
-    // Private Methods
-
-    //- Read volume/surface/point/area fields that may or may not exist
-    //- on all processors
-    template<class BoolListType, class GeoField, class MeshSubsetter>
-    static void readFieldsImpl
-    (
-        const BoolListType& haveMeshOnProc,
-        const MeshSubsetter* subsetter,
-        const typename GeoField::Mesh& mesh,
-        IOobjectList& allObjects,
-        PtrList<GeoField>& fields,
-        const bool deregister
-    );
-
-
 public:
 
     // Reading helpers
@@ -125,35 +108,9 @@ public:
     template<class GeoField, class MeshSubsetter>
     static void readFields
     (
-        const bitSet& haveMeshOnProc,
-        const MeshSubsetter* subsetter,
-        const typename GeoField::Mesh& mesh,
-        IOobjectList& allObjects,
-        PtrList<GeoField>& fields,
-        const bool deregister = false
-    );
-
-    //- Read volume/surface/point/area fields that may or may not exist
-    //- on all processors
-    template<class GeoField, class MeshSubsetter>
-    static void readFields
-    (
-        const boolList& haveMeshOnProc,
-        const MeshSubsetter* subsetter,
-        const typename GeoField::Mesh& mesh,
-        IOobjectList& allObjects,
-        PtrList<GeoField>& fields,
-        const bool deregister = false
-    );
-
-    //- Read volume/surface/point/area fields that may or may not exist
-    //- on all processors
-    template<class GeoField, class MeshSubsetter>
-    static void readFields
-    (
         const boolList& haveMeshOnProc,
         const typename GeoField::Mesh& mesh,
-        const autoPtr<MeshSubsetter>& subsetter,
+        const autoPtr<MeshSubsetter>& subsetterPtr,
         IOobjectList& allObjects,
         PtrList<GeoField>& fields,
         const bool deregister = false

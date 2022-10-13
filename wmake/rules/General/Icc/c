@@ -1,16 +1,10 @@
-#------------------------------------------------------------------------------
-# Intel compiler
-#------------------------------------------------------------------------------
-SUFFIXES   += .c
+SUFFIXES += .c
 
-cc         := icc$(COMPILER_VERSION)
+cc          = icc$(COMPILER_VERSION)
 
-cARCH      :=
-cDBUG      :=
-cOPT       := -O2
-cWARN      :=
-
-# Tuning
-sinclude $(GENERAL_RULES)/common/c$(WM_COMPILE_OPTION)
+cARCH       =
+cDBUG       =
+cOPT        = -O2
+cWARN       =
 
 #------------------------------------------------------------------------------

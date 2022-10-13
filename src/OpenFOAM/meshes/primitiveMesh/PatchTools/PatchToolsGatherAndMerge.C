@@ -46,22 +46,20 @@ void Foam::PatchTools::gatherAndMerge
     <
         typename PrimitivePatch<FaceList, PointField>::face_type
     >& mergedFaces,
-    globalIndex& pointAddr,
-    globalIndex& faceAddr,
     labelList& pointMergeMap,
     const bool useLocal
 )
 {
-    typedef typename PrimitivePatch<FaceList, PointField>::face_type FaceType;
+    typedef typename PrimitivePatch<FaceList,PointField>::face_type FaceType;
 
     // Faces from all ranks
-    faceAddr.reset(globalIndex::gatherOnly{}, pp.size());
+    const globalIndex faceAddr(pp.size(), globalIndex::gatherOnly{});
 
     // Points from all ranks
-    pointAddr.reset
+    const globalIndex pointAddr
     (
-        globalIndex::gatherOnly{},
-        (useLocal ? pp.localPoints().size() : pp.points().size())
+        (useLocal ? pp.localPoints().size() : pp.points().size()),
+        globalIndex::gatherOnly{}
     );
 
     if (useLocal)
@@ -96,14 +94,14 @@ void Foam::PatchTools::gatherAndMerge
     {
         const globalIndex localPointAddr
         (
-            globalIndex::gatherOnly{},
-            pp.localPoints().size()
+            pp.localPoints().size(),
+            globalIndex::gatherOnly{}
         );
 
         const globalIndex bndPointAddr
         (
-            globalIndex::gatherOnly{},
-            pp.boundaryPoints().size()
+            pp.boundaryPoints().size(),
+            globalIndex::gatherOnly{}
         );
 
         bndPointAddr.gather(pp.boundaryPoints(), boundaryPoints);
@@ -151,40 +149,6 @@ void Foam::PatchTools::gatherAndMerge
         // Safety
         pointMergeMap = identity(mergedPoints.size());
     }
-}
-
-
-template<class FaceList, class PointField>
-void Foam::PatchTools::gatherAndMerge
-(
-    const scalar mergeDist,
-    const PrimitivePatch<FaceList, PointField>& pp,
-    Field
-    <
-        typename PrimitivePatch<FaceList, PointField>::point_type
-    >& mergedPoints,
-    List
-    <
-        typename PrimitivePatch<FaceList, PointField>::face_type
-    >& mergedFaces,
-    labelList& pointMergeMap,
-    const bool useLocal
-)
-{
-    globalIndex pointAddr;
-    globalIndex faceAddr;
-
-    PatchTools::gatherAndMerge<FaceList, PointField>
-    (
-        mergeDist,
-        pp,
-        mergedPoints,
-        mergedFaces,
-        pointAddr,
-        faceAddr,
-        pointMergeMap,
-        useLocal
-    );
 }
 
 

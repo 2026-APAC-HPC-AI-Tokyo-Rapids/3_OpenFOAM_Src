@@ -76,44 +76,7 @@ Foam::fileName Foam::functionObjects::writeFile::baseTimeDir() const
 }
 
 
-Foam::fileName Foam::functionObjects::writeFile::filePath
-(
-    const fileName& fName
-) const
-{
-    return baseFileDir()/prefix_/fName;
-}
-
-
-Foam::autoPtr<Foam::OFstream> Foam::functionObjects::writeFile::newFile
-(
-    const fileName& fName
-) const
-{
-    autoPtr<OFstream> osPtr;
-
-    if (Pstream::master() && writeToFile_)
-    {
-        fileName outputDir(filePath(fName).path());
-
-        mkDir(outputDir);
-
-        osPtr.reset(new OFstream(outputDir/(fName.name() + ".dat")));
-
-        if (!osPtr->good())
-        {
-            FatalIOErrorInFunction(osPtr()) << "Cannot open file"
-                << exit(FatalIOError);
-        }
-
-        initStream(osPtr());
-    }
-
-    return osPtr;
-}
-
-
-Foam::autoPtr<Foam::OFstream> Foam::functionObjects::writeFile::newFileAtTime
+Foam::autoPtr<Foam::OFstream> Foam::functionObjects::writeFile::createFile
 (
     const word& name,
     scalar timeValue
@@ -158,13 +121,12 @@ Foam::autoPtr<Foam::OFstream> Foam::functionObjects::writeFile::newFileAtTime
 }
 
 
-Foam::autoPtr<Foam::OFstream>
-Foam::functionObjects::writeFile::newFileAtStartTime
+Foam::autoPtr<Foam::OFstream> Foam::functionObjects::writeFile::createFile
 (
     const word& name
 ) const
 {
-    return newFileAtTime(name, startTime_);
+    return createFile(name, startTime_);
 
 }
 
@@ -172,7 +134,7 @@ Foam::functionObjects::writeFile::newFileAtStartTime
 void Foam::functionObjects::writeFile::resetFile(const word& fileName)
 {
     fileName_ = fileName;
-    filePtr_ = newFileAtStartTime(fileName_);
+    filePtr_ = createFile(fileName_);
 }
 
 
@@ -238,7 +200,7 @@ Foam::functionObjects::writeFile::writeFile
 
     if (writeToFile_)
     {
-        filePtr_ = newFileAtStartTime(fileName_);
+        filePtr_ = createFile(fileName_);
     }
 }
 
@@ -291,22 +253,9 @@ bool Foam::functionObjects::writeFile::writeToFile() const
 }
 
 
-bool Foam::functionObjects::writeFile::canWriteToFile() const
-{
-    return (Pstream::master() && writeToFile_ && filePtr_);
-}
-
-
-bool Foam::functionObjects::writeFile::canResetFile() const
-{
-    return (Pstream::master() && writeToFile_ && !filePtr_);
-}
-
-
 bool Foam::functionObjects::writeFile::canWriteHeader() const
 {
-    return
-        Pstream::master() && writeToFile_ && (updateHeader_ || !writtenHeader_);
+    return writeToFile_ && (updateHeader_ || !writtenHeader_);
 }
 
 

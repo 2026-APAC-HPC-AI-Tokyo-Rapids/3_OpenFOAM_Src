@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,18 +49,18 @@ Foam::fa::jouleHeatingSource::jouleHeatingSource
     const word& sourceName,
     const word& modelType,
     const dictionary& dict,
-    const fvMesh& m
+    const fvPatch& patch
 )
 :
-    fa::faceSetOption(sourceName, modelType, dict, m),
+    fa::faceSetOption(sourceName, modelType, dict, patch),
     TName_(dict.getOrDefault<word>("T", "T")),
     V_
     (
         IOobject
         (
             typeName + ":V_" + regionName_,
-            regionMesh().thisDb().time().timeName(),
-            regionMesh().thisDb(),
+            mesh().time().timeName(),
+            mesh(),
             IOobject::MUST_READ,
             IOobject::AUTO_WRITE
         ),
@@ -105,9 +105,8 @@ void Foam::fa::jouleHeatingSource::addSup
 {
     if (isActive())
     {
-        DebugInfo
-            << name() << ": applying source to "
-            << eqn.psi().name() << endl;
+        DebugInfo<< name() << ": applying source to " << eqn.psi().name()
+                 << endl;
 
         if (curTimeIndex_ != mesh().time().timeIndex())
         {
@@ -143,14 +142,6 @@ void Foam::fa::jouleHeatingSource::addSup
         // Add the Joule heating contribution
         areaVectorField gradV("gradV", fac::grad(V_));
 
-        if (debug > 1 && mesh().time().outputTime())
-        {
-            areaScalarField qgradV("gradVSource", (gradV & gradV));
-            qgradV.write();
-        }
-
-        tmp<areaScalarField> tsource;
-
         if (anisotropicElectricalConductivity_)
         {
             const auto& sigma =
@@ -159,7 +150,7 @@ void Foam::fa::jouleHeatingSource::addSup
                     typeName + ":sigma_" + regionName_
                 );
 
-            tsource = (h*sigma & gradV) & gradV;
+            eqn += (h*sigma & gradV) & gradV;
         }
         else
         {
@@ -169,13 +160,14 @@ void Foam::fa::jouleHeatingSource::addSup
                     typeName + ":sigma_" + regionName_
                 );
 
-            tsource = (h*sigma*gradV) & gradV;
+            eqn += (h*sigma*gradV) & gradV;
+
+            if (mesh().time().outputTime() && debug)
+            {
+                areaScalarField qgradV("gradVSource", (gradV & gradV));
+                qgradV.write();
+            }
         }
-
-        // Apply subMesh filter
-        faceSetOption::subsetFilter(tsource.ref().primitiveFieldRef());
-
-        eqn += tsource;
     }
 }
 

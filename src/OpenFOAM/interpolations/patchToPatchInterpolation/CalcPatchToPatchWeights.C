@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,6 +35,12 @@ License
 namespace Foam
 {
 
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+
+template<class FromPatch, class ToPatch>
+scalar PatchToPatchInterpolation<FromPatch, ToPatch>::projectionTol_ = 0.05;
+
+
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 template<class FromPatch, class ToPatch>
@@ -42,14 +48,15 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcPointAddressing() const
 {
     // Calculate pointWeights
 
-    pointWeightsPtr_.reset(new FieldField<Field, scalar>(toPatch_.nPoints()));
-    auto& pointWeights = *pointWeightsPtr_;
+    pointWeightsPtr_ = new FieldField<Field, scalar>(toPatch_.nPoints());
+    FieldField<Field, scalar>& pointWeights = *pointWeightsPtr_;
 
-    pointDistancePtr_.reset(new scalarField(toPatch_.nPoints(), GREAT));
-    auto& pointDistance = *pointDistancePtr_;
+    pointDistancePtr_ = new scalarField(toPatch_.nPoints(), GREAT);
+    scalarField& pointDistance = *pointDistancePtr_;
 
     const pointField& fromPatchPoints = fromPatch_.localPoints();
-    const auto& fromPatchFaces = fromPatch_.localFaces();
+    const List<typename FromPatch::face_type>& fromPatchFaces =
+        fromPatch_.localFaces();
 
     const pointField& toPatchPoints = toPatch_.localPoints();
     const vectorField& projectionDirection = toPatch_.pointNormals();
@@ -64,8 +71,8 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcPointAddressing() const
     List<objectHit> proj =
         toPatch_.projectPoints(fromPatch_, projectionDirection, alg_, dir_);
 
-    pointAddressingPtr_.reset(new labelList(proj.size(), -1));
-    auto& pointAddressing = *pointAddressingPtr_;
+    pointAddressingPtr_ = new labelList(proj.size(), -1);
+    labelList& pointAddressing = *pointAddressingPtr_;
 
     bool doWeights = false;
 
@@ -73,7 +80,8 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcPointAddressing() const
     {
         doWeights = false;
 
-        const auto& hitFace = fromPatchFaces[proj[pointi].hitObject()];
+        const typename FromPatch::face_type& hitFace =
+            fromPatchFaces[proj[pointi].hitObject()];
 
         point hitPoint = Zero;
 
@@ -208,7 +216,11 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcPointAddressing() const
                 pointWeights[pointi][masterPointi] =
                     1.0/
                     (
-                        hitPoint.dist(hitFacePoints[masterPointi])
+                        mag
+                        (
+                            hitFacePoints[masterPointi]
+                          - hitPoint
+                        )
                       + VSMALL
                     );
             }
@@ -217,7 +229,7 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcPointAddressing() const
         }
         else
         {
-            pointWeights.set(pointi, new scalarField());
+            pointWeights.set(pointi, new scalarField(0));
         }
     }
 }
@@ -226,11 +238,11 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcPointAddressing() const
 template<class FromPatch, class ToPatch>
 void PatchToPatchInterpolation<FromPatch, ToPatch>::calcFaceAddressing() const
 {
-    faceWeightsPtr_.reset(new FieldField<Field, scalar>(toPatch_.size()));
-    auto& faceWeights = *faceWeightsPtr_;
+    faceWeightsPtr_ = new FieldField<Field, scalar>(toPatch_.size());
+    FieldField<Field, scalar>& faceWeights = *faceWeightsPtr_;
 
-    faceDistancePtr_.reset(new scalarField(toPatch_.size(), GREAT));
-    auto& faceDistance = *faceDistancePtr_;
+    faceDistancePtr_ = new scalarField(toPatch_.size(), GREAT);
+    scalarField& faceDistance = *faceDistancePtr_;
 
     if (debug)
     {
@@ -238,7 +250,7 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcFaceAddressing() const
     }
 
     const pointField& fromPatchPoints = fromPatch_.points();
-    const auto& fromPatchFaces = fromPatch_;
+    const typename FromPatch::FaceListType& fromPatchFaces = fromPatch_;
     const labelListList& fromPatchFaceFaces = fromPatch_.faceFaces();
 
     vectorField fromPatchFaceCentres(fromPatchFaces.size());
@@ -250,7 +262,7 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcFaceAddressing() const
     }
 
     const pointField& toPatchPoints = toPatch_.points();
-    const auto& toPatchFaces = toPatch_;
+    const typename ToPatch::FaceListType& toPatchFaces = toPatch_;
 
     const vectorField& projectionDirection = toPatch_.faceNormals();
 
@@ -263,8 +275,8 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcFaceAddressing() const
             dir_
         );
 
-    faceAddressingPtr_.reset(new labelList(proj.size(), -1));
-    auto& faceAddressing = *faceAddressingPtr_;
+    faceAddressingPtr_ = new labelList(proj.size(), -1);
+    labelList& faceAddressing = *faceAddressingPtr_;
 
     forAll(faceAddressing, facei)
     {
@@ -273,7 +285,8 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcFaceAddressing() const
             // A hit exists
             faceAddressing[facei] = proj[facei].hitObject();
 
-            const auto& hitFace = fromPatchFaces[faceAddressing[facei]];
+            const typename FromPatch::face_type& hitFace =
+                fromPatchFaces[faceAddressing[facei]];
 
             pointHit curHit =
                 hitFace.ray
@@ -296,7 +309,7 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcFaceAddressing() const
             const labelList& neighbours =
                 fromPatchFaceFaces[faceAddressing[facei]];
 
-            scalar m = curHit.hitPoint().dist(hitFaceCentre);
+            scalar m = mag(curHit.hitPoint() - hitFaceCentre);
 
             if
             (
@@ -322,9 +335,10 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcFaceAddressing() const
                     faceWeights[facei][nI + 1] =
                     1.0/
                     (
-                        curHit.hitPoint().dist
+                        mag
                         (
                             fromPatchFaceCentres[neighbours[nI]]
+                          - curHit.hitPoint()
                         )
                       + VSMALL
                     );
@@ -335,7 +349,7 @@ void PatchToPatchInterpolation<FromPatch, ToPatch>::calcFaceAddressing() const
         }
         else
         {
-            faceWeights.set(facei, new scalarField());
+            faceWeights.set(facei, new scalarField(0));
         }
     }
 }

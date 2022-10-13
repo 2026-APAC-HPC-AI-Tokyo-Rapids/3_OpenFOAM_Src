@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,8 +40,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_dummyISstream_H
-#define Foam_dummyISstream_H
+#ifndef dummyISstream_H
+#define dummyISstream_H
 
 #include "StringStream.H"
 
@@ -108,15 +108,15 @@ public:
                 return *this;
             }
 
-            //- Read a float
-            virtual Istream& read(float&)
+            //- Read a floatScalar
+            virtual Istream& read(floatScalar&)
             {
                 NotImplemented;
                 return *this;
             }
 
-            //- Read a double
-            virtual Istream& read(double&)
+            //- Read a doubleScalar
+            virtual Istream& read(doubleScalar&)
             {
                 NotImplemented;
                 return *this;

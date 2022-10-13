@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -133,10 +133,22 @@ void Foam::snappyVoxelMeshDriver::isInside
     }
     else
     {
-        for (label celli = 0; celli < mesh.nCells(); ++celli)
-        {
-            const boundBox cellBb(mesh.cellBb(celli));
+        const cellList& cells = mesh.cells();
+        const faceList& faces = mesh.faces();
+        const pointField& points = mesh.points();
 
+        for (label celli = 0; celli < mesh.nCells(); celli++)
+        {
+            const cell& cFaces = cells[celli];
+            boundBox cellBb(boundBox::invertedBox);
+            forAll(cFaces, cFacei)
+            {
+                const face& f = faces[cFaces[cFacei]];
+                forAll(f, fp)
+                {
+                    cellBb.add(points[f[fp]]);
+                }
+            }
             voxelMeshSearch::fill
             (
                 isVoxelInMesh,
@@ -171,11 +183,11 @@ void Foam::snappyVoxelMeshDriver::markSurfaceRefinement
             const triSurface& ts = refCast<const triSurface>(geom);
             const pointField& points = ts.points();
 
-            for (const labelledTri& tri : ts)
+            forAll(ts, trii)
             {
-                label regioni = tri.region();
+                label regioni = ts[trii].region();
                 label globalRegioni = s.regionOffset()[surfi]+regioni;
-                const boundBox triBb(tri.box(points));
+                const boundBox triBb(points, ts[trii], false);
 
                 // Fill cellLevel
                 label level = s.minLevel()[globalRegioni];

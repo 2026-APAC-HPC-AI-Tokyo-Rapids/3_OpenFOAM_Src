@@ -261,9 +261,12 @@ void Foam::meshRefinement::getIntersections
         {
             if (str)
             {
-                str().writeLine(start[i], hit1[i].point());
-                str().writeLine(hit1[i].point(), hit2[i].point());
-                str().writeLine(hit2[i].point(), end[i]);
+                str().write(linePointRef(start[i], hit1[i].rawPoint()));
+                str().write
+                (
+                    linePointRef(hit1[i].rawPoint(), hit2[i].rawPoint())
+                );
+                str().write(linePointRef(hit2[i].rawPoint(), end[i]));
             }
 
             // Pick up the patches
@@ -597,7 +600,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::createBaffles
 
 
     autoPtr<mapPolyMesh> mapPtr;
-    if (returnReduceOr(nBaffles))
+    if (returnReduce(nBaffles, sumOp<label>()))
     {
         // Remove any unnecessary fields
         mesh_.clearOut();
@@ -818,11 +821,12 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::createZoneBaffles
 
         label nLocalBaffles = sum(nBaffles);
 
+
         label nTotalBaffles = returnReduce(nLocalBaffles, sumOp<label>());
 
         if (nTotalBaffles > 0)
         {
-            Pstream::listCombineReduce(nBaffles, plusEqOp<label>());
+            Pstream::listCombineAllGather(nBaffles, plusEqOp<label>());
 
             Info<< nl
                 << setf(ios_base::left)
@@ -1143,13 +1147,13 @@ Foam::List<Foam::labelPair> Foam::meshRefinement::freeStandingBaffles
             (
                 hit1[i].hit()
              && hit2[i].hit()
-             && hit1[i].point().dist(hit2[i].point()) > mergeDistance_
+             && mag(hit1[i].hitPoint()-hit2[i].hitPoint()) > mergeDistance_
             )
             {
                 // Two different hits. Check angle.
                 //str.write
                 //(
-                //    linePointRef(hit1[i].point(), hit2[i].point()),
+                //    linePointRef(hit1[i].hitPoint(), hit2[i].hitPoint()),
                 //    normal1[i],
                 //    normal2[i]
                 //);
@@ -1193,7 +1197,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::mergeBaffles
 {
     autoPtr<mapPolyMesh> mapPtr;
 
-    if (returnReduceOr(couples.size() || faceToPatch.size()))
+    if (returnReduce(couples.size()+faceToPatch.size(), sumOp<label>()))
     {
         // Mesh change engine
         polyTopoChange meshMod(mesh_);
@@ -1400,7 +1404,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::mergeZoneBaffles
     );
 
     autoPtr<mapPolyMesh> mapPtr;
-    if (returnReduceOr(zoneBaffles.size()))
+    if (returnReduce(zoneBaffles.size(), sumOp<label>()))
     {
         mapPtr = mergeBaffles(zoneBaffles, Map<label>(0));
     }
@@ -1952,7 +1956,7 @@ void Foam::meshRefinement::findCellZoneTopo
     // - region numbers are identical on all processors
     // - keepRegion is identical ,,
     // - cellZones are identical ,,
-    Pstream::listCombineReduce(regionToCellZone, maxEqOp<label>());
+    Pstream::listCombineAllGather(regionToCellZone, maxEqOp<label>());
 
 
     // Find the region containing the keepPoint
@@ -2002,7 +2006,7 @@ void Foam::meshRefinement::findCellZoneTopo
         // - cellZones are identical ,,
         // This done at top of loop to account for geometric matching
         // not being synchronised.
-        Pstream::listCombineReduce(regionToCellZone, maxEqOp<label>());
+        Pstream::listCombineAllGather(regionToCellZone, maxEqOp<label>());
 
 
         bool changed = false;
@@ -2076,7 +2080,7 @@ void Foam::meshRefinement::findCellZoneTopo
             }
         }
 
-        if (!returnReduceOr(changed))
+        if (!returnReduce(changed, orOp<bool>()))
         {
             break;
         }
@@ -3211,8 +3215,8 @@ void Foam::meshRefinement::zonify
 
         if (debug)
         {
-            mkDir(mesh_.time().timePath());
             const pointZone& pz = pointZones[zonei];
+            mkDir(mesh_.time().timePath());
             OBJstream str(mesh_.time().timePath()/pz.name()+".obj");
             Pout<< "Writing " << pz.size() << " frozen points to "
                 << str.name() << endl;
@@ -3221,7 +3225,8 @@ void Foam::meshRefinement::zonify
                 str.write(mesh_.points()[pointi]);
             }
         }
-        if (debug && returnReduceOr(unnamedClosureFaces.size()))
+
+        if (debug && returnReduce(unnamedClosureFaces.size(), sumOp<label>()))
         {
             mkDir(mesh_.time().timePath());
             OBJstream str(mesh_.time().timePath()/"unnamedClosureFaces.obj");
@@ -3232,7 +3237,7 @@ void Foam::meshRefinement::zonify
                 str.write(mesh_.faces()[facei], mesh_.points(), false);
             }
         }
-        if (debug && returnReduceOr(namedClosureFaces.size()))
+        if (debug && returnReduce(namedClosureFaces.size(), sumOp<label>()))
         {
             mkDir(mesh_.time().timePath());
             OBJstream str(mesh_.time().timePath()/"namedClosureFaces.obj");
@@ -4034,7 +4039,7 @@ Foam::label Foam::meshRefinement::markPatchZones
         }
 
 
-        if (returnReduceAnd(changedEdges.empty()))
+        if (returnReduce(changedEdges.size(), sumOp<label>()) == 0)
         {
             break;
         }
@@ -4217,7 +4222,7 @@ void Foam::meshRefinement::consistentOrientation
         }
 
 
-        if (returnReduceAnd(changedEdges.empty()))
+        if (returnReduce(changedEdges.size(), sumOp<label>()) == 0)
         {
             break;
         }
@@ -4748,7 +4753,8 @@ void Foam::meshRefinement::mergeFreeStandingBaffles
         )
     );
 
-    const label nCouples = returnReduce(couples.size(), sumOp<label>());
+    label nCouples = couples.size();
+    reduce(nCouples, sumOp<label>());
 
     Info<< "Detected free-standing baffles : " << nCouples << endl;
 
@@ -4891,7 +4897,6 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::splitMesh
         neiPatch
     );
 }
-
 
 Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::splitMesh
 (
@@ -5085,113 +5090,34 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::splitMesh
 
         labelList neiCellRegion;
         syncTools::swapBoundaryCellList(mesh_, cellRegion, neiCellRegion);
-
-        //for
-        //(
-        //    label facei = mesh_.nInternalFaces();
-        //    facei < mesh_.nFaces();
-        //    facei++
-        //)
-        //{
-        //    if (!isFrozenFace[facei])
-        //    {
-        //        const face& f = mesh_.faces()[facei];
-        //
-        //        const label ownRegion = cellRegion[faceOwner[facei]];
-        //        const label neiRegion =
-        //            neiCellRegion[facei-mesh_.nInternalFaces()];
-        //
-        //        if (ownRegion == -1 && neiRegion != -1)
-        //        {
-        //            forAll(f, fp)
-        //            {
-        //                if (!isFrozenPoint[f[fp]])
-        //                {
-        //                    pointBaffle[f[fp]] =
-        //                        max(defaultPatch, ownPatch[facei]);
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
-
-        const auto& patches = mesh_.boundaryMesh();
-        for (const auto& pp : patches)
+        for
+        (
+            label facei = mesh_.nInternalFaces();
+            facei < mesh_.nFaces();
+            facei++
+        )
         {
-            if (pp.coupled())
+            if (!isFrozenFace[facei])
             {
-                // Note: swapBoundaryCellList only works on cyclic&processor.
-                //       Does not handle e.g. cyclicAMI. TBD?
-                // Note: we could check check our side being in the set
-                //       since syncPointList below will push over any decision
-                //       made by the other side.
-                forAll(pp, i)
+                const face& f = mesh_.faces()[facei];
+
+                const label ownRegion = cellRegion[faceOwner[facei]];
+                const label neiRegion =
+                    neiCellRegion[facei-mesh_.nInternalFaces()];
+
+                if (ownRegion == -1 && neiRegion != -1)
                 {
-                    const label facei = pp.start()+i;
-                    if (!isFrozenFace[facei])
+                    forAll(f, fp)
                     {
-                        const face& f = mesh_.faces()[facei];
-                        const label ownRegion = cellRegion[faceOwner[facei]];
-                        const label neiRegion =
-                            neiCellRegion[facei-mesh_.nInternalFaces()];
-
-                        // Same logic as for internal faces
-
-                        if (ownRegion == -1 && neiRegion != -1)
+                        if (!isFrozenPoint[f[fp]])
                         {
-                            forAll(f, fp)
-                            {
-                                if (!isFrozenPoint[f[fp]])
-                                {
-                                    pointBaffle[f[fp]] =
-                                        max(defaultPatch, ownPatch[facei]);
-                                }
-                            }
-                        }
-                        else if (ownRegion != -1 && neiRegion == -1)
-                        {
-                            label newPatchI = neiPatch[facei];
-                            if (newPatchI == -1)
-                            {
-                                newPatchI = max(defaultPatch, ownPatch[facei]);
-                            }
-                            forAll(f, fp)
-                            {
-                                if (!isFrozenPoint[f[fp]])
-                                {
-                                    pointBaffle[f[fp]] = newPatchI;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                forAll(pp, i)
-                {
-                    const label facei = pp.start()+i;
-                    if (!isFrozenFace[facei])
-                    {
-                        const face& f = mesh_.faces()[facei];
-                        const label ownRegion = cellRegion[faceOwner[facei]];
-
-                        if (ownRegion != -1)
-                        {
-                            forAll(f, fp)
-                            {
-                                if (!isFrozenPoint[f[fp]])
-                                {
-                                    pointBaffle[f[fp]] =
-                                        max(defaultPatch, ownPatch[facei]);
-                                }
-                            }
+                            pointBaffle[f[fp]] =
+                                max(defaultPatch, ownPatch[facei]);
                         }
                     }
                 }
             }
         }
-
 
         // Sync
         syncTools::syncPointList
@@ -5294,11 +5220,8 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::splitMesh
     }
     cellsToRemove.shrink();
 
-    const label nCellsToKeep = returnReduce
-    (
-        mesh_.nCells() - cellsToRemove.size(),
-        sumOp<label>()
-    );
+    label nCellsToKeep = mesh_.nCells() - cellsToRemove.size();
+    reduce(nCellsToKeep, sumOp<label>());
 
     Info<< "Keeping all cells containing inside points" << endl
         << "Selected for keeping : " << nCellsToKeep << " cells." << endl;
@@ -5541,7 +5464,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::mergePoints
 
     autoPtr<mapPolyMesh> mapPtr;
 
-    if (returnReduceOr(nPointPairs))
+    if (returnReduce(nPointPairs, sumOp<label>()))
     {
         Map<label> pointToMaster(2*nPointPairs);
         forAll(pointToDuplicate, pointI)
@@ -5862,7 +5785,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
 
         // 2.Combine faceZoneNames allocated on different processors
 
-        Pstream::mapCombineReduce(zonesToFaceZone, eqOp<word>());
+        Pstream::mapCombineAllGather(zonesToFaceZone, eqOp<word>());
 
 
         // 3. Allocate faceZones from (now synchronised) faceZoneNames
@@ -6085,7 +6008,7 @@ Foam::autoPtr<Foam::mapPolyMesh> Foam::meshRefinement::zonify
                     nPosOrientation.find(faceToConnectedZone[faceI])() += n;
                 }
             }
-            Pstream::mapCombineReduce(nPosOrientation, plusEqOp<label>());
+            Pstream::mapCombineAllGather(nPosOrientation, plusEqOp<label>());
 
 
             Info<< "Split " << nFreeStanding << " free-standing zone faces"

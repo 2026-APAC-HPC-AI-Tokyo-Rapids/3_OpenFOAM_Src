@@ -49,35 +49,31 @@ static const Foam::List<Foam::word> subDictNames
 
 void Foam::solution::read(const dictionary& dict)
 {
-    const dictionary* dictptr;
-
-    if ((dictptr = dict.findDict("cache")) != nullptr)
+    if (dict.found("cache"))
     {
-        cache_ = *dictptr;
+        cache_ = dict.subDict("cache");
         caching_ = cache_.getOrDefault("active", true);
     }
 
-    if ((dictptr = dict.findDict("relaxationFactors")) != nullptr)
+    if (dict.found("relaxationFactors"))
     {
-        const dictionary& relaxDict = *dictptr;
+        const dictionary& relaxDict = dict.subDict("relaxationFactors");
 
-        bool needsCompat = true;
-
-        if ((dictptr = relaxDict.findDict("fields")) != nullptr)
+        if (relaxDict.found("fields") || relaxDict.found("equations"))
         {
-            needsCompat = false;
-            fieldRelaxDict_ = *dictptr;
-            fieldRelaxCache_.clear();
-        }
+            if (relaxDict.found("fields"))
+            {
+                fieldRelaxDict_ = relaxDict.subDict("fields");
+                fieldRelaxCache_.clear();
+            }
 
-        if ((dictptr = relaxDict.findDict("equations")) != nullptr)
-        {
-            needsCompat = false;
-            eqnRelaxDict_ = *dictptr;
-            eqnRelaxCache_.clear();
+            if (relaxDict.found("equations"))
+            {
+                eqnRelaxDict_ = relaxDict.subDict("equations");
+                eqnRelaxCache_.clear();
+            }
         }
-
-        if (needsCompat)
+        else
         {
             // backwards compatibility
             fieldRelaxDict_.clear();
@@ -134,9 +130,9 @@ void Foam::solution::read(const dictionary& dict)
             << "equations: " << eqnRelaxDict_ << endl;
     }
 
-    if ((dictptr = dict.findDict("solvers")) != nullptr)
+    if (dict.found("solvers"))
     {
-        solvers_ = *dictptr;
+        solvers_ = dict.subDict("solvers");
         upgradeSolverDict(solvers_);
     }
 }
@@ -147,7 +143,7 @@ void Foam::solution::read(const dictionary& dict)
 Foam::solution::solution
 (
     const objectRegistry& obr,
-    IOobjectOption::readOption rOpt,
+    const IOobject::readOption rOpt,
     const fileName& dictName,
     const dictionary* fallback
 )
@@ -174,10 +170,10 @@ Foam::solution::solution
     if
     (
         readOpt() == IOobject::MUST_READ
-     || (isReadOptional() && headerOk())
+     || (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
     )
     {
-        readOpt(IOobject::MUST_READ_IF_MODIFIED);
+        readOpt() = IOobject::MUST_READ_IF_MODIFIED;
         addWatch();
     }
 

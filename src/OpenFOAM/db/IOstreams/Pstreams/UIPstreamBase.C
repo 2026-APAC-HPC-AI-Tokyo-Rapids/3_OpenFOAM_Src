@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,11 +49,11 @@ inline static void processFlags(Istream& is, int flagMask)
 {
     if ((flagMask & token::ASCII))
     {
-        is.format(IOstreamOption::ASCII);
+        is.format(IOstream::ASCII);
     }
     else if ((flagMask & token::BINARY))
     {
-        is.format(IOstreamOption::BINARY);
+        is.format(IOstream::BINARY);
     }
 }
 
@@ -157,7 +157,7 @@ Foam::UIPstreamBase::UIPstreamBase
 )
 :
     UPstream(commsType),
-    Istream(fmt),
+    Istream(fmt, IOstreamOption::currentVersion),
     fromProcNo_(fromProcNo),
     recvBuf_(receiveBuf),
     recvBufPos_(receiveBufPosition),
@@ -178,7 +178,7 @@ Foam::UIPstreamBase::UIPstreamBase
 )
 :
     UPstream(buffers.commsType()),
-    Istream(buffers.format()),
+    Istream(buffers.format(), IOstreamOption::currentVersion),
     fromProcNo_(fromProcNo),
     recvBuf_(buffers.recvBuf_[fromProcNo]),
     recvBufPos_(buffers.recvBufPos_[fromProcNo]),
@@ -359,7 +359,7 @@ Foam::Istream& Foam::UIPstreamBase::read(token& t)
         // Float
         case token::tokenType::FLOAT :
         {
-            float val;
+            floatScalar val;
             if (read(val))
             {
                 t = val;
@@ -374,7 +374,7 @@ Foam::Istream& Foam::UIPstreamBase::read(token& t)
         // Double
         case token::tokenType::DOUBLE :
         {
-            double val;
+            doubleScalar val;
             if (read(val))
             {
                 t = val;
@@ -432,14 +432,14 @@ Foam::Istream& Foam::UIPstreamBase::read(label& val)
 }
 
 
-Foam::Istream& Foam::UIPstreamBase::read(float& val)
+Foam::Istream& Foam::UIPstreamBase::read(floatScalar& val)
 {
     readFromBuffer(val);
     return *this;
 }
 
 
-Foam::Istream& Foam::UIPstreamBase::read(double& val)
+Foam::Istream& Foam::UIPstreamBase::read(doubleScalar& val)
 {
     readFromBuffer(val);
     return *this;

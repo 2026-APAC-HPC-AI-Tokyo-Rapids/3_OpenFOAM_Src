@@ -40,14 +40,14 @@ Foam::scalar Foam::uniformInterpolationTable<Type>::dx() const
 
 
 template<class Type>
-Foam::Switch Foam::uniformInterpolationTable<Type>::log10() const noexcept
+const Foam::Switch& Foam::uniformInterpolationTable<Type>::log10() const
 {
     return log10_;
 }
 
 
 template<class Type>
-Foam::Switch Foam::uniformInterpolationTable<Type>::bound() const noexcept
+const Foam::Switch& Foam::uniformInterpolationTable<Type>::bound() const
 {
     return bound_;
 }
@@ -68,14 +68,14 @@ Foam::scalar& Foam::uniformInterpolationTable<Type>::dx()
 
 
 template<class Type>
-Foam::Switch& Foam::uniformInterpolationTable<Type>::log10() noexcept
+Foam::Switch& Foam::uniformInterpolationTable<Type>::log10()
 {
     return log10_;
 }
 
 
 template<class Type>
-Foam::Switch& Foam::uniformInterpolationTable<Type>::bound() noexcept
+Foam::Switch& Foam::uniformInterpolationTable<Type>::bound()
 {
     return bound_;
 }

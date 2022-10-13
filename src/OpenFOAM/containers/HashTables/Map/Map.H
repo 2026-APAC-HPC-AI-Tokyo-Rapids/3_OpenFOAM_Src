@@ -40,8 +40,8 @@ See also
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_Map_H
-#define Foam_Map_H
+#ifndef Map_H
+#define Map_H
 
 #include "HashTable.H"
 
@@ -103,7 +103,7 @@ public:
             parent_type(std::move(map))
         {}
 
-        //- Construct from pairs of values
+        //- Construct from an initializer list
         Map(std::initializer_list<std::pair<label, T>> map)
         :
             parent_type(map)

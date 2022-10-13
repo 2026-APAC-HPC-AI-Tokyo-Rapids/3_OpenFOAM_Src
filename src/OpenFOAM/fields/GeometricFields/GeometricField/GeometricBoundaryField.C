@@ -437,8 +437,7 @@ void Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::evaluate()
     ///    InfoInFunction << nl;
     ///}
 
-    const UPstream::commsTypes commsType = UPstream::defaultCommsType;
-    const label startOfRequests = UPstream::nRequests();
+    const UPstream::commsTypes commsType(UPstream::defaultCommsType);
 
     if
     (
@@ -446,13 +445,19 @@ void Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::evaluate()
      || commsType == UPstream::commsTypes::nonBlocking
     )
     {
+        const label startOfRequests = UPstream::nRequests();
+
         for (auto& pfld : *this)
         {
             pfld.initEvaluate(commsType);
         }
 
         // Wait for outstanding requests
-        if (commsType == Pstream::commsTypes::nonBlocking)
+        if
+        (
+            UPstream::parRun()
+         && commsType == Pstream::commsTypes::nonBlocking
+        )
         {
             UPstream::waitRequests(startOfRequests);
         }
@@ -501,8 +506,7 @@ void Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::evaluateCoupled()
     ///    InfoInFunction << nl;
     ///}
 
-    const UPstream::commsTypes commsType = UPstream::defaultCommsType;
-    const label startOfRequests = UPstream::nRequests();
+    const UPstream::commsTypes commsType(UPstream::defaultCommsType);
 
     if
     (
@@ -510,6 +514,8 @@ void Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::evaluateCoupled()
      || commsType == UPstream::commsTypes::nonBlocking
     )
     {
+        const label startOfRequests = UPstream::nRequests();
+
         for (auto& pfld : *this)
         {
             const auto* cpp = isA<CoupledPatchType>(pfld.patch());
@@ -521,7 +527,11 @@ void Foam::GeometricBoundaryField<Type, PatchField, GeoMesh>::evaluateCoupled()
         }
 
         // Wait for outstanding requests
-        if (commsType == UPstream::commsTypes::nonBlocking)
+        if
+        (
+            UPstream::parRun()
+         && commsType == UPstream::commsTypes::nonBlocking
+        )
         {
             UPstream::waitRequests(startOfRequests);
         }

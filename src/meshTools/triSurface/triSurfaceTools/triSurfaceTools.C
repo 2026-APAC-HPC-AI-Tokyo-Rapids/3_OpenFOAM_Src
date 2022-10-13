@@ -847,13 +847,15 @@ Foam::surfaceLocation Foam::triSurfaceTools::cutEdge
 
         if (d[fp1] == 0.0)
         {
-            cut.hitPoint(points[f[fp1]]);
+            cut.setHit();
+            cut.setPoint(points[f[fp1]]);
             cut.elementType() = triPointRef::POINT;
             cut.setIndex(s.localFaces()[triI][fp1]);
         }
         else if (d[fp2] == 0.0)
         {
-            cut.hitPoint(points[f[fp2]]);
+            cut.setHit();
+            cut.setPoint(points[f[fp2]]);
             cut.elementType() = triPointRef::POINT;
             cut.setIndex(s.localFaces()[triI][fp2]);
         }
@@ -868,7 +870,8 @@ Foam::surfaceLocation Foam::triSurfaceTools::cutEdge
         }
         else
         {
-            cut.hitPoint
+            cut.setHit();
+            cut.setPoint
             (
                 (d[fp2]*points[f[fp1]] - d[fp1]*points[f[fp2]])
               / (d[fp2] - d[fp1])
@@ -896,7 +899,8 @@ Foam::surfaceLocation Foam::triSurfaceTools::cutEdge
                         << "triangle:" << f.tri(points)
                         << " d:" << d << abort(FatalError);
                 }
-                inters[interI].hitPoint(points[f[fp0]]);
+                inters[interI].setHit();
+                inters[interI].setPoint(points[f[fp0]]);
                 inters[interI].elementType() = triPointRef::POINT;
                 inters[interI].setIndex(s.localFaces()[triI][fp0]);
                 interI++;
@@ -914,7 +918,8 @@ Foam::surfaceLocation Foam::triSurfaceTools::cutEdge
                         << "triangle:" << f.tri(points)
                         << " d:" << d << abort(FatalError);
                 }
-                inters[interI].hitPoint
+                inters[interI].setHit();
+                inters[interI].setPoint
                 (
                     (d[fp0]*points[f[fp1]] - d[fp1]*points[f[fp0]])
                   / (d[fp0] - d[fp1])
@@ -959,8 +964,8 @@ Foam::surfaceLocation Foam::triSurfaceTools::cutEdge
                 // Two cuts. Find nearest.
                 if
                 (
-                    inters[0].point().distSqr(toPoint)
-                  < inters[1].point().distSqr(toPoint)
+                    magSqr(inters[0].rawPoint() - toPoint)
+                  < magSqr(inters[1].rawPoint() - toPoint)
                 )
                 {
                     cut = inters[0];
@@ -1145,9 +1150,9 @@ Foam::surfaceLocation Foam::triSurfaceTools::visitFaces
                     triI,
                     excludeEdgeI,       // excludeEdgeI
                     excludePointi,      // excludePointi
-                    start.point(),
+                    start.rawPoint(),
                     cutPlane,
-                    end.point()
+                    end.rawPoint()
                 );
 
                 // If crossing an edge we expect next edge to be cut.
@@ -1156,14 +1161,14 @@ Foam::surfaceLocation Foam::triSurfaceTools::visitFaces
                     FatalErrorInFunction
                         << "Triangle:" << triI
                         << " excludeEdge:" << excludeEdgeI
-                        << " point:" << start.point()
+                        << " point:" << start.rawPoint()
                         << " plane:" << cutPlane
                         << " . No intersection!" << abort(FatalError);
                 }
 
                 if (cutInfo.hit())
                 {
-                    scalar distSqr = cutInfo.point().distSqr(end.point());
+                    scalar distSqr = magSqr(cutInfo.rawPoint()-end.rawPoint());
 
                     if (distSqr < minDistSqr)
                     {
@@ -2029,7 +2034,7 @@ Foam::triSurfaceTools::sideType Foam::triSurfaceTools::surfaceSide
 
     pointHit pHit = f.nearestPointClassify(sample, points, nearType, nearLabel);
 
-    const point& nearestPoint = pHit.point();
+    const point& nearestPoint(pHit.rawPoint());
 
     if (nearType == triPointRef::NONE)
     {
@@ -2455,7 +2460,7 @@ Foam::triSurface Foam::triSurfaceTools::delaunay2D(const List<vector2D>& pts)
 {
     // Vertices in geompack notation. Note that could probably just use
     // pts.begin() if double precision.
-    List<double> geompackVertices(2*pts.size());
+    List<doubleScalar> geompackVertices(2*pts.size());
     label doubleI = 0;
     for (const vector2D& pt : pts)
     {
@@ -2589,7 +2594,7 @@ void Foam::triSurfaceTools::calcInterpolationWeights
                 verts[1] = f[1];
                 verts[2] = f[2];
 
-                calcInterpolationWeights(tri, nearest.point(), weights);
+                calcInterpolationWeights(tri, nearest.rawPoint(), weights);
 
                 //Pout<< "calcScalingFactors : samplePt:" << samplePt
                 //    << " inside triangle:" << facei
@@ -2631,7 +2636,11 @@ void Foam::triSurfaceTools::calcInterpolationWeights
                     scalar s = min
                     (
                         1,
-                        nearest.point().dist(p0)/p1.dist(p0)
+                        max
+                        (
+                            0,
+                            mag(nearest.rawPoint() - p0)/mag(p1 - p0)
+                        )
                     );
 
                     // Interpolate
@@ -2651,7 +2660,7 @@ void Foam::triSurfaceTools::calcInterpolationWeights
                     verts[1] = f[1];
                     verts[2] = f[2];
 
-                    calcInterpolationWeights(tri, nearest.point(), weights);
+                    calcInterpolationWeights(tri, nearest.rawPoint(), weights);
 
                     //Pout<< "calcScalingFactors : samplePt:" << samplePt
                     //    << " distance:" << nearest.distance()
@@ -2920,9 +2929,9 @@ Foam::surfaceLocation Foam::triSurfaceTools::trackToEdge
                 start.index(),          // triangle
                 -1,                     // excludeEdge
                 -1,                     // excludePoint
-                start.point(),
+                start.rawPoint(),
                 cutPlane,
-                end.point()
+                end.rawPoint()
             );
             nearest.elementType() = triPointRef::EDGE;
             nearest.triangle() = start.index();
@@ -2975,7 +2984,7 @@ void Foam::triSurfaceTools::track
 {
     //OFstream str("track.obj");
     //label vertI = 0;
-    //meshTools::writeOBJ(str, hitInfo.point());
+    //meshTools::writeOBJ(str, hitInfo.rawPoint());
     //vertI++;
 
     // Track across surface.
@@ -2993,7 +3002,7 @@ void Foam::triSurfaceTools::track
             cutPlane
         );
 
-        //meshTools::writeOBJ(str, hitInfo.point());
+        //meshTools::writeOBJ(str, hitInfo.rawPoint());
         //vertI++;
         //str<< "l " << vertI-1 << ' ' << vertI << nl;
 

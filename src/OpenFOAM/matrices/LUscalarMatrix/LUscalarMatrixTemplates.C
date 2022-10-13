@@ -54,17 +54,17 @@ void Foam::LUscalarMatrix::solve
 
             SubList<Type>(X, x.size()) = x;
 
-            for (const int proci : Pstream::subProcs(comm_))
+            for (const int slave : Pstream::subProcs(comm_))
             {
-                UIPstream::read
+                IPstream::read
                 (
                     Pstream::commsTypes::scheduled,
-                    proci,
+                    slave,
                     reinterpret_cast<char*>
                     (
-                        &(X[procOffsets_[proci]])
+                        &(X[procOffsets_[slave]])
                     ),
-                    (procOffsets_[proci+1]-procOffsets_[proci])*sizeof(Type),
+                    (procOffsets_[slave+1]-procOffsets_[slave])*sizeof(Type),
                     Pstream::msgType(),
                     comm_
                 );
@@ -72,7 +72,7 @@ void Foam::LUscalarMatrix::solve
         }
         else
         {
-            UOPstream::write
+            OPstream::write
             (
                 Pstream::commsTypes::scheduled,
                 Pstream::masterNo(),
@@ -89,17 +89,17 @@ void Foam::LUscalarMatrix::solve
 
             x = SubList<Type>(X, x.size());
 
-            for (const int proci : Pstream::subProcs(comm_))
+            for (const int slave : Pstream::subProcs(comm_))
             {
-                UOPstream::write
+                OPstream::write
                 (
                     Pstream::commsTypes::scheduled,
-                    proci,
+                    slave,
                     reinterpret_cast<const char*>
                     (
-                        &(X[procOffsets_[proci]])
+                        &(X[procOffsets_[slave]])
                     ),
-                    (procOffsets_[proci+1]-procOffsets_[proci])*sizeof(Type),
+                    (procOffsets_[slave+1]-procOffsets_[slave])*sizeof(Type),
                     Pstream::msgType(),
                     comm_
                 );
@@ -107,7 +107,7 @@ void Foam::LUscalarMatrix::solve
         }
         else
         {
-            UIPstream::read
+            IPstream::read
             (
                 Pstream::commsTypes::scheduled,
                 Pstream::masterNo(),

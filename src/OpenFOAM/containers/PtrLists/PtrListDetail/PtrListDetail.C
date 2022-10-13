@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,6 +26,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "PtrListDetail.H"
+#include <utility>
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -89,7 +90,13 @@ void Foam::Detail::PtrListDetail<T>::free()
 
     for (label i=0; i<len; ++i)
     {
-        delete ptrs[i];
+        T* ptr = ptrs[i];
+
+        if (ptr)
+        {
+            delete ptr;
+        }
+
         ptrs[i] = nullptr;
     }
 }

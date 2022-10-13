@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,30 +55,17 @@ int main(int argc, char *argv[])
     (
         "deltaT",
         "time",
-        "Override deltaT (eg, for accelerated motion)"
-    );
-
-    argList::addOption
-    (
-        "endTime",
-        "time",
-        "Override endTime (eg, for shorter tests)"
+        "Override deltaT for accelerated motion"
     );
 
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createNamedMesh.H"
 
-    scalar timeVal = 0;
-    if (args.readIfPresent("deltaT", timeVal))
+    scalar deltaT = 0;
+    if (args.readIfPresent("deltaT", deltaT))
     {
-        runTime.setDeltaT(timeVal);
-    }
-
-    if (args.readIfPresent("endTime", timeVal))
-    {
-        runTime.stopAt(Time::stopAtControls::saEndTime);
-        runTime.setEndTime(timeVal);
+        runTime.setDeltaT(deltaT);
     }
 
     autoPtr<motionSolver> motionPtr = motionSolver::New(mesh);

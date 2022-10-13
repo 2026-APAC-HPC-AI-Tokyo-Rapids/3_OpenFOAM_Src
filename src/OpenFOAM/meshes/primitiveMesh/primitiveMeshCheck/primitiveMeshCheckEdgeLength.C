@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -69,7 +69,8 @@ bool Foam::primitiveMesh::checkEdgeLength
     reduce(minLenSqr, minOp<scalar>());
     reduce(maxLenSqr, maxOp<scalar>());
 
-    label nSmall = returnReduce(smallEdgeSet.size(), sumOp<label>());
+    label nSmall = smallEdgeSet.size();
+    reduce(nSmall, sumOp<label>());
 
     if (setPtr)
     {

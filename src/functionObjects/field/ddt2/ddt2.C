@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -45,16 +45,14 @@ namespace functionObjects
 }
 }
 
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-// * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
-
-namespace Foam
+bool Foam::functionObjects::ddt2::checkFormatName
+(
+    const std::string& str
+)
 {
-
-// Check that string contains the appropriate substitution token(s)
-static bool checkFormatName(const word& str)
-{
-    if (!str.contains("@@"))
+    if (std::string::npos == str.find("@@"))
     {
         WarningInFunction
             << "Bad result naming (no '@@' token found)."
@@ -74,10 +72,6 @@ static bool checkFormatName(const word& str)
     return true;
 }
 
-} // End namespace Foam
-
-
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 bool Foam::functionObjects::ddt2::accept(const word& fieldName) const
 {

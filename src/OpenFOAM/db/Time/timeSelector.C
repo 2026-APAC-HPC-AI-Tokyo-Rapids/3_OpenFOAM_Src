@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,39 +35,33 @@ License
 
 Foam::timeSelector::timeSelector(const std::string& str)
 :
-    ranges_(str)
+    scalarRanges(str)
 {}
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool Foam::timeSelector::contains(const scalar value) const
+bool Foam::timeSelector::selected(const instant& value) const
 {
-    return ranges_.contains(value);
-}
-
-
-bool Foam::timeSelector::contains(const instant& t) const
-{
-    return ranges_.contains(t.value());
+    return scalarRanges::match(value.value());
 }
 
 
 Foam::List<bool> Foam::timeSelector::selected(const instantList& times) const
 {
-    List<bool> selectTimes(times.size());
+    List<bool> selectTimes(times.size(), false);
 
     // Check ranges, avoid false positive on constant/
     forAll(times, timei)
     {
-        selectTimes[timei] =
-        (
-            times[timei].name() != "constant" && contains(times[timei])
-        );
+        if (times[timei].name() != "constant" && selected(times[timei]))
+        {
+            selectTimes[timei] = true;
+        }
     }
 
     // Check specific values
-    for (const scalarRange& range : ranges_)
+    for (const scalarRange& range : *this)
     {
         if (range.single())
         {

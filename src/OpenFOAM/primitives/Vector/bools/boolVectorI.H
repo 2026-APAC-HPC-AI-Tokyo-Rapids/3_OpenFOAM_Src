@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -45,6 +45,8 @@ inline Foam::boolVector::boolVector
     const bool vy,
     const bool vz
 )
+:
+    FixedList<bool, 3>()
 {
     x() = vx;
     y() = vy;
@@ -60,19 +62,27 @@ inline Foam::boolVector::boolVector(Istream& is)
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-inline bool Foam::boolVector::all() const noexcept
+inline bool Foam::boolVector::all() const
 {
-    return (x() && y() && z());
+    for (const bool val : *this)
+    {
+        if (!val) return false;
+    }
+    return true;
 }
 
 
-inline bool Foam::boolVector::any() const noexcept
+inline bool Foam::boolVector::any() const
 {
-    return (x() || y() || z());
+    for (const bool val : *this)
+    {
+        if (val) return true;
+    }
+    return false;
 }
 
 
-inline bool Foam::boolVector::none() const noexcept
+inline bool Foam::boolVector::none() const
 {
     return !any();
 }
@@ -97,11 +107,21 @@ inline unsigned int Foam::boolVector::count(const bool on) const
 }
 
 
+inline bool Foam::boolVector::x() const { return operator[](boolVector::X); }
+inline bool Foam::boolVector::y() const { return operator[](boolVector::Y); }
+inline bool Foam::boolVector::z() const { return operator[](boolVector::Z); }
+
+inline bool& Foam::boolVector::x() { return operator[](boolVector::X); }
+inline bool& Foam::boolVector::y() { return operator[](boolVector::Y); }
+inline bool& Foam::boolVector::z() { return operator[](boolVector::Z); }
+
+
 inline void Foam::boolVector::flip()
 {
-    x() = !x();
-    y() = !y();
-    z() = !z();
+    for (bool& val : *this)
+    {
+        val = !val;
+    }
 }
 
 

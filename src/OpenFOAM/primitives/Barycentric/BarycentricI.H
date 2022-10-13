@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,26 +50,61 @@ inline Foam::Barycentric<Cmpt>::Barycentric
 }
 
 
-template<class Cmpt>
-inline Foam::Barycentric<Cmpt>::Barycentric
-(
-    const Cmpt& va,
-    const Cmpt& vb,
-    const Cmpt& vc
-)
-:
-    Barycentric<Cmpt>(va, vb, vc, (pTraits<Cmpt>::one - va - vb - vc))
-{}
-
-
-// * * * * * * * * * * * * * * * Member Operations * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Cmpt>
-inline Cmpt Foam::Barycentric<Cmpt>::inner(const Barycentric<Cmpt>& b2) const
+inline const Cmpt& Foam::Barycentric<Cmpt>::a() const
 {
-    const Barycentric<Cmpt>& b1 = *this;
+    return this->v_[A];
+}
 
-    return (b1.a()*b2.a() + b1.b()*b2.b() + b1.c()*b2.c() + b1.d()*b2.d());
+
+template<class Cmpt>
+inline const Cmpt& Foam::Barycentric<Cmpt>::b() const
+{
+    return this->v_[B];
+}
+
+
+template<class Cmpt>
+inline const Cmpt& Foam::Barycentric<Cmpt>::c() const
+{
+    return this->v_[C];
+}
+
+
+template<class Cmpt>
+inline const Cmpt& Foam::Barycentric<Cmpt>::d() const
+{
+    return this->v_[D];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Barycentric<Cmpt>::a()
+{
+    return this->v_[A];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Barycentric<Cmpt>::b()
+{
+    return this->v_[B];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Barycentric<Cmpt>::c()
+{
+    return this->v_[C];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Barycentric<Cmpt>::d()
+{
+    return this->v_[D];
 }
 
 
@@ -84,7 +118,7 @@ namespace Foam
 template<class Cmpt>
 inline Cmpt operator&(const Barycentric<Cmpt>& b1, const Barycentric<Cmpt>& b2)
 {
-    return b1.inner(b2);
+    return b1.a()*b2.a() + b1.b()*b2.b() + b1.c()*b2.c() + b1.d()*b2.d();
 }
 
 

@@ -964,6 +964,8 @@ Foam::labelList Foam::boundaryMesh::getNearest
 
     labelList nearestBFacei(pMesh.nBoundaryFaces());
 
+    treeBoundBox tightest;
+
     const scalar searchDimSqr = magSqr(searchSpan);
 
     forAll(nearestBFacei, patchFacei)
@@ -1007,8 +1009,8 @@ Foam::labelList Foam::boundaryMesh::getNearest
                 label rightFacei = rightFaces[rightInfo.index()];
                 label leftFacei = leftFaces[leftInfo.index()];
 
-                label rightDist = rightInfo.point().dist(ctr);
-                label leftDist = leftInfo.point().dist(ctr);
+                label rightDist = mag(rightInfo.hitPoint()-ctr);
+                label leftDist = mag(leftInfo.hitPoint()-ctr);
 
                 scalar rightSign = n & ns[rightFacei];
                 scalar leftSign = n & ns[leftFacei];
@@ -1147,7 +1149,7 @@ void Foam::boundaryMesh::patchify
     // zero faces (repatched later on). Exception is coupled patches which
     // keep their size.
 
-    polyPatchList newPatches(nNewPatches);
+    List<polyPatch*> newPatchPtrList(nNewPatches);
 
     label meshFacei = newMesh.nInternalFaces();
 
@@ -1172,19 +1174,15 @@ void Foam::boundaryMesh::patchify
                     << " type:" << bp.physicalType() << endl;
             }
 
-            newPatches.set
+            newPatchPtrList[newPatchi] = polyPatch::New
             (
+                bp.physicalType(),
+                bp.name(),
+                facesToBeDone,
+                meshFacei,
                 newPatchi,
-                polyPatch::New
-                (
-                    bp.physicalType(),
-                    bp.name(),
-                    facesToBeDone,
-                    meshFacei,
-                    newPatchi,
-                    newMesh.boundaryMesh()
-                )
-            );
+                newMesh.boundaryMesh()
+            ).ptr();
 
             meshFacei += facesToBeDone;
 
@@ -1202,17 +1200,13 @@ void Foam::boundaryMesh::patchify
                     << oldPatch.name() << endl;
             }
 
-            newPatches.set
+            newPatchPtrList[newPatchi] = oldPatch.clone
             (
+                newMesh.boundaryMesh(),
                 newPatchi,
-                oldPatch.clone
-                (
-                    newMesh.boundaryMesh(),
-                    newPatchi,
-                    facesToBeDone,
-                    meshFacei
-                )
-            );
+                facesToBeDone,
+                meshFacei
+            ).ptr();
 
             meshFacei += facesToBeDone;
 
@@ -1226,9 +1220,9 @@ void Foam::boundaryMesh::patchify
     {
         Pout<< "Patchify : new polyPatch list:" << endl;
 
-        forAll(newPatches, patchi)
+        forAll(newPatchPtrList, patchi)
         {
-            const polyPatch& newPatch = newPatches[patchi];
+            const polyPatch& newPatch = *newPatchPtrList[patchi];
 
             if (debug)
             {
@@ -1243,13 +1237,13 @@ void Foam::boundaryMesh::patchify
 
     // Actually add new list of patches
     repatchPolyTopoChanger polyMeshRepatcher(newMesh);
-    polyMeshRepatcher.changePatches(newPatches);
+    polyMeshRepatcher.changePatches(newPatchPtrList);
 
 
     // Pass2:
     // Change patch type for face
 
-    if (newPatches.size())
+    if (newPatchPtrList.size())
     {
         List<DynamicList<label>> patchFaces(nNewPatches);
 
@@ -1806,7 +1800,7 @@ void Foam::boundaryMesh::changeFaces
 
     // Reconstruct 'mesh' from new faces and (copy of) existing points.
 
-    std::unique_ptr<bMesh> newMeshPtr(new bMesh(newFaces, mesh().points()));
+    unique_ptr<bMesh> newMeshPtr(new bMesh(newFaces, mesh().points()));
 
     // Reset meshFace_ to new ordering.
     meshFace_.transfer(newMeshFace);

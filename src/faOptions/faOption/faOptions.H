@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 ------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -34,8 +34,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_fa_options_H
-#define Foam_fa_options_H
+#ifndef fa_options_H
+#define fa_options_H
 
 #include "faOptionList.H"
 #include "IOdictionary.H"
@@ -78,15 +78,16 @@ public:
     // Constructors
 
         //- Construct from components with list of field names
-        explicit options(const fvMesh& mesh);
+        options(const fvPatch& p);
 
         //- Construct faOptions and register to database if not present
         //- otherwise lookup and return
-        static options& New(const fvMesh& mesh);
+        static options& New(const fvPatch& p);
 
 
     //- Destructor
-    virtual ~options() = default;
+    virtual ~options()
+    {}
 
 
     // Member Functions

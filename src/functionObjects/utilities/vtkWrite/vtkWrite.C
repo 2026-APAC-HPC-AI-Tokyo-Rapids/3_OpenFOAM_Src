@@ -48,9 +48,6 @@ namespace functionObjects
 }
 
 
-// Implementation
-#include "vtkWriteImpl.C"
-
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 Foam::label Foam::functionObjects::vtkWrite::writeAllVolFields
@@ -58,31 +55,28 @@ Foam::label Foam::functionObjects::vtkWrite::writeAllVolFields
     autoPtr<vtk::internalWriter>& internalWriter,
     UPtrList<vtk::patchWriter>& patchWriters,
     const fvMeshSubset& proxy,
-    const wordHashSet& candidateNames
+    const wordHashSet& acceptField
 ) const
 {
+    #undef  vtkWrite_WRITE_FIELD
+    #define vtkWrite_WRITE_FIELD(FieldType)     \
+        writeVolFields<FieldType>               \
+        (                                       \
+            internalWriter,                     \
+            patchWriters,                       \
+            proxy,                              \
+            acceptField                         \
+        )
+
+
     label count = 0;
+    count += vtkWrite_WRITE_FIELD(volScalarField);
+    count += vtkWrite_WRITE_FIELD(volVectorField);
+    count += vtkWrite_WRITE_FIELD(volSphericalTensorField);
+    count += vtkWrite_WRITE_FIELD(volSymmTensorField);
+    count += vtkWrite_WRITE_FIELD(volTensorField);
 
-    {
-        #undef  doLocalCode
-        #define doLocalCode(FieldType)              \
-            count += writeVolFieldsImpl<FieldType>  \
-            (                                       \
-                internalWriter,                     \
-                patchWriters,                       \
-                proxy,                              \
-                candidateNames                      \
-            );
-
-        doLocalCode(volScalarField);
-        doLocalCode(volVectorField);
-        doLocalCode(volSphericalTensorField);
-        doLocalCode(volSymmTensorField);
-        doLocalCode(volTensorField);
-
-        #undef doLocalCode
-    }
-
+    #undef vtkWrite_WRITE_FIELD
     return count;
 }
 
@@ -95,31 +89,28 @@ Foam::label Foam::functionObjects::vtkWrite::writeAllVolFields
     UPtrList<vtk::patchWriter>& patchWriters,
     const UPtrList<PrimitivePatchInterpolation<primitivePatch>>& patchInterps,
     const fvMeshSubset& proxy,
-    const wordHashSet& candidateNames
+    const wordHashSet& acceptField
 ) const
 {
+    #undef  vtkWrite_WRITE_FIELD
+    #define vtkWrite_WRITE_FIELD(FieldType)     \
+        writeVolFields<FieldType>               \
+        (                                       \
+            internalWriter, pInterp,            \
+            patchWriters,   patchInterps,       \
+            proxy,                              \
+            acceptField                         \
+        )
+
+
     label count = 0;
+    count += vtkWrite_WRITE_FIELD(volScalarField);
+    count += vtkWrite_WRITE_FIELD(volVectorField);
+    count += vtkWrite_WRITE_FIELD(volSphericalTensorField);
+    count += vtkWrite_WRITE_FIELD(volSymmTensorField);
+    count += vtkWrite_WRITE_FIELD(volTensorField);
 
-    {
-        #undef  doLocalCode
-        #define doLocalCode(FieldType)              \
-            count += writeVolFieldsImpl<FieldType>  \
-            (                                       \
-                internalWriter, pInterp,            \
-                patchWriters,   patchInterps,       \
-                proxy,                              \
-                candidateNames                      \
-            );
-
-        doLocalCode(volScalarField);
-        doLocalCode(volVectorField);
-        doLocalCode(volSphericalTensorField);
-        doLocalCode(volSymmTensorField);
-        doLocalCode(volTensorField);
-
-        #undef doLocalCode
-    }
-
+    #undef vtkWrite_WRITE_FIELD
     return count;
 }
 
@@ -147,9 +138,7 @@ Foam::functionObjects::vtkWrite::vtkWrite
     meshState_(polyMesh::TOPO_CHANGE),
     selectRegions_(),
     selectPatches_(),
-    blockPatches_(),
     selectFields_(),
-    blockFields_(),
     selection_(),
     meshes_(),
     meshSubsets_(),
@@ -299,30 +288,10 @@ bool Foam::functionObjects::vtkWrite::write()
 
         const fvMesh& baseMesh = meshProxy.baseMesh();
 
-
-        // Output fields MUST be specified to avoid accidentally
-        // writing everything. Can still use ".*" for everything
-
-        wordHashSet candidateNames(0);
-
-        if (!selectFields_.empty())
-        {
-            if (!blockFields_.empty())
-            {
-                // With 'allow' and 'deny' filters
-                wordRes::filter filter(selectFields_, blockFields_);
-
-                candidateNames = baseMesh.names<void>(filter);
-            }
-            else
-            {
-                // With 'allow' filter only
-                candidateNames = baseMesh.names<void>(selectFields_);
-            }
-        }
+        wordHashSet acceptField(baseMesh.names<void>(selectFields_));
 
         // Prune restart fields
-        candidateNames.filterKeys
+        acceptField.filterKeys
         (
             [](const word& k){ return k.ends_with("_0"); },
             true // prune
@@ -334,7 +303,7 @@ bool Foam::functionObjects::vtkWrite::write()
           ? baseMesh.count
             (
                 stringListOps::foundOp<word>(fieldTypes::volume),
-                candidateNames
+                acceptField
             )
           : 0
         );
@@ -347,7 +316,7 @@ bool Foam::functionObjects::vtkWrite::write()
         //   ? baseMesh.count
         //     (
         //         stringListOps::foundOp<word>(fieldTypes::internal),
-        //         candidateNames
+        //         acceptField
         //     )
         //   : 0
         // );
@@ -595,14 +564,14 @@ bool Foam::functionObjects::vtkWrite::write()
                 internalWriter,
                 patchWriters,
                 meshProxy,
-                candidateNames
+                acceptField
             );
 
             // writeAllDimFields
             // (
             //     internalWriter,
             //     meshProxy,
-            //     candidateNames
+            //     acceptField
             // );
 
             // End CellData is implicit
@@ -643,14 +612,14 @@ bool Foam::functionObjects::vtkWrite::write()
                 internalWriter, pInterp,
                 patchWriters,   patchInterps,
                 meshProxy,
-                candidateNames
+                acceptField
             );
 
             // writeAllDimFields
             // (
             //     internalWriter, pInterp,
             //     meshProxy,
-            //     candidateNames
+            //     acceptField
             // );
 
             // writeAllPointFields
@@ -658,7 +627,7 @@ bool Foam::functionObjects::vtkWrite::write()
             //     internalWriter,
             //     patchWriters,
             //     meshProxy,
-            //     candidateNames
+            //     acceptField
             // );
 
             // End PointData is implicit

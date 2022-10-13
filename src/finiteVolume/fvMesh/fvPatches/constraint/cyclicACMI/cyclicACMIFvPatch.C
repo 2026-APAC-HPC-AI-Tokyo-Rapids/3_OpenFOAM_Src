@@ -311,24 +311,35 @@ Foam::tmp<Foam::labelField> Foam::cyclicACMIFvPatch::internalFieldTransfer
 
 void Foam::cyclicACMIFvPatch::movePoints()
 {
-    // Update local and higher level areas
-    const bool updated = updateAreas();
+    if (!cyclicACMIPolyPatch_.owner())
+    {
+        return;
+    }
 
-    // If anything changed update the mesh flux
-    if (cyclicACMIPolyPatch_.owner() && updated)
+
+    if (!cyclicACMIPolyPatch_.upToDate(areaTime_))
     {
         if (debug)
         {
-            Pout<< "cyclicACMIFvPatch::movePoints() : areas updated for "
-                << name() << "; updating mesh flux now"
+            Pout<< "cyclicACMIFvPatch::movePoints() : updating fv areas for "
+                << name() << " and " << this->nonOverlapPatch().name()
                 << endl;
         }
 
-        // Scale the mesh flux
+
+        // Set the patch face areas to be consistent with the changes made
+        // at the polyPatch level
 
         const fvPatch& nonOverlapPatch = this->nonOverlapPatch();
         const cyclicACMIFvPatch& nbrACMI = neighbPatch();
         const fvPatch& nbrNonOverlapPatch = nbrACMI.nonOverlapPatch();
+
+        resetPatchAreas(*this);
+        resetPatchAreas(nonOverlapPatch);
+        resetPatchAreas(nbrACMI);
+        resetPatchAreas(nbrNonOverlapPatch);
+
+        // Scale the mesh flux
 
         const labelListList& newSrcAddr = AMI().srcAddress();
         const labelListList& newTgtAddr = AMI().tgtAddress();
@@ -399,6 +410,9 @@ void Foam::cyclicACMIFvPatch::movePoints()
             const scalar w = 1.0 - cyclicACMIPolyPatch_.tgtMask()[facei];
             nbrPhiNonOverlapp[facei] *= w;
         }
+
+        // Mark my data to be up to date with ACMI polyPatch level
+        cyclicACMIPolyPatch_.setUpToDate(areaTime_);
     }
 }
 

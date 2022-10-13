@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -61,9 +61,9 @@ void basicTests(const coordinateSystem& cs)
 
     if (const auto* cartptr = isA<coordSystem::cartesian>(cs))
     {
-        if (!cartptr->valid())
+        if (!cartptr->active())
         {
-            Info<< "invalid cartesian = " << (*cartptr)
+            Info<< "inactive cartesian = " << (*cartptr)
                 << " with: " << (*cartptr).R() << nl;
         }
     }
@@ -106,7 +106,7 @@ void doTest(const dictionary& dict)
 
     try
     {
-        auto cs1ptr = coordinateSystem::New(dict, word::null);
+        auto cs1ptr = coordinateSystem::New(dict, "");
         coordinateSystem& cs1 = *cs1ptr;
         cs1.rename(dict.dictName());
 

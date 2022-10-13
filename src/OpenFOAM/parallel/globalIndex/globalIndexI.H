@@ -90,8 +90,20 @@ inline Foam::globalIndex::globalIndex
 
 inline Foam::globalIndex::globalIndex
 (
-    const globalIndex::gatherNone,
     const label localSize,
+    const globalIndex::gatherOnly,
+    const label comm
+)
+{
+    // Gather sizes (one-sided)
+    reset(UPstream::listGatherValues(localSize, comm));
+}
+
+
+inline Foam::globalIndex::globalIndex
+(
+    const label localSize,
+    const globalIndex::gatherNone,
     const label /* comm (ignored) */
 )
 :
@@ -99,37 +111,6 @@ inline Foam::globalIndex::globalIndex
 {
     offsets_[0] = 0;
     offsets_[1] = localSize;
-}
-
-
-inline Foam::globalIndex::globalIndex
-(
-    const globalIndex::gatherOnly,
-    const label localSize,
-    const label comm
-)
-{
-    // one-sided
-    reset(UPstream::listGatherValues(localSize, comm));
-}
-
-
-inline Foam::globalIndex::globalIndex
-(
-    const globalIndex::gatherNonLocal,
-    const label localSize,
-    const label comm
-)
-{
-    // one-sided: non-master only
-    reset
-    (
-        UPstream::listGatherValues
-        (
-            (UPstream::master() ? label(0) : localSize),
-            comm
-        )
-    );
 }
 
 
@@ -192,12 +173,6 @@ inline const Foam::labelList& Foam::globalIndex::offsets() const noexcept
 inline Foam::labelList& Foam::globalIndex::offsets() noexcept
 {
     return offsets_;
-}
-
-
-inline void Foam::globalIndex::clear()
-{
-    offsets_.clear();
 }
 
 
@@ -366,50 +341,6 @@ inline Foam::label Foam::globalIndex::whichProcID(const label i) const
     const label proci(Pstream::myProcNo());
 
     return isLocal(proci, i) ? proci : findLower(offsets_, i+1);
-}
-
-
-inline void Foam::globalIndex::reset
-(
-    const globalIndex::gatherNone,
-    const label localSize,
-    const label /* comm (ignored) */
-)
-{
-    offsets_.resize_nocopy(2);
-    offsets_[0] = 0;
-    offsets_[1] = localSize;
-}
-
-
-inline void Foam::globalIndex::reset
-(
-    const globalIndex::gatherOnly,
-    const label localSize,
-    const label comm
-)
-{
-    // one-sided
-    reset(UPstream::listGatherValues(localSize, comm));
-}
-
-
-inline void Foam::globalIndex::reset
-(
-    const globalIndex::gatherNonLocal,
-    const label localSize,
-    const label comm
-)
-{
-    // one-sided: non-master only
-    reset
-    (
-        UPstream::listGatherValues
-        (
-            (UPstream::master() ? label(0) : localSize),
-            comm
-        )
-    );
 }
 
 

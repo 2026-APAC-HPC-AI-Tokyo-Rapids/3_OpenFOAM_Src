@@ -3,12 +3,11 @@
 #------------------------------------------------------------------------------
 include $(GENERAL_RULES)/Clang/c++
 
-CC         := FCC$(COMPILER_VERSION) -std=c++14
-c++ARCH    := -pthread
+CC          = FCC$(COMPILER_VERSION) -std=c++14
 
-ifneq (,$(strip $(WM_COMPILE_OPTION)))
-    sinclude $(DEFAULT_RULES)/c++$(WM_COMPILE_OPTION)
-endif
+c++ARCH     = -pthread
+
+include $(DEFAULT_RULES)/c++$(WM_COMPILE_OPTION)
 
 c++FLAGS    = \
     $(c++ARCH) $(GFLAGS) $(c++WARN) $(c++OPT) $(c++DBUG) $(ptFLAGS) \

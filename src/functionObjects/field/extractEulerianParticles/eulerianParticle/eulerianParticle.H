@@ -37,8 +37,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_functionObjects_eulerianParticle_H
-#define Foam_functionObjects_eulerianParticle_H
+#ifndef functionObjects_eulerianParticle_H
+#define functionObjects_eulerianParticle_H
 
 #include "label.H"
 #include "scalar.H"
@@ -49,7 +49,7 @@ SourceFiles
 
 namespace Foam
 {
-// Forward Declarations
+// Forward declaration of classes
 class Istream;
 class Ostream;
 
@@ -71,9 +71,10 @@ namespace functionObjects
 
 class eulerianParticle
 {
+
 public:
 
-    // Public Data
+    // Public data
 
         //- Index of face in faceZone that this particle hits.  Also used to
         //  identify the index of the coarse face of the surface agglomeration
@@ -94,7 +95,7 @@ public:
         scalar time;
 
 
-    //- Default construct
+    //- Constructor
     eulerianParticle();
 
 

@@ -41,7 +41,7 @@ cellZoneID
                             fieldName,
                             mesh,
                             dimless,
-                            fvPatchScalarField::zeroGradientType()
+                            zeroGradientFvPatchField<scalar>::typeName
                         )
                     );
 
@@ -95,14 +95,6 @@ plane
     fields          ( cellZoneID U );
 
     surfaceFormat   vtk;
-
-    formatOptions
-    {
-        default
-        {
-            verbose true;
-        }
-    }
 
     surfaces
     {

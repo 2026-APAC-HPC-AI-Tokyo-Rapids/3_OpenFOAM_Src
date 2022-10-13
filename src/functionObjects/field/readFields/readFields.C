@@ -80,28 +80,15 @@ bool Foam::functionObjects::readFields::execute()
     for (const word& fieldName : fieldSet_)
     {
         // Already loaded?
-        auto* ptr = mesh_.getObjectPtr<regIOobject>(fieldName);
+        const auto* ptr = mesh_.cfindObject<regIOobject>(fieldName);
 
         if (ptr)
         {
-            if (functionObject::postProcess)
-            {
-                DebugInfo
-                    << "readFields : "
-                    << ptr->name() << " (" << ptr->type()
-                    << ") already in database - removing" << endl;
-
-                ptr->checkOut();
-            }
-            else
-            {
-                DebugInfo
-                    << "readFields : "
-                    << ptr->name() << " (" << ptr->type()
-                    << ") already in database" << endl;
-
-                continue;
-            }
+            DebugInfo
+                << "readFields : "
+                << ptr->name() << " (" << ptr->type()
+                << ") already in database" << endl;
+            continue;
         }
 
         // Load field as necessary

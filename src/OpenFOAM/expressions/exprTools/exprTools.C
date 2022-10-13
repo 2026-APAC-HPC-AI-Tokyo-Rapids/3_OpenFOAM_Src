@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -81,8 +81,8 @@ static List<expressions::exprString> expandExprStrings
                 (
                     exprTools::getList
                     (
-                        varExpr.substr(1),
                         dict,
+                        varExpr.substr(1),
                         mandatory,
                         recursionDepth
                     )
@@ -99,10 +99,7 @@ static List<expressions::exprString> expandExprStrings
             }
             else
             {
-                result.append
-                (
-                    expressions::exprString::toExpr(std::move(varExpr), dict)
-                );
+                result.append(expressions::exprString(varExpr, dict));
             }
         }
     }
@@ -116,13 +113,13 @@ static List<expressions::exprString> expandExprStrings
 } // End namespace Foam
 
 
-// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
 
 Foam::List<Foam::expressions::exprString>
 Foam::exprTools::getList
 (
-    const word& keyword,
     const dictionary& dict,
+    const word& keyword,
     bool mandatory,
     label recursionDepth
 )

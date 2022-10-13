@@ -242,20 +242,16 @@ void Foam::fvMatrix<Type>::setValuesFromList
             GeometricField<Type, fvPatchField, volMesh>&
         >(psi_).primitiveFieldRef();
 
-
-    // Following actions:
-    // - adjust local field psi
-    // - set local matrix to be diagonal (so adjust source)
-    //      - cut connections to neighbours
-    // - make (on non-adjusted cells) contribution explicit
-
-    if (symmetric() || asymmetric())
+    forAll(cellLabels, i)
     {
-        forAll(cellLabels, i)
-        {
-            const label celli = cellLabels[i];
-            const Type& value = values[i];
+        const label celli = cellLabels[i];
+        const Type& value = values[i];
 
+        psi[celli] = value;
+        source_[celli] = value*Diag[celli];
+
+        if (symmetric() || asymmetric())
+        {
             for (const label facei : cells[celli])
             {
                 if (mesh.isInternalFace(facei))
@@ -303,17 +299,6 @@ void Foam::fvMatrix<Type>::setValuesFromList
                 }
             }
         }
-    }
-
-    // Note: above loop might have affected source terms on adjusted cells
-    // so make sure to adjust them afterwards
-    forAll(cellLabels, i)
-    {
-        const label celli = cellLabels[i];
-        const Type& value = values[i];
-
-        psi[celli] = value;
-        source_[celli] = value*Diag[celli];
     }
 }
 

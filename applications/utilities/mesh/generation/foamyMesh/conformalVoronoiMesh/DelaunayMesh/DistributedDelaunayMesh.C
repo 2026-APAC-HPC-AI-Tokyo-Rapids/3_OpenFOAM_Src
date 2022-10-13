@@ -588,8 +588,9 @@ Foam::label Foam::DistributedDelaunayMesh<Triangulation>::referVertices
     reduce(preInsertionSize, sumOp<label>());
     reduce(postInsertionSize, sumOp<label>());
 
-    label nTotalToInsert =
-        returnReduce(referredVertices.size(), sumOp<label>());
+    label nTotalToInsert = referredVertices.size();
+
+    reduce(nTotalToInsert, sumOp<label>());
 
     if (preInsertionSize + nTotalToInsert != postInsertionSize)
     {
@@ -869,7 +870,9 @@ Foam::DistributedDelaunayMesh<Triangulation>::rangeInsertReferredWithInfo
 
         if (!bb.contains(samplePoint))
         {
-            distFromBbSqr = bb.nearest(samplePoint).distSqr(samplePoint);
+            const Foam::point nearestPoint = bb.nearest(samplePoint);
+
+            distFromBbSqr = magSqr(nearestPoint - samplePoint);
         }
 
         pointsBbDistSqr.append

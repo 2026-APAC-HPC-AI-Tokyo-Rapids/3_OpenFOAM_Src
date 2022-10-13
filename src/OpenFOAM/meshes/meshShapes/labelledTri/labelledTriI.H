@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -77,13 +77,13 @@ inline Foam::labelledTri::labelledTri
 
 inline Foam::labelledTri::labelledTri
 (
-    const label p0,
-    const label p1,
-    const label p2,
+    const label a,
+    const label b,
+    const label c,
     const label region
 )
 :
-    triFace(p0, p1, p2),
+    triFace(a, b, c),
     index_(region)
 {}
 
@@ -139,7 +139,7 @@ inline Foam::labelledTri::labelledTri(Istream& is)
 
 inline Foam::Istream& Foam::operator>>(Istream& is, labelledTri& t)
 {
-    if (is.format() == IOstreamOption::ASCII)
+    if (is.format() == IOstream::ASCII)
     {
         is.readBegin("labelledTri");
 
@@ -164,7 +164,7 @@ inline Foam::Istream& Foam::operator>>(Istream& is, labelledTri& t)
 
 inline Foam::Ostream& Foam::operator<<(Ostream& os, const labelledTri& t)
 {
-    if (os.format() == IOstreamOption::ASCII)
+    if (os.format() == IOstream::ASCII)
     {
         os  << token::BEGIN_LIST
             << static_cast<const triFace&>(t) << token::SPACE << t.index()

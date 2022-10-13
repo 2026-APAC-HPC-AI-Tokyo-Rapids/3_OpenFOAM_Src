@@ -28,8 +28,8 @@ License
 #include "surfaceNoise.H"
 #include "surfaceReader.H"
 #include "surfaceWriter.H"
-#include "globalIndex.H"
 #include "argList.H"
+#include "graph.H"
 #include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -48,10 +48,8 @@ addToRunTimeSelectionTable(noiseModel, surfaceNoise, dictionary);
 
 void surfaceNoise::initialise(const fileName& fName)
 {
-    Info<< "Reading data file: "
-        << fileObr_.time().relativePath(fName) << endl;
+    Info<< "Reading data file " << fName << endl;
 
-    instantList allTimes;
     label nAvailableTimes = 0;
 
     // All reading performed on the master processor only
@@ -61,7 +59,7 @@ void surfaceNoise::initialise(const fileName& fName)
         readerPtr_ = surfaceReader::New(readerType_, fName);
 
         // Find the index of the pressure data
-        const wordList fieldNames(readerPtr_->fieldNames(0));
+        const List<word> fieldNames(readerPtr_->fieldNames(0));
         pIndex_ = fieldNames.find(pName_);
         if (pIndex_ == -1)
         {
@@ -77,8 +75,8 @@ void surfaceNoise::initialise(const fileName& fName)
         //   the heavy lifting
 
         // Set the time range
-        allTimes = readerPtr_->times();
-        startTimeIndex_ = instant::findStart(allTimes, startTime_);
+        const instantList allTimes = readerPtr_->times();
+        startTimeIndex_ = findStartTimeIndex(allTimes, startTime_);
 
         // Determine the windowing
         nAvailableTimes = allTimes.size() - startTimeIndex_;
@@ -99,6 +97,8 @@ void surfaceNoise::initialise(const fileName& fName)
     if (Pstream::master())
     {
         // Restrict times
+        const instantList allTimes = readerPtr_->times();
+
         times_.setSize(nRequiredTimes);
         forAll(times_, timeI)
         {
@@ -109,8 +109,7 @@ void surfaceNoise::initialise(const fileName& fName)
         // Read the surface geometry
         // Note: hard-coded to read mesh from first time index
         const meshedSurface& surf = readerPtr_->geometry(0);
-
-        nFaces_ = surf.nFaces();
+        nFace_ = surf.size();
     }
 
     Pstream::broadcasts
@@ -118,14 +117,14 @@ void surfaceNoise::initialise(const fileName& fName)
         UPstream::worldComm,
         times_,
         deltaT_,
-        nFaces_
+        nFace_
     );
 }
 
 
 void surfaceNoise::readSurfaceData
 (
-    const globalIndex& procFaceAddr,
+    const labelList& procFaceOffset,
     List<scalarField>& pData
 )
 {
@@ -134,23 +133,12 @@ void surfaceNoise::readSurfaceData
     // surface face.  In serial mode, this results in all pressure data being
     // loaded into memory (!)
 
-    const label nLocalFace = procFaceAddr.localSize();
-
-    // Complete pressure time history data for subset of faces
-    pData.resize_nocopy(nLocalFace);
-    const label nTimes = times_.size();
-    for (scalarField& pf : pData)
-    {
-        pf.resize_nocopy(nTimes);
-    }
-
-    Info<< "Reading pressure data" << endl;
-
-    // Master only
-    scalarField allData;
+    Info << "Reading pressure data" << endl;
 
     if (Pstream::parRun())
     {
+        PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking);
+
         // Procedure:
         // 1. Master processor reads pressure data for all faces for all times
         // 2. Master sends each processor a subset of faces
@@ -158,157 +146,101 @@ void surfaceNoise::readSurfaceData
         //    of faces
         // Note: reading all data on master to avoid potential NFS problems...
 
-        scalarField scratch;
+        const label myProcI = Pstream::myProcNo();
+        const label nLocalFace =
+            procFaceOffset[myProcI + 1] - procFaceOffset[myProcI];
 
-        if (!useBroadcast_)
+        // Complete pressure time history data for subset of faces
+        pData.setSize(nLocalFace);
+        const label nTimes = times_.size();
+        for (scalarField& pf : pData)
         {
-            scratch.resize(nLocalFace);
+            pf.setSize(nTimes);
         }
 
-        // Read data and send to sub-ranks
-        forAll(times_, timei)
+        // Read and send data
+        forAll(times_, i)
         {
-            const label fileTimeIndex = timei + startTimeIndex_;
+            pBufs.clear();
 
             if (Pstream::master())
             {
-                Info<< "    time: " << times_[timei] << endl;
+                label timeI = i + startTimeIndex_;
+
+                Info<< "    time: " << times_[i] << endl;
 
                 // Read pressure at all faces for time timeI
-                allData = readerPtr_->field(fileTimeIndex, pIndex_, scalar(0));
+                scalarField p(readerPtr_->field(timeI, pIndex_, scalar(0)));
+
+                // Apply conversions
+                p *= rhoRef_;
+
+                // Send subset of faces to each processor
+                for (const int procI : Pstream::allProcs())
+                {
+                    label face0 = procFaceOffset[procI];
+                    label nLocalFace =
+                        procFaceOffset[procI + 1] - procFaceOffset[procI];
+
+                    UOPstream toProc(procI, pBufs);
+                    toProc << SubList<scalar>(p, nLocalFace, face0);
+                }
             }
 
-            if (useBroadcast_)
+            pBufs.finishedScatters();
+
+            // Receive data from the master
+            UIPstream fromProc(Pstream::masterNo(), pBufs);
+            scalarList pSlice(fromProc);
+
+            forAll(pSlice, faceI)
             {
-                Pstream::broadcast(allData);
+                pData[faceI][i] = pSlice[faceI];
             }
-            else
-            {
-                procFaceAddr.scatter
-                (
-                    allData,
-                    scratch,
-                    UPstream::msgType(),
-                    commType_,
-                    UPstream::worldComm
-                );
-            }
+        }
 
-            scalarField::subField procData =
-            (
-                useBroadcast_
-              ? allData.slice(procFaceAddr.range())
-              : scratch.slice(0, nLocalFace)
-            );
-
-            // Apply conversions
-            procData *= rhoRef_;
-
-            // Transcribe this time snapshot (transpose)
-            forAll(procData, facei)
-            {
-                pData[facei][timei] = procData[facei];
-            }
+        forAll(pData, faceI)
+        {
+            pData[faceI] -= average(pData[faceI]);
         }
     }
     else
     {
-        // Read data - no sub-ranks
-        forAll(times_, timei)
+        const label nLocalFace = procFaceOffset[0];
+
+        pData.setSize(nLocalFace);
+        for (scalarField& pf : pData)
         {
-            const label fileTimeIndex = timei + startTimeIndex_;
+            pf.setSize(times_.size());
+        }
 
-            Info<< "    time: " << times_[timei] << endl;
+        forAll(times_, i)
+        {
+            label timeI = i + startTimeIndex_;
 
-            allData = readerPtr_->field(fileTimeIndex, pIndex_, scalar(0));
-
-            auto& procData = allData;
+            Info<< "    time: " << times_[i] << endl;
+            scalarField p(readerPtr_->field(timeI, pIndex_, scalar(0)));
 
             // Apply conversions
-            procData *= rhoRef_;
+            p *= rhoRef_;
 
-            // Transcribe this time snapshot (transpose)
-            forAll(procData, facei)
+            forAll(p, faceI)
             {
-                pData[facei][timei] = procData[facei];
+                pData[faceI][i] = p[faceI];
             }
         }
-    }
 
-    forAll(pData, facei)
-    {
-        pData[facei] -= average(pData[facei]);
+        forAll(pData, faceI)
+        {
+            pData[faceI] -= average(pData[faceI]);
+        }
     }
-
 
     Info<< "Read "
         << returnReduce(pData.size(), sumOp<label>())
         << " pressure traces with "
         << times_.size()
         << " time values" << nl << endl;
-}
-
-
-scalar surfaceNoise::surfaceAverage
-(
-    const scalarField& data,
-    const globalIndex& procFaceAddr
-) const
-{
-    if (!nFaces_)
-    {
-        // Already reduced, can use as sanity check
-        return 0;
-    }
-
-    scalar areaAverage = 0;
-
-    if (areaAverage_)
-    {
-        if (Pstream::parRun())
-        {
-            // Collect the surface data so that we can output the surfaces
-            scalarField allData;
-
-            procFaceAddr.gather
-            (
-                data,
-                allData,
-                UPstream::msgType(),
-                commType_,
-                UPstream::worldComm
-            );
-
-            if (Pstream::master())
-            {
-                // Note: hard-coded to read mesh from first time index
-                const meshedSurface& surf = readerPtr_->geometry(0);
-
-                areaAverage = sum(allData*surf.magSf())/sum(surf.magSf());
-            }
-        }
-        else
-        {
-            // Note: hard-coded to read mesh from first time index
-            const meshedSurface& surf = readerPtr_->geometry(0);
-
-            areaAverage = sum(data*surf.magSf())/sum(surf.magSf());
-        }
-
-        Pstream::broadcast(areaAverage);
-    }
-    else
-    {
-        // Ensemble averaged
-        // - same as gAverage, but already know number of faces
-
-        areaAverage = sum(data);
-        reduce(areaAverage, sumOp<scalar>());
-
-        areaAverage /= (scalar(nFaces_) + ROOTVSMALL);
-    }
-
-    return areaAverage;
 }
 
 
@@ -319,7 +251,7 @@ scalar surfaceNoise::writeSurfaceData
     const word& title,
     const scalar freq,
     const scalarField& data,
-    const globalIndex& procFaceAddr,
+    const labelList& procFaceOffset,
     const bool writeSurface
 ) const
 {
@@ -327,42 +259,46 @@ scalar surfaceNoise::writeSurfaceData
 
     const instant freqInst(freq, Foam::name(freq));
 
-    if (!writeSurface)
-    {
-        return surfaceAverage(data, procFaceAddr);
-    }
-
-    scalar areaAverage = 0;
-
     if (Pstream::parRun())
     {
         // Collect the surface data so that we can output the surfaces
-        scalarField allData;
 
-        procFaceAddr.gather
-        (
-            data,
-            allData,
-            UPstream::msgType(),
-            commType_,
-            UPstream::worldComm
-        );
+        PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking);
 
+        if (!Pstream::master())
+        {
+            UOPstream toProc(Pstream::masterNo(), pBufs);
+            toProc << data;
+        }
+
+        pBufs.finishedGathers();
+
+        scalar areaAverage = 0;
         if (Pstream::master())
         {
             // Note: hard-coded to read mesh from first time index
             const meshedSurface& surf = readerPtr_->geometry(0);
 
-            if (areaAverage_)
+            scalarField allData(surf.size());
+
+            forAll(data, faceI)
             {
-                areaAverage = sum(allData*surf.magSf())/sum(surf.magSf());
-            }
-            else
-            {
-                areaAverage = sum(allData)/(allData.size() + ROOTVSMALL);
+                // Master procFaceOffset is zero...
+                allData[faceI] = data[faceI];
             }
 
-            // (writeSurface == true)
+            for (const int procI : Pstream::subProcs())
+            {
+                UIPstream fromProc(procI, pBufs);
+                scalarList dataSlice(fromProc);
+                forAll(dataSlice, i)
+                {
+                    label faceI = procFaceOffset[procI] + i;
+                    allData[faceI] = dataSlice[i];
+                }
+            }
+
+            if (writeSurface)
             {
                 // Time-aware, with time spliced into the output path
                 writerPtr_->beginTime(freqInst);
@@ -381,23 +317,26 @@ scalar surfaceNoise::writeSurfaceData
                 writerPtr_->endTime();
                 writerPtr_->clear();
             }
+
+            if (areaAverage_)
+            {
+                areaAverage = sum(allData*surf.magSf())/sum(surf.magSf());
+            }
+            else
+            {
+                areaAverage = sum(allData)/(allData.size() + ROOTVSMALL);
+            }
         }
+        Pstream::broadcast(areaAverage);
+
+        return areaAverage;
     }
     else
     {
         // Note: hard-coded to read mesh from first time index
         const meshedSurface& surf = readerPtr_->geometry(0);
 
-        if (areaAverage_)
-        {
-            areaAverage = sum(data*surf.magSf())/sum(surf.magSf());
-        }
-        else
-        {
-            areaAverage = sum(data)/(data.size() + ROOTVSMALL);
-        }
-
-        // (writeSurface == true)
+        if (writeSurface)
         {
             // Time-aware, with time spliced into the output path
             writerPtr_->beginTime(freqInst);
@@ -416,36 +355,106 @@ scalar surfaceNoise::writeSurfaceData
             writerPtr_->endTime();
             writerPtr_->clear();
         }
-    }
 
-    Pstream::broadcast(areaAverage);
-    return areaAverage;
+        if (areaAverage_)
+        {
+            return sum(data*surf.magSf())/sum(surf.magSf());
+        }
+        else
+        {
+            return sum(data)/(data.size() + ROOTVSMALL);
+        }
+    }
+}
+
+
+scalar surfaceNoise::surfaceAverage
+(
+    const scalarField& data,
+    const labelList& procFaceOffset
+) const
+{
+    if (Pstream::parRun())
+    {
+        // Collect the surface data so that we can output the surfaces
+
+        PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking);
+
+        if (!Pstream::master())
+        {
+            UOPstream toProc(Pstream::masterNo(), pBufs);
+            toProc << data;
+        }
+
+        pBufs.finishedGathers();
+
+        scalar areaAverage = 0;
+        if (Pstream::master())
+        {
+            // Note: hard-coded to read mesh from first time index
+            const meshedSurface& surf = readerPtr_->geometry(0);
+
+            scalarField allData(surf.size());
+
+            forAll(data, faceI)
+            {
+                // Master procFaceOffset is zero...
+                allData[faceI] = data[faceI];
+            }
+
+            for (const int procI : Pstream::subProcs())
+            {
+                UIPstream fromProc(procI, pBufs);
+                scalarList dataSlice(fromProc);
+                forAll(dataSlice, i)
+                {
+                    label faceI = procFaceOffset[procI] + i;
+                    allData[faceI] = dataSlice[i];
+                }
+            }
+
+            if (areaAverage_)
+            {
+                areaAverage = sum(allData*surf.magSf())/sum(surf.magSf());
+            }
+            else
+            {
+                areaAverage = sum(allData)/allData.size();
+            }
+        }
+        Pstream::broadcast(areaAverage);
+
+        return areaAverage;
+    }
+    else
+    {
+        if (areaAverage_)
+        {
+            // Note: hard-coded to read mesh from first time index
+            const meshedSurface& surf = readerPtr_->geometry(0);
+            return sum(data*surf.magSf())/sum(surf.magSf());
+        }
+
+        return sum(data)/data.size();
+    }
 }
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-surfaceNoise::surfaceNoise
-(
-    const dictionary& dict,
-    const objectRegistry& obr,
-    const word& name,
-    const bool readFields
-)
+surfaceNoise::surfaceNoise(const dictionary& dict, const bool readFields)
 :
-    noiseModel(dict, obr, name, false),
+    noiseModel(dict, false),
     inputFileNames_(),
     pName_("p"),
     pIndex_(0),
     times_(),
     deltaT_(0),
     startTimeIndex_(0),
-    nFaces_(0),
+    nFace_(0),
     fftWriteInterval_(1),
     areaAverage_(false),
-    useBroadcast_(false),
-    commType_(UPstream::commsTypes::scheduled),
-    readerType_(),
+    readerType_(word::null),
     readerPtr_(nullptr),
     writerPtr_(nullptr)
 {
@@ -471,8 +480,7 @@ bool surfaceNoise::read(const dictionary& dict)
         dict.readIfPresent("p", pName_);
         dict.readIfPresent("fftWriteInterval", fftWriteInterval_);
 
-        Info<< this->type() << nl
-            << "    Pressure field name: " << pName_ << nl
+        Info<< "    Pressure field name: " << pName_ << nl
             << "    FFT write interval: " << fftWriteInterval_ << nl;
 
         dict.readIfPresent("areaAverage", areaAverage_);
@@ -486,38 +494,20 @@ bool surfaceNoise::read(const dictionary& dict)
             Info<< "    Averaging: ensemble" << endl;
         }
 
-        useBroadcast_ = false;
-        dict.readIfPresent("broadcast", useBroadcast_);
-        UPstream::commsTypeNames.readIfPresent("commsType", dict, commType_);
-
-        if (Pstream::parRun())
-        {
-            Info<< "    Distribute fields: "
-                << UPstream::commsTypeNames[commType_];
-
-            if (useBroadcast_)
-            {
-                Info<< " (broadcast all)";
-            }
-            Info<< endl;
-        }
-
         readerType_ = dict.get<word>("reader");
 
-        // Surface writer (keywords: writer, writeOptions)
-
-        const word writerType = dict.get<word>("writer");
+        const word writerType(dict.get<word>("writer"));
 
         writerPtr_ = surfaceWriter::New
         (
             writerType,
-            surfaceWriter::formatOptions(dict, writerType, "writeOptions")
+            dict.subOrEmptyDict("writeOptions").subOrEmptyDict(writerType)
         );
 
         // Use outputDir/TIME/surface-name
         writerPtr_->useTimeDir(true);
 
-        Info<< endl;
+        Info << endl;
 
         return true;
     }
@@ -540,36 +530,29 @@ void surfaceNoise::calculate()
 
         initialise(fName);
 
-        // Processor face addressing
-        globalIndex procFaceAddr;
+        // Container for pressure time history data per face
+        List<scalarField> pData;
 
+        // Processor procFaceOffsets
+        labelList procFaceOffset;
         if (Pstream::parRun())
         {
-            // Calculate face/proc offsets manually
-            labelList procFaceOffsets(Pstream::nProcs() + 1);
-            const label nFacePerProc = floor(nFaces_/Pstream::nProcs()) + 1;
+            const label nProcs = Pstream::nProcs();
+            const label nFacePerProc = floor(nFace_/nProcs) + 1;
 
-            procFaceOffsets[0] = 0;
-            for (label proci = 1; proci < procFaceOffsets.size(); ++proci)
+            procFaceOffset.setSize(nProcs + 1, 0);
+            for (label i = 1; i < procFaceOffset.size(); ++i)
             {
-                procFaceOffsets[proci] = min(proci*nFacePerProc, nFaces_);
+                procFaceOffset[i] = min(i*nFacePerProc, nFace_);
             }
-
-            procFaceAddr.offsets() = std::move(procFaceOffsets);
-
-            // Don't need to broadcast. Already identical on all ranks
         }
         else
         {
-            // Local data only
-            procFaceAddr.reset(globalIndex::gatherNone{}, nFaces_);
+            procFaceOffset.setSize(1, nFace_);
         }
 
-        // Pressure time history data per face
-        List<scalarField> pData;
-
         // Read pressure data from file
-        readSurfaceData(procFaceAddr, pData);
+        readSurfaceData(procFaceOffset, pData);
 
         // Process the pressure data, and store results as surface values per
         // frequency so that it can be output using the surface writer
@@ -578,11 +561,9 @@ void surfaceNoise::calculate()
 
         const scalarField freq1(uniformFrequencies(deltaT_, true));
 
-        const scalar maxFreq1 = max(freq1);
-
         // Reset desired frequency range if outside actual frequency range
-        fLower_ = min(fLower_, maxFreq1);
-        fUpper_ = min(fUpper_, maxFreq1);
+        fLower_ = min(fLower_, max(freq1));
+        fUpper_ = min(fUpper_, max(freq1));
 
         // Storage for FFT data
         const label nLocalFace = pData.size();
@@ -666,9 +647,9 @@ void surfaceNoise::calculate()
             }
         }
 
-        const word fNameBase = fName.stem();
+        const word fNameBase = fName.nameLessExt();
 
-        // Output directory
+        // Output directory for graphs
         fileName outDirBase(baseFileDir(filei)/fNameBase);
 
         const scalar deltaf = 1.0/(deltaT_*win.nSamples());
@@ -683,33 +664,8 @@ void surfaceNoise::calculate()
                 << endl;
         }
 
-        // Common output information
-        // Note: hard-coded to read mesh from first time index
-        scalar surfArea = 0;
-        label surfSize = 0;
-        if (Pstream::master())
-        {
-            const meshedSurface& surf = readerPtr_->geometry(0);
-            surfArea = sum(surf.magSf());
-            surfSize = surf.size();
-        }
-        Pstream::broadcasts
-        (
-            UPstream::worldComm,
-            surfArea,
-            surfSize
-        );
-
-        List<Tuple2<string, token>> commonInfo
-        ({
-            {"Area average", token(word(Switch::name(areaAverage_)))},
-            {"Area sum", token(surfArea)},
-            {"Number of faces", token(surfSize)}
-        });
-
         {
             fileName outDir(outDirBase/"fft");
-            fileName outSurfDir(filePath(outDir));
 
             // Determine frequency range of interest
             // Note: frequencies have fixed interval, and are in the range
@@ -738,43 +694,43 @@ void surfaceNoise::calculate()
 
                     PrmsfAve[i] = writeSurfaceData
                     (
-                        outSurfDir,
+                        outDir,
                         fNameBase,
                         "Prmsf",
                         freq1[freqI],
                         surfPrmsf[i + f0],
-                        procFaceAddr,
+                        procFaceOffset,
                         writePrmsf_
                     );
 
                     PSDfAve[i] = writeSurfaceData
                     (
-                        outSurfDir,
+                        outDir,
                         fNameBase,
                         "PSDf",
                         freq1[freqI],
                         surfPSDf[i + f0],
-                        procFaceAddr,
+                        procFaceOffset,
                         writePSDf_
                     );
                     writeSurfaceData
                     (
-                        outSurfDir,
+                        outDir,
                         fNameBase,
                         "PSD",
                         freq1[freqI],
                         PSD(surfPSDf[i + f0]),
-                        procFaceAddr,
+                        procFaceOffset,
                         writePSD_
                     );
                     writeSurfaceData
                     (
-                        outSurfDir,
+                        outDir,
                         fNameBase,
                         "SPL",
                         freq1[freqI],
                         SPL(surfPSDf[i + f0]*deltaf, freq1[freqI]),
-                        procFaceAddr,
+                        procFaceOffset,
                         writeSPL_
                     );
                 }
@@ -782,60 +738,65 @@ void surfaceNoise::calculate()
 
             if (Pstream::master())
             {
-                {
-                    auto filePtr = newFile(outDir/"Average_Prms_f");
-                    auto& os = filePtr();
+                graph Prmsfg
+                (
+                    "Average Prms(f)",
+                    "f [Hz]",
+                    "P(f) [Pa]",
+                    fOut,
+                    PrmsfAve
+                );
+                Prmsfg.write
+                (
+                    outDir,
+                    graph::wordify(Prmsfg.title()),
+                    graphFormat_
+                );
 
-                    Info<< "    Writing " << os.relativeName() << endl;
+                graph PSDfg
+                (
+                    "Average PSD_f(f)",
+                    "f [Hz]",
+                    "PSD(f) [PaPa_Hz]",
+                    fOut,
+                    PSDfAve
+                );
+                PSDfg.write
+                (
+                    outDir,
+                    graph::wordify(PSDfg.title()),
+                    graphFormat_
+                );
 
-                    writeFileHeader(os, "f [Hz]", "P(f) [Pa]", commonInfo);
-                    writeFreqDataToFile(os, fOut, PrmsfAve);
-                }
-                {
-                    auto filePtr = newFile(outDir/"Average_PSD_f_f");
-                    auto& os = filePtr();
+                graph PSDg
+                (
+                    "Average PSD_dB_Hz(f)",
+                    "f [Hz]",
+                    "PSD(f) [dB_Hz]",
+                    fOut,
+                    PSD(PSDfAve)
+                );
+                PSDg.write
+                (
+                    outDir,
+                    graph::wordify(PSDg.title()),
+                    graphFormat_
+                );
 
-                    Info<< "    Writing " << os.relativeName() << endl;
-
-                    writeFileHeader
-                    (
-                        os,
-                        "f [Hz]",
-                        "PSD(f) [PaPa_Hz]",
-                        commonInfo
-                    );
-                    writeFreqDataToFile(os, fOut, PSDfAve);
-                }
-                {
-                    auto filePtr = newFile(outDir/"Average_PSD_dB_Hz_f");
-                    auto& os = filePtr();
-
-                    Info<< "    Writing " << os.relativeName() << endl;
-
-                    writeFileHeader
-                    (
-                        os,
-                        "f [Hz]",
-                        "PSD(f) [dB_Hz]",
-                        commonInfo
-                    );
-                    writeFreqDataToFile(os, fOut, PSD(PSDfAve));
-                }
-                {
-                    auto filePtr = newFile(outDir/"Average_SPL_dB_f");
-                    auto& os = filePtr();
-
-                    Info<< "    Writing " << os.relativeName() << endl;
-
-                    writeFileHeader
-                    (
-                        os,
-                        "f [Hz]",
-                        "SPL(f) [dB]",
-                        commonInfo
-                    );
-                    writeFreqDataToFile(os, fOut, SPL(PSDfAve*deltaf, fOut));
-                }
+                graph SPLg
+                (
+                    "Average SPL_dB(f)",
+                    "f [Hz]",
+                    "SPL(f) [dB]",
+                    fOut,
+                    SPL(PSDfAve*deltaf, fOut)
+                );
+                SPLg.write
+                (
+                    outDir,
+                    graph::wordify(SPLg.title()),
+                    graphFormat_
+                );
             }
         }
 
@@ -843,7 +804,6 @@ void surfaceNoise::calculate()
         Info<< "Writing one-third octave surface data" << endl;
         {
             fileName outDir(outDirBase/"oneThirdOctave");
-            fileName outSurfDir(filePath(outDir));
 
             scalarField PSDfAve(surfPrms13f.size(), Zero);
             scalarField Prms13fAve(surfPrms13f.size(), Zero);
@@ -852,38 +812,34 @@ void surfaceNoise::calculate()
             {
                 writeSurfaceData
                 (
-                    outSurfDir,
+                    outDir,
                     fNameBase,
                     "SPL13",
                     octave13FreqCentre[i],
                     SPL(surfPrms13f[i], octave13FreqCentre[i]),
-                    procFaceAddr,
+                    procFaceOffset,
                     writeOctaves_
                 );
 
                 Prms13fAve[i] =
-                    surfaceAverage(surfPrms13f[i], procFaceAddr);
+                    surfaceAverage(surfPrms13f[i], procFaceOffset);
             }
 
             if (Pstream::master())
             {
-                auto filePtr = newFile(outDir/"Average_SPL13_dB_fm");
-                auto& os = filePtr();
-
-                Info<< "    Writing " << os.relativeName() << endl;
-
-                writeFileHeader
+                graph SPL13g
                 (
-                    os,
+                    "Average SPL13_dB(fm)",
                     "fm [Hz]",
                     "SPL(fm) [dB]",
-                    commonInfo
-                );
-                writeFreqDataToFile
-                (
-                    os,
                     octave13FreqCentre,
                     SPL(Prms13fAve, octave13FreqCentre)
+                );
+                SPL13g.write
+                (
+                    outDir,
+                    graph::wordify(SPL13g.title()),
+                    graphFormat_
                 );
             }
         }

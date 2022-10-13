@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -70,7 +70,7 @@ void Foam::FaceInteraction<CloudType>::write()
     const fvMesh& mesh = this->owner().mesh();
     const faceZoneMesh& fzm = mesh.faceZones();
 
-    Log_<< type() << " output:" << nl;
+    Info<< type() << " output:" << nl;
 
     // Retrieve any stored data
     const label nZones = faceZoneIDs_.size();
@@ -98,7 +98,7 @@ void Foam::FaceInteraction<CloudType>::write()
     forAll(faceZoneIDs_, i)
     {
         const label zonei = faceZoneIDs_[i];
-        Log_<< "    Zone : " << fzm[zonei].name() << nl
+        Info<< "    Zone : " << fzm[zonei].name() << nl
             << "        Escape  : " << npe[i] << nl
             << "        Stick   : " << nps[i] << nl
             << "        Rebound : " << npr[i] << nl;
@@ -116,7 +116,7 @@ void Foam::FaceInteraction<CloudType>::write()
                 << endl;
         }
     }
-    Log_<< endl;
+    Info<< endl;
 
     // Set restart data
     this->setModelProperty("nEscape", npe);
@@ -209,7 +209,7 @@ Foam::FaceInteraction<CloudType>::FaceInteraction
                 filePtrs_.set
                 (
                     nZone,
-                    this->newFileAtStartTime(modelName + '_' + zoneName)
+                    this->createFile(modelName + '_' + zoneName)
                 );
 
                 writeHeaderValue(filePtrs_[nZone], "Source", type());

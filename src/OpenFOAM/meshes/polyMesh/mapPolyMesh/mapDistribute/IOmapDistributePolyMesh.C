@@ -40,7 +40,14 @@ namespace Foam
 
 bool Foam::IOmapDistributePolyMesh::readContents()
 {
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        (
+            readOpt() == IOobject::MUST_READ
+         || readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         readStream(typeName) >> *this;
         close();

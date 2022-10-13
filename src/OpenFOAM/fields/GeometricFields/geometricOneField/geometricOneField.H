@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,11 +37,12 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_geometricOneField_H
-#define Foam_geometricOneField_H
+#ifndef geometricOneField_H
+#define geometricOneField_H
 
 #include "oneFieldField.H"
 #include "dimensionSet.H"
+#include "scalar.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -94,9 +95,9 @@ public:
             return Internal{};
         }
 
-        oneField primitiveField() const noexcept
+        Internal primitiveField() const noexcept
         {
-            return oneField{};
+            return Internal{};
         }
 
         Boundary boundaryField() const noexcept

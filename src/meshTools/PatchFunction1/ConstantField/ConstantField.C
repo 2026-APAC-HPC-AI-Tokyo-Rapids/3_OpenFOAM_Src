@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -79,7 +79,6 @@ template<class Type>
 Foam::Field<Type>
 Foam::PatchFunction1Types::ConstantField<Type>::getValue
 (
-    const word& entryName,
     const entry* eptr,
     const dictionary& dict,
     const label len,
@@ -92,39 +91,12 @@ Foam::PatchFunction1Types::ConstantField<Type>::getValue
 
     Field<Type> fld;
 
-    if (!eptr)
+    if (!eptr || !eptr->isStream())
     {
-        if (entryName == dict.dictName())
-        {
-            // The containing dictionary *IS* the Function1 entry
-            // Eg,
-            // uniformValue { type constant; value 1.2; }
-
-            dict.readEntry("value", uniformValue);
-
-            fld.resize(len);
-            fld = uniformValue;
-            return fld;
-        }
-        else
-        {
-            FatalIOErrorInFunction(dict)
-                << "Null entry" << nl
-                << exit(FatalIOError);
-        }
+        FatalIOErrorInFunction(dict)
+            << "Null or invalid entry" << nl
+            << exit(FatalIOError);
     }
-    else if (!eptr->isStream())
-    {
-        // Dictionary format. Eg,
-        // key { type constant; value 1.2; }
-
-        dict.readEntry("value", uniformValue);
-
-        fld.resize(len);
-        fld = uniformValue;
-        return fld;
-    }
-
     ITstream& is = eptr->stream();
 
     if (is.peek().isWord())
@@ -209,7 +181,6 @@ Foam::PatchFunction1Types::ConstantField<Type>::ConstantField
     (
         getValue
         (
-            entryName,
             dict.findEntry(entryName, keyType::LITERAL),
             dict,
             this->size(),
@@ -237,7 +208,6 @@ Foam::PatchFunction1Types::ConstantField<Type>::ConstantField
     (
         getValue
         (
-            entryName,
             eptr,
             dict,
             this->size(),

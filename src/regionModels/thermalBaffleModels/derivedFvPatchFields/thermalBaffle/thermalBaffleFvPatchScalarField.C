@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd
+    Copyright (C) 2020-2021 OpenCFD Ltd
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -49,7 +49,7 @@ thermalBaffleFvPatchScalarField::thermalBaffleFvPatchScalarField
     turbulentTemperatureRadCoupledMixedFvPatchScalarField(p, iF),
     owner_(false),
     internal_(true),
-    baffle_(nullptr),
+    baffle_(),
     dict_(),
     extrudeMeshPtr_()
 {}
@@ -72,7 +72,7 @@ thermalBaffleFvPatchScalarField::thermalBaffleFvPatchScalarField
     ),
     owner_(ptf.owner_),
     internal_(ptf.internal_),
-    baffle_(nullptr),
+    baffle_(),
     dict_(ptf.dict_),
     extrudeMeshPtr_()
 {}
@@ -88,12 +88,14 @@ thermalBaffleFvPatchScalarField::thermalBaffleFvPatchScalarField
     turbulentTemperatureRadCoupledMixedFvPatchScalarField(p, iF, dict),
     owner_(false),
     internal_(true),
-    baffle_(nullptr),
+    baffle_(),
     dict_(dict),
     extrudeMeshPtr_()
 {
 
     const fvMesh& thisMesh = patch().boundaryMesh().mesh();
+
+    typedef regionModels::thermalBaffleModels::thermalBaffleModel baffle;
 
     word regionName("none");
     dict_.readIfPresent("region", regionName);
@@ -113,7 +115,7 @@ thermalBaffleFvPatchScalarField::thermalBaffleFvPatchScalarField
             createPatchMesh();
         }
 
-        baffle_.reset(baffleType::New(thisMesh, dict));
+        baffle_.reset(baffle::New(thisMesh, dict).ptr());
         owner_ = true;
         baffle_->rename(baffleName);
     }
@@ -129,7 +131,7 @@ thermalBaffleFvPatchScalarField::thermalBaffleFvPatchScalarField
     turbulentTemperatureRadCoupledMixedFvPatchScalarField(ptf, iF),
     owner_(ptf.owner_),
     internal_(ptf.internal_),
-    baffle_(nullptr),
+    baffle_(),
     dict_(ptf.dict_),
     extrudeMeshPtr_()
 {}
@@ -143,10 +145,10 @@ void thermalBaffleFvPatchScalarField::createPatchMesh()
 
     const word regionName(dict_.get<word>("region"));
 
-    polyPatchList regionPatches(3);
-    List<dictionary> dicts(regionPatches.size());
+    List<polyPatch*> regionPatches(3);
     List<word> patchNames(regionPatches.size());
     List<word> patchTypes(regionPatches.size());
+    List<dictionary> dicts(regionPatches.size());
 
     patchNames[bottomPatchID] = word("bottom");
     patchNames[sidePatchID] = word("side");
@@ -172,7 +174,8 @@ void thermalBaffleFvPatchScalarField::createPatchMesh()
         patchTypes[sidePatchID] = polyPatch::typeName;
     }
 
-    const auto& mpp = refCast<const mappedPatchBase>(patch().patch(), dict_);
+    const mappedPatchBase& mpp =
+        refCast<const mappedPatchBase>(patch().patch(), dict_);
 
     const word coupleGroup(mpp.coupleGroup());
 
@@ -201,22 +204,18 @@ void thermalBaffleFvPatchScalarField::createPatchMesh()
 
     forAll(regionPatches, patchi)
     {
-        dictionary& patchDict = dicts[patchi];
+        dictionary&  patchDict = dicts[patchi];
         patchDict.set("nFaces", 0);
         patchDict.set("startFace", 0);
 
-        regionPatches.set
+        regionPatches[patchi] = polyPatch::New
         (
+            patchTypes[patchi],
+            patchNames[patchi],
+            dicts[patchi],
             patchi,
-            polyPatch::New
-            (
-                patchTypes[patchi],
-                patchNames[patchi],
-                dicts[patchi],
-                patchi,
-                thisMesh.boundaryMesh()
-            )
-        );
+            thisMesh.boundaryMesh()
+        ).ptr();
     }
 
     extrudeMeshPtr_.reset

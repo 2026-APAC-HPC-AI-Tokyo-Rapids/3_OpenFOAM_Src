@@ -7,7 +7,6 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
     Copyright (C) 2015-2022 OpenCFD Ltd.
-    Copyright (C) 2022 Upstream CFD GmbH
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -29,8 +28,7 @@ Class
     Foam::DEShybrid
 
 Description
-    Improved hybrid convection scheme of Travin et al. for hybrid RAS/LES
-    calculations with enhanced Grey Area Mitigation (GAM) behaviour.
+    Hybrid convection scheme of Travin et al. for hybrid RAS/LES calculations.
 
     The scheme provides a blend between two convection schemes, based on local
     properties including the wall distance, velocity gradient and eddy
@@ -55,26 +53,25 @@ Description
 
     First published in:
     \verbatim
-        Travin, A., Shur, M., Strelets, M., & Spalart, P. R. (2000).
-        Physical and numerical upgrades in the detached-eddy
-        simulation of complex turbulent flows.
-        In LES of Complex Transitional and Turbulent Flows.
-        Proceedings of the Euromech Colloquium 412. Munich, Germany
+        A. Travin, M. Shur, M. Strelets, P. Spalart (2000).
+        Physical and numerical upgrades in the detached-eddy simulation of
+        complex turbulent flows.
+        In Proceedings of the 412th Euromech Colloquium on LES and Complex
+        Transition and Turbulent Flows, Munich, Germany
     \endverbatim
 
-    Original publication contained a typo for \c C_H3 constant.
-    Corrected version with minor changes for 2 lower limiters published in:
+    Original publication contained a typo for C_H3 constant. Corrected version
+    with minor changes for 2 lower limiters published in:
     \verbatim
-        Spalart, P., Shur, M., Strelets, M., & Travin, A. (2012).
-        Sensitivity of landing-gear noise predictions by large-eddy
-        simulation to numerics and resolution.
-        In 50th AIAA Aerospace Sciences Meeting Including the
-        New Horizons Forum and Aerospace Exposition. Nashville, US.
-        DOI:10.2514/6.2012-1174
+        P. Spalart, M. Shur, M. Strelets, A. Travin (2012).
+        Sensitivity of Landing-Gear Noise Predictions by Large-Eddy
+        Simulation to Numerics and Resolution.
+        AIAA Paper 2012-1174, 50th AIAA Aerospace Sciences Meeting,
+        Nashville / TN, Jan. 2012
     \endverbatim
 
-    Example of the \c DEShybrid scheme specification using \c linear
-    within the LES region and \c linearUpwind within the RAS region:
+    Example of the DEShybrid scheme specification using linear within the LES
+    region and linearUpwind within the RAS region:
     \verbatim
     divSchemes
     {
@@ -83,14 +80,13 @@ Description
         div(phi,U)      Gauss DEShybrid
             linear                    // scheme 1
             linearUpwind grad(U)      // scheme 2
-            delta                     // LES delta name, e.g. 'delta', 'hmax'
-            0.65                      // CDES coefficient
+            hmax                      // LES delta name, e.g. 'delta', 'hmax'
+            0.65                      // DES coefficient, typically = 0.65
             30                        // Reference velocity scale
             2                         // Reference length scale
             0                         // Minimum sigma limit (0-1)
             1                         // Maximum sigma limit (0-1)
-            1.0e-03                   // Limiter of B function, typically 1e-03
-            1.0;                      // nut limiter (if > 1, GAM extension is active)
+            1.0e-03;                  // Limiter of B function, typically 1e-03
         .
         .
     }
@@ -101,12 +97,12 @@ Notes
     be used in the detached/vortex shedding regions.
   - Scheme 2 should be an upwind/deferred correction/TVD scheme which will
     be used in the free-stream/Euler/boundary layer regions.
-  - The scheme is compiled into a separate library, and not available to
+  - the scheme is compiled into a separate library, and not available to
     solvers by default.  In order to use the scheme, add the library as a
     run-time loaded library in the \$FOAM\_CASE/system/controlDict
     dictionary, e.g.:
     \verbatim
-        libs (turbulenceModelSchemes);
+        libs ("libturbulenceModelSchemes.so");
     \endverbatim
 
 SourceFiles
@@ -114,14 +110,15 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_DEShybrid_H
-#define Foam_DEShybrid_H
+#ifndef DEShybrid_H
+#define DEShybrid_H
 
 #include "surfaceInterpolationScheme.H"
 #include "surfaceInterpolate.H"
 #include "fvcGrad.H"
 #include "blendedSchemeBase.H"
-#include "turbulenceModel.H"
+#include "turbulentTransportModel.H"
+#include "turbulentFluidThermoModel.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -138,9 +135,6 @@ class DEShybrid
     public surfaceInterpolationScheme<Type>,
     public blendedSchemeBase<Type>
 {
-    typedef GeometricField<Type, fvPatchField, volMesh> VolFieldType;
-    typedef GeometricField<Type, fvsPatchField, surfaceMesh> SurfaceFieldType;
-
     // Private Data
 
         //- Scheme 1
@@ -152,7 +146,7 @@ class DEShybrid
         //- Name of the LES delta field
         word deltaName_;
 
-        //- DES coefficient
+        //- DES Coefficient
         scalar CDES_;
 
         //- Reference velocity scale [m/s]
@@ -170,14 +164,10 @@ class DEShybrid
         //- Limiter of B function
         scalar OmegaLim_;
 
-        //- Limiter for modified GAM behaviour
-        scalar nutLim_;
-
         //- Scheme constants
         scalar CH1_;
         scalar CH2_;
         scalar CH3_;
-        scalar Cs_;
 
         //- No copy construct
         DEShybrid(const DEShybrid&) = delete;
@@ -188,108 +178,51 @@ class DEShybrid
 
     // Private Member Functions
 
-        //- Check the scheme coefficients
-        void checkValues()
-        {
-            if (U0_.value() <= 0)
-            {
-                FatalErrorInFunction
-                    << "U0 coefficient must be > 0. "
-                    << "Current value: " << U0_ << exit(FatalError);
-            }
-            if (L0_.value() <= 0)
-            {
-                FatalErrorInFunction
-                    << "L0 coefficient must be > 0. "
-                    << "Current value: " << L0_ << exit(FatalError);
-            }
-            if (sigmaMin_ < 0)
-            {
-                FatalErrorInFunction
-                    << "sigmaMin coefficient must be >= 0. "
-                    << "Current value: " << sigmaMin_ << exit(FatalError);
-            }
-            if (sigmaMax_ < 0)
-            {
-                FatalErrorInFunction
-                    << "sigmaMax coefficient must be >= 0. "
-                    << "Current value: " << sigmaMax_ << exit(FatalError);
-            }
-            if (sigmaMin_ > 1)
-            {
-                FatalErrorInFunction
-                    << "sigmaMin coefficient must be <= 1. "
-                    << "Current value: " << sigmaMin_ << exit(FatalError);
-            }
-            if (sigmaMax_ > 1)
-            {
-                FatalErrorInFunction
-                    << "sigmaMax coefficient must be <= 1. "
-                    << "Current value: " << sigmaMax_ << exit(FatalError);
-            }
-
-            if (debug)
-            {
-                Info<< type() << "coefficients:" << nl
-                    << "    delta : " << deltaName_ << nl
-                    << "    CDES : " << CDES_ << nl
-                    << "    U0 : " << U0_.value() << nl
-                    << "    L0 : " << L0_.value() << nl
-                    << "    sigmaMin : " << sigmaMin_ << nl
-                    << "    sigmaMax : " << sigmaMax_ << nl
-                    << "    OmegaLim : " << OmegaLim_ << nl
-                    << "    nutLim : " << nutLim_ << nl
-                    << "    CH1 : " << CH1_ << nl
-                    << "    CH2 : " << CH2_ << nl
-                    << "    CH3 : " << CH3_ << nl
-                    << "    Cs : " << Cs_ << nl
-                    << endl;
-            }
-        }
-
-
         //- Calculate the blending factor
         tmp<surfaceScalarField> calcBlendingFactor
         (
-            const VolFieldType& vf,
-            const volScalarField& nut,
-            const volScalarField& nu,
+            const GeometricField<Type, fvPatchField, volMesh>& vf,
+            const volScalarField& nuEff,
             const volVectorField& U,
             const volScalarField& delta
         ) const
         {
-            tmp<volTensorField> tgradU = fvc::grad(U);
-            const volTensorField& gradU = tgradU.cref();
-            const volScalarField S(sqrt(2.0)*mag(symm(gradU)));
-            const volScalarField Omega(sqrt(2.0)*mag(skew(tgradU)));
+            tmp<volTensorField> gradU(fvc::grad(U));
+            const volScalarField S(sqrt(2.0)*mag(symm(gradU())));
+            const volScalarField Omega(sqrt(2.0)*mag(skew(gradU())));
             const dimensionedScalar tau0_ = L0_/U0_;
 
-            tmp<volScalarField> tB =
+            const volScalarField B
+            (
                 CH3_*Omega*max(S, Omega)
-               /max(0.5*(sqr(S) + sqr(Omega)), sqr(OmegaLim_/tau0_));
+               /max(0.5*(sqr(S) + sqr(Omega)), sqr(OmegaLim_/tau0_))
+            );
 
-            tmp<volScalarField> tg = tanh(pow4(tB));
+            const volScalarField K
+            (
+                max(Foam::sqrt(0.5*(sqr(S) + sqr(Omega))), 0.1/tau0_)
+            );
 
-            tmp<volScalarField> tK =
-                max(Foam::sqrt(0.5*(sqr(S) + sqr(Omega))), 0.1/tau0_);
-
-            tmp<volScalarField> tlTurb =
+            const volScalarField lTurb
+            (
                 Foam::sqrt
                 (
                     max
                     (
-                        (max(nut, min(sqr(Cs_*delta)*S, nutLim_*nut)) + nu)
-                       /(pow(0.09, 1.5)*tK),
-                        dimensionedScalar(sqr(dimLength), Zero)
+                        nuEff/(pow(0.09, 1.5)*K),
+                        dimensionedScalar("l0", sqr(dimLength), 0)
                     )
-                );
+                )
+            );
+
+            const volScalarField g(tanh(pow4(B)));
 
             const volScalarField A
             (
                 CH2_*max
                 (
                     scalar(0),
-                    CDES_*delta/max(tlTurb*tg, SMALL*L0_) - 0.5
+                    CDES_*delta/max(lTurb*g, SMALL*L0_) - 0.5
                 )
             );
 
@@ -364,8 +297,14 @@ public:
         DEShybrid(const fvMesh& mesh, Istream& is)
         :
             surfaceInterpolationScheme<Type>(mesh),
-            tScheme1_(surfaceInterpolationScheme<Type>::New(mesh, is)),
-            tScheme2_(surfaceInterpolationScheme<Type>::New(mesh, is)),
+            tScheme1_
+            (
+                surfaceInterpolationScheme<Type>::New(mesh, is)
+            ),
+            tScheme2_
+            (
+                surfaceInterpolationScheme<Type>::New(mesh, is)
+            ),
             deltaName_(is),
             CDES_(readScalar(is)),
             U0_("U0", dimLength/dimTime, readScalar(is)),
@@ -373,13 +312,46 @@ public:
             sigmaMin_(readScalar(is)),
             sigmaMax_(readScalar(is)),
             OmegaLim_(readScalar(is)),
-            nutLim_(readScalarOrDefault(is, scalar(1))),
             CH1_(3.0),
             CH2_(1.0),
-            CH3_(2.0),
-            Cs_(0.18)
+            CH3_(2.0)
         {
-            checkValues();
+            if (U0_.value() <= 0)
+            {
+                FatalErrorInFunction
+                    << "U0 coefficient must be > 0. "
+                    << "Current value: " << U0_ << exit(FatalError);
+            }
+            if (L0_.value() <= 0)
+            {
+                FatalErrorInFunction
+                    << "L0 coefficient must be > 0. "
+                    << "Current value: " << L0_ << exit(FatalError);
+            }
+            if (sigmaMin_ < 0)
+            {
+                FatalErrorInFunction
+                    << "sigmaMin coefficient must be >= 0. "
+                    << "Current value: " << sigmaMin_ << exit(FatalError);
+            }
+            if (sigmaMax_ < 0)
+            {
+                FatalErrorInFunction
+                    << "sigmaMax coefficient must be >= 0. "
+                    << "Current value: " << sigmaMax_ << exit(FatalError);
+            }
+            if (sigmaMin_ > 1)
+            {
+                FatalErrorInFunction
+                    << "sigmaMin coefficient must be <= 1. "
+                    << "Current value: " << sigmaMin_ << exit(FatalError);
+            }
+            if (sigmaMax_ > 1)
+            {
+                FatalErrorInFunction
+                    << "sigmaMax coefficient must be <= 1. "
+                    << "Current value: " << sigmaMax_ << exit(FatalError);
+            }
         }
 
         //- Construct from mesh, faceFlux and Istream
@@ -406,13 +378,46 @@ public:
             sigmaMin_(readScalar(is)),
             sigmaMax_(readScalar(is)),
             OmegaLim_(readScalar(is)),
-            nutLim_(readScalarOrDefault(is, scalar(1))),
             CH1_(3.0),
             CH2_(1.0),
-            CH3_(2.0),
-            Cs_(0.18)
+            CH3_(2.0)
         {
-            checkValues();
+            if (U0_.value() <= 0)
+            {
+                FatalErrorInFunction
+                    << "U0 coefficient must be > 0. "
+                    << "Current value: " << U0_ << exit(FatalError);
+            }
+            if (L0_.value() <= 0)
+            {
+                FatalErrorInFunction
+                    << "L0 coefficient must be > 0. "
+                    << "Current value: " << U0_ << exit(FatalError);
+            }
+            if (sigmaMin_ < 0)
+            {
+                FatalErrorInFunction
+                    << "sigmaMin coefficient must be >= 0. "
+                    << "Current value: " << sigmaMin_ << exit(FatalError);
+            }
+            if (sigmaMax_ < 0)
+            {
+                FatalErrorInFunction
+                    << "sigmaMax coefficient must be >= 0. "
+                    << "Current value: " << sigmaMax_ << exit(FatalError);
+            }
+            if (sigmaMin_ > 1)
+            {
+                FatalErrorInFunction
+                    << "sigmaMin coefficient must be <= 1. "
+                    << "Current value: " << sigmaMin_ << exit(FatalError);
+            }
+            if (sigmaMax_ > 1)
+            {
+                FatalErrorInFunction
+                    << "sigmaMax coefficient must be <= 1. "
+                    << "Current value: " << sigmaMax_ << exit(FatalError);
+            }
         }
 
 
@@ -426,24 +431,33 @@ public:
         {
             const fvMesh& mesh = this->mesh();
 
-            // Retrieve LES delta from the mesh database
-            const auto& delta =
-                mesh.lookupObject<const volScalarField>(deltaName_);
+            typedef compressible::turbulenceModel cmpModel;
+            typedef incompressible::turbulenceModel icoModel;
 
-            // Retrieve turbulence model from the mesh database
-            const auto* modelPtr =
-                mesh.cfindObject<turbulenceModel>
-                (
-                    turbulenceModel::propertiesName
-                );
+            // Lookup the LES delta from the mesh database
+            const volScalarField& delta = this->mesh().template
+                 lookupObject<const volScalarField>(deltaName_);
 
-            if (modelPtr)
+            // Could avoid the compressible/incompressible case by looking
+            // up all fields from the database - but retrieving from model
+            // ensures consistent fields are being employed e.g. for multiphase
+            // where group name is used
+
+            if (mesh.foundObject<icoModel>(icoModel::propertiesName))
             {
-                const auto& model = *modelPtr;
+                const icoModel& model =
+                    mesh.lookupObject<icoModel>(icoModel::propertiesName);
+
+                return calcBlendingFactor(vf, model.nuEff(), model.U(), delta);
+            }
+            else if (mesh.foundObject<cmpModel>(cmpModel::propertiesName))
+            {
+                const cmpModel& model =
+                    mesh.lookupObject<cmpModel>(cmpModel::propertiesName);
 
                 return calcBlendingFactor
                 (
-                    vf, model.nut(), model.nu(), model.U(), delta
+                    vf, model.muEff()/model.rho(), model.U(), delta
                 );
             }
 
@@ -457,9 +471,12 @@ public:
 
 
         //- Return the interpolation weighting factors
-        tmp<surfaceScalarField> weights(const VolFieldType& vf) const
+        tmp<surfaceScalarField> weights
+        (
+            const GeometricField<Type, fvPatchField, volMesh>& vf
+        ) const
         {
-            const surfaceScalarField bf(blendingFactor(vf));
+            surfaceScalarField bf(blendingFactor(vf));
 
             return
                 (scalar(1) - bf)*tScheme1_().weights(vf)
@@ -468,10 +485,14 @@ public:
 
 
         //- Return the face-interpolate of the given cell field
-        //- with explicit correction
-        tmp<SurfaceFieldType> interpolate(const VolFieldType& vf) const
+        //  with explicit correction
+        tmp<GeometricField<Type, fvsPatchField, surfaceMesh>>
+        interpolate
+        (
+            const GeometricField<Type, fvPatchField, volMesh>& vf
+        ) const
         {
-            const surfaceScalarField bf(blendingFactor(vf));
+            surfaceScalarField bf(blendingFactor(vf));
 
             return
                 (scalar(1) - bf)*tScheme1_().interpolate(vf)
@@ -487,10 +508,14 @@ public:
 
 
         //- Return the explicit correction to the face-interpolate
-        //- for the given field
-        virtual tmp<SurfaceFieldType> correction(const VolFieldType& vf) const
+        //  for the given field
+        virtual tmp<GeometricField<Type, fvsPatchField, surfaceMesh>>
+        correction
+        (
+            const GeometricField<Type, fvPatchField, volMesh>& vf
+        ) const
         {
-            const surfaceScalarField bf(blendingFactor(vf));
+            surfaceScalarField bf(blendingFactor(vf));
 
             if (tScheme1_().corrected())
             {

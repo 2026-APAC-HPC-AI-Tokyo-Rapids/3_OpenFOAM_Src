@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,8 +26,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "vibrationShellFvPatchScalarField.H"
-#include "dictionaryContent.H"
 #include "addToRunTimeSelectionTable.H"
+#include "dictionaryContent.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -43,11 +43,11 @@ vibrationShellFvPatchScalarField::vibrationShellFvPatchScalarField
 )
 :
     mixedFvPatchField<scalar>(p, iF),
-    baffle_(nullptr),
+    baffle_(),
     dict_()
 {
-    refValue() = Zero;
-    refGrad() = Zero;
+    refValue() = 0;
+    refGrad() = 0;
     valueFraction() = 1;
 }
 
@@ -67,7 +67,7 @@ vibrationShellFvPatchScalarField::vibrationShellFvPatchScalarField
         iF,
         mapper
     ),
-    baffle_(nullptr),
+    baffle_(),
     dict_(ptf.dict_)
 {}
 
@@ -80,15 +80,15 @@ vibrationShellFvPatchScalarField::vibrationShellFvPatchScalarField
 )
 :
     mixedFvPatchField<scalar>(p, iF),
-    baffle_(nullptr),
+    baffle_(),
     dict_
     (
         // Copy dictionary, but without "heavy" data chunks
         dictionaryContent::copyDict
         (
             dict,
-            wordList(),  // allow
-            wordList     // deny
+            wordRes(),  // allow
+            wordRes     // deny
             ({
                 "type",  // redundant
                 "value", "refValue", "refGradient", "valueFraction"
@@ -109,13 +109,13 @@ vibrationShellFvPatchScalarField::vibrationShellFvPatchScalarField
     {
         // Start from user entered data. Assume fixedValue.
         refValue() = *this;
-        refGrad() = Zero;
+        refGrad() = 0;
         valueFraction() = 1;
     }
 
     if (!baffle_)
     {
-        baffle_.reset(baffleType::New(p.boundaryMesh().mesh(), dict_));
+        baffle_.reset(regionModels::vibrationShellModel::New(p, dict).ptr());
     }
 }
 
@@ -127,7 +127,7 @@ vibrationShellFvPatchScalarField::vibrationShellFvPatchScalarField
 )
 :
     mixedFvPatchField<scalar>(ptf, iF),
-    baffle_(nullptr),
+    baffle_(),
     dict_(ptf.dict_)
 {}
 
@@ -141,23 +141,19 @@ void vibrationShellFvPatchScalarField::updateCoeffs()
         return;
     }
 
+    baffle_->evolve();
+
     const auto& transportProperties =
         db().lookupObject<IOdictionary>("transportProperties");
 
     dimensionedScalar rho("rho", dimDensity, transportProperties);
 
-    baffle_->evolve();
+    const areaScalarField aRho(rho*baffle_->a());
 
-    // rho * acceleration
+    baffle_->vsm().mapToField(aRho, this->refGrad());
 
-    refGrad() = Zero;  // safety (for any unmapped values)
-
-    baffle_->vsm().mapToVolumePatch(baffle_->a(), refGrad(), patch().index());
-
-    refGrad() *= rho.value();
-
-    refValue() = Zero;
-    valueFraction() = Zero;
+    this->refValue() = Zero;
+    this->valueFraction() = Zero;
 
     mixedFvPatchField<scalar>::updateCoeffs();
 }

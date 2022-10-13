@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -33,7 +32,6 @@ License
 #include "fvcDiv.H"
 #include "fvcGrad.H"
 #include "fvcSnGrad.H"
-#include "fvcAverage.H"
 #include "unitConversion.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -111,27 +109,10 @@ void Foam::interfaceProperties::calculateK()
     const surfaceVectorField& Sf = mesh.Sf();
 
     // Cell gradient of alpha
-    tmp<volVectorField> tgradAlpha;
-    if (nAlphaSmoothCurvature_ < 1)
-    {
-        tgradAlpha = fvc::grad(alpha1_, "nHat");
-    }
-    else
-    {
-        // Smooth interface curvature to reduce spurious currents
-        auto talpha1L = tmp<volScalarField>::New(alpha1_);
-        auto& alpha1L = talpha1L.ref();
-
-        for (int i = 0; i < nAlphaSmoothCurvature_; ++i)
-        {
-            alpha1L = fvc::average(fvc::interpolate(alpha1L));
-        }
-
-        tgradAlpha = fvc::grad(talpha1L, "nHat");
-    }
+    const volVectorField gradAlpha(fvc::grad(alpha1_, "nHat"));
 
     // Interpolated face-gradient of alpha
-    surfaceVectorField gradAlphaf(fvc::interpolate(tgradAlpha));
+    surfaceVectorField gradAlphaf(fvc::interpolate(gradAlpha));
 
     //gradAlphaf -=
     //    (mesh.Sf()/mesh.magSf())
@@ -176,11 +157,6 @@ Foam::interfaceProperties::interfaceProperties
 )
 :
     transportPropertiesDict_(dict),
-    nAlphaSmoothCurvature_
-    (
-        alpha1.mesh().solverDict(alpha1.name()).
-            getOrDefault<int>("nAlphaSmoothCurvature", 0)
-    ),
     cAlpha_
     (
         alpha1.mesh().solverDict(alpha1.name()).get<scalar>("cAlpha")

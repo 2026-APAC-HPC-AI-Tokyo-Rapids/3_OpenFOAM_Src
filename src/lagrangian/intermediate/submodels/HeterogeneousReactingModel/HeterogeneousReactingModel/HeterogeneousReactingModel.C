@@ -87,14 +87,12 @@ Foam::label Foam::HeterogeneousReactingModel<CloudType>::nF() const
 
 
 template<class CloudType>
-void Foam::HeterogeneousReactingModel<CloudType>::info()
+void Foam::HeterogeneousReactingModel<CloudType>::info(Ostream& os)
 {
-    CloudSubModelBase<CloudType>::info();
-
     const scalar mass0 = this->template getBaseProperty<scalar>("mass");
     const scalar massTotal = mass0 + returnReduce(dMass_, sumOp<scalar>());
 
-    Log_<< "    Mass transfer surface reaction  = " << massTotal << nl;
+    Info<< "    Mass transfer surface reaction  = " << massTotal << nl;
 
     if (this->writeTime())
     {

@@ -100,7 +100,7 @@ void Foam::globalIndex::gatherValues
         {
             if (is_contiguous<Type>::value)
             {
-                UIPstream::read
+                IPstream::read
                 (
                     commsType,
                     procIDs[i],
@@ -123,7 +123,7 @@ void Foam::globalIndex::gatherValues
 
         if (is_contiguous<Type>::value)
         {
-            UOPstream::write
+            OPstream::write
             (
                 commsType,
                 procIDs[0],
@@ -142,7 +142,7 @@ void Foam::globalIndex::gatherValues
 
     if (commsType == UPstream::commsTypes::nonBlocking)
     {
-        // Wait for outstanding requests
+        // Wait for all to finish
         UPstream::waitRequests(startOfRequests);
     }
 }
@@ -198,7 +198,7 @@ void Foam::globalIndex::gather
             }
             else if (is_contiguous<Type>::value)
             {
-                UIPstream::read
+                IPstream::read
                 (
                     commsType,
                     procIDs[i],
@@ -223,7 +223,7 @@ void Foam::globalIndex::gather
         }
         else if (is_contiguous<Type>::value)
         {
-            UOPstream::write
+            OPstream::write
             (
                 commsType,
                 procIDs[0],
@@ -242,7 +242,7 @@ void Foam::globalIndex::gather
 
     if (commsType == UPstream::commsTypes::nonBlocking)
     {
-        // Wait for outstanding requests
+        // Wait for all to finish
         UPstream::waitRequests(startOfRequests);
     }
 }
@@ -338,7 +338,7 @@ void Foam::globalIndex::gather
 
     if (commsType == UPstream::commsTypes::nonBlocking)
     {
-        // Wait for outstanding requests
+        // Wait for all to finish
         UPstream::waitRequests(startOfRequests);
     }
 }
@@ -697,7 +697,7 @@ void Foam::globalIndex::mpiGatherOp
     if (UPstream::parRun())
     {
         // Gather sizes - only needed on master
-        globalIndex(globalIndex::gatherOnly{}, sendData.size(), comm)
+        globalIndex(sendData.size(), globalIndex::gatherOnly{}, comm)
             .mpiGather(sendData, allData, comm, commsType, tag);
     }
     else
@@ -765,7 +765,7 @@ void Foam::globalIndex::gatherOp
     if (UPstream::parRun())
     {
         // Gather sizes - only needed on master
-        globalIndex(globalIndex::gatherOnly{}, sendData.size(), comm)
+        globalIndex(sendData.size(), globalIndex::gatherOnly{}, comm)
             .gather(sendData, allData, tag, commsType, comm);
     }
     else
@@ -789,7 +789,7 @@ void Foam::globalIndex::gatherOp
     if (UPstream::parRun())
     {
         // Gather sizes - only needed on master
-        globalIndex(globalIndex::gatherOnly{}, sendData.size(), comm)
+        globalIndex(sendData.size(), globalIndex::gatherOnly{}, comm)
             .gather(sendData, allData, tag, commsType, comm);
     }
     else
@@ -842,7 +842,7 @@ void Foam::globalIndex::gatherInplaceOp
     if (UPstream::parRun())
     {
         // Gather sizes - only needed on master
-        globalIndex(globalIndex::gatherOnly{}, fld.size(), comm)
+        globalIndex(fld.size(), globalIndex::gatherOnly{}, comm)
             .gather(fld, tag, commsType, comm);
     }
     // Serial: (no-op)
@@ -889,7 +889,7 @@ void Foam::globalIndex::scatter
             }
             else if (is_contiguous<Type>::value)
             {
-                UOPstream::write
+                OPstream::write
                 (
                     commsType,
                     procIDs[i],
@@ -926,7 +926,7 @@ void Foam::globalIndex::scatter
         }
         else if (is_contiguous<Type>::value)
         {
-            UIPstream::read
+            IPstream::read
             (
                 commsType,
                 procIDs[0],
@@ -945,7 +945,7 @@ void Foam::globalIndex::scatter
 
     if (commsType == UPstream::commsTypes::nonBlocking)
     {
-        // Wait for outstanding requests
+        // Wait for all to finish
         UPstream::waitRequests(startOfRequests);
     }
 }

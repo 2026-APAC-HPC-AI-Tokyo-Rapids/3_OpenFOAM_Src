@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017-2018 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -58,8 +58,6 @@ namespace Foam
         )
     );
 }
-
-// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 const Foam::Enum<Foam::fileOperation::pathType>
 Foam::fileOperation::pathTypeNames_
@@ -292,42 +290,6 @@ Foam::fileOperation::sortTimes
     }
 
     return times;
-}
-
-
-bool Foam::fileOperation::uniformFile(const fileNameList& names)
-{
-    if (names.empty())
-    {
-        return false;
-    }
-
-    const auto& object0 = names[0];
-
-    for (label i = 1; i < names.size(); ++i)
-    {
-        if (object0 != names[i])
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-
-bool Foam::fileOperation::uniformFile(const label comm, const fileName& name)
-{
-    if (!Pstream::parRun())
-    {
-        return true;
-    }
-
-    fileName masterName(name);
-
-    Pstream::broadcast(masterName, comm);
-
-    return returnReduceAnd((masterName == name), comm);
 }
 
 
@@ -746,18 +708,6 @@ Foam::fileOperation::New
     bool verbose
 )
 {
-    if (handlerType.empty())
-    {
-        if (fileOperation::defaultFileHandler.empty())
-        {
-            FatalErrorInFunction
-                << "defaultFileHandler name is undefined" << nl
-                << abort(FatalError);
-        }
-
-        return fileOperation::New(fileOperation::defaultFileHandler, verbose);
-    }
-
     DebugInFunction
         << "Constructing fileHandler" << endl;
 
@@ -842,12 +792,7 @@ bool Foam::fileOperation::writeObject
 }
 
 
-Foam::fileName Foam::fileOperation::filePath
-(
-    const fileName& fName,
-    const bool checkGzip,
-    const bool followLink
-) const
+Foam::fileName Foam::fileOperation::filePath(const fileName& fName) const
 {
     if (debug)
     {
@@ -875,7 +820,7 @@ Foam::fileName Foam::fileOperation::filePath
             const fileName& procDir = dirIdx.first();
 
             fileName collatedName(path/procDir/local);
-            if (exists(collatedName, checkGzip, followLink))
+            if (exists(collatedName))
             {
                 if (debug)
                 {
@@ -886,7 +831,7 @@ Foam::fileName Foam::fileOperation::filePath
         }
     }
 
-    if (exists(fName, checkGzip, followLink))
+    if (exists(fName))
     {
         if (debug)
         {
@@ -899,8 +844,7 @@ Foam::fileName Foam::fileOperation::filePath
     {
         Pout<< "fileOperation::filePath : Not found" << endl;
     }
-
-    return fileName();
+    return fileName::null;
 }
 
 
@@ -1048,8 +992,7 @@ Foam::instantList Foam::fileOperation::findTimes
 
     if (debug)
     {
-        Pout<< "fileOperation::findTimes : Found times:" << flatOutput(times)
-            << endl;
+        Pout<< "fileOperation::findTimes : Found times:" << times << endl;
     }
     return times;
 }
@@ -1082,7 +1025,11 @@ Foam::IOobject Foam::fileOperation::findInstance
     }
 
     // Handling failures afterwards
-    const bool exitIfMissing = startIO.isReadRequired();
+    const bool exitIfMissing
+    (
+        startIO.readOpt() == IOobject::MUST_READ
+     || startIO.readOpt() == IOobject::MUST_READ_IF_MODIFIED
+    );
 
     enum failureCodes { FAILED_STOPINST = 1, FAILED_CONSTINST = 2 };
     int failed(0);
@@ -1234,7 +1181,7 @@ Foam::fileNameList Foam::fileOperation::readObjects
 
     fileName path(db.path(instance, db.dbDir()/local));
 
-    newInstance.clear();
+    newInstance = word::null;
     fileNameList objectNames;
 
     if (Foam::isDir(path))
@@ -1368,7 +1315,7 @@ Foam::fileName Foam::fileOperation::processorsPath
         return dir.path()/procsDir;
     }
 
-    return fileName();
+    return fileName::null;
 }
 
 
@@ -1559,14 +1506,14 @@ const Foam::fileOperation& Foam::fileHandler()
 {
     if (!fileOperation::fileHandlerPtr_)
     {
-        word handlerType(Foam::getEnv("FOAM_FILEHANDLER"));
+        word handler(getEnv("FOAM_FILEHANDLER"));
 
-        if (handlerType.empty())
+        if (handler.empty())
         {
-            handlerType = fileOperation::defaultFileHandler;
+            handler = fileOperation::defaultFileHandler;
         }
 
-        fileOperation::fileHandlerPtr_ = fileOperation::New(handlerType, true);
+        fileOperation::fileHandlerPtr_ = fileOperation::New(handler, true);
     }
 
     return *fileOperation::fileHandlerPtr_;
@@ -1574,40 +1521,21 @@ const Foam::fileOperation& Foam::fileHandler()
 
 
 Foam::autoPtr<Foam::fileOperation>
-Foam::fileHandler(std::nullptr_t)
-{
-    return autoPtr<fileOperation>(fileOperation::fileHandlerPtr_.release());
-}
-
-
-Foam::autoPtr<Foam::fileOperation>
 Foam::fileHandler(autoPtr<fileOperation>&& newHandler)
 {
-    // - do nothing if newHandler is empty. Does not delete current
-    // - do nothing if newHandler is identical to current handler
-
-    // Change ownership as atomic operations
-
-    // If newHandler and current handler are actually identical, we
-    // have a bit problem somewhere else since this means that the pointer
-    // is managed is done in two places!
-    // Should flag as a FatalError (in the future), but there may still be
-    // some place where we would like to fake shared pointers?
-
-    // TBD: add a flush() operation on the old handler first,
-    // instead of waiting for it to be run on destruction?
-
-    autoPtr<fileOperation> old;
-
     if
     (
-        newHandler.get() != nullptr
-     && newHandler.get() != fileOperation::fileHandlerPtr_.get()
+        newHandler
+     && fileOperation::fileHandlerPtr_
+     && newHandler->type() == fileOperation::fileHandlerPtr_->type()
     )
     {
-        old.reset(newHandler.release());
-        old.swap(fileOperation::fileHandlerPtr_);
+        return nullptr;  // No change
     }
+
+    autoPtr<fileOperation> old(std::move(fileOperation::fileHandlerPtr_));
+
+    fileOperation::fileHandlerPtr_ = std::move(newHandler);
 
     return old;
 }

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2020 ENERCON GmbH
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,7 +31,7 @@ Group
     grpFvOptionsSources
 
 Description
-    Applies sources on velocity (i.e. \c U) to incorporate effects
+    Applies sources on velocity, i.e. \c U, to incorporate effects
     of plant canopy for atmospheric boundary layer modelling.
 
     Corrections applied to:
@@ -42,8 +42,8 @@ Description
     Required fields:
     \verbatim
       U                | Velocity                               [m/s]
-      Cd               | Plant canopy drag coefficient          [-]
-      LAD              | Leaf area density                      [1/m]
+      plantCd          | Plant canopy drag coefficient          [-]
+      leafAreaDensity  | Leaf area density                      [1/m]
     \endverbatim
 
     References:
@@ -53,13 +53,6 @@ Description
             Modification of two-equation models to account for plant drag.
             Boundary-Layer Meteorology, 121(2), 229-266.
             DOI:10.1007/s10546-006-9073-5
-
-        Governing equations (tag:BSG):
-            Brozovsky, J., Simonsen, A., & Gaitani, N. (2021).
-            Validation of a CFD model for the evaluation of urban microclimate
-            at high latitudes: A case study in Trondheim, Norway.
-            Building and Environment, 205, 108175.
-            DOI:10.1016/j.buildenv.2021.108175
     \endverbatim
 
 Usage
@@ -67,24 +60,28 @@ Usage
     \verbatim
     atmPlantCanopyUSource1
     {
-        // Mandatory entries
-        type         atmPlantCanopyUSource;
+        // Mandatory entries (unmodifiable)
+        type             atmPlantCanopyUSource;
 
-        // Optional entries
-        Cd           <word>;
-        LAD          <word>;
+        atmPlantCanopyUSourceCoeffs
+        {
+            // Mandatory (inherited) entries (unmodifiable)
+            selectionMode    all;
 
-        // Inherited entries
+            // Optional entries (unmodifiable)
+            rho          rho;
+        }
+
+        // Optional (inherited) entries
         ...
     }
     \endverbatim
 
     where the entries mean:
     \table
-      Property | Description                      | Type   | Reqd  | Deflt
-      type     | Type name: atmPlantCanopyUSource | word   | yes   | -
-      Cd       | Name of operand canopy drag coefficient field | word | no | Cd
-      LAD      | Name of operand leaf area density field | word | no | LAD
+      Property  | Description                      | Type   | Req'd  | Dflt
+      type      | Type name: atmPlantCanopyUSource | word   | yes    | -
+      rho       | Name of density field            | word   | no     | rho
     \endtable
 
     The inherited entries are elaborated in:
@@ -111,7 +108,7 @@ namespace fv
 {
 
 /*---------------------------------------------------------------------------*\
-                    Class atmPlantCanopyUSource Declaration
+               Class atmPlantCanopyUSource Declaration
 \*---------------------------------------------------------------------------*/
 
 class atmPlantCanopyUSource
@@ -120,18 +117,17 @@ class atmPlantCanopyUSource
 {
     // Private Data
 
-        //- Name of operand canopy drag coefficient field
-        word CdName_;
-
-        //- Name of operand leaf area density field
-        word LADname_;
+        //- Name of density field
+        const word rhoName_;
 
 
-     // Private Member Functions
+        // Fields
 
-        //- Return requested field from the object registry
-        //- or read+register the field to the object registry
-        volScalarField& getOrReadField(const word& fieldName) const;
+            //- Plant canopy drag coefficient field [-]
+            volScalarField plantCd_;
+
+            //- Leaf area density field [1/m]
+            volScalarField leafAreaDensity_;
 
 
 public:
@@ -184,8 +180,11 @@ public:
             const label fieldi
         );
 
-        //- Read source dictionary
-        virtual bool read(const dictionary& dict);
+        //- Read source dictionary (effectively no-op)
+        virtual bool read(const dictionary& dict)
+        {
+            return true;
+        }
 };
 
 

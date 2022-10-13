@@ -64,7 +64,7 @@ bool Foam::faMesh::hasSystemFiles(const polyMesh& pMesh)
                     pMesh,
                     IOobject::MUST_READ,
                     IOobject::NO_WRITE,
-                    IOobject::NO_REGISTER
+                    false
                 ),
                 expect // typeName (ununsed?)
             )
@@ -76,7 +76,6 @@ bool Foam::faMesh::hasSystemFiles(const polyMesh& pMesh)
         }
     }
 
-    // Only needed on master
     Pstream::broadcast(looksValid);
 
     return looksValid;
@@ -88,8 +87,8 @@ bool Foam::faMesh::hasFiles(const polyMesh& pMesh)
     // As well as system/{faSchemes,faSolution}
     //
     // expect these:
-    // - instance/faMesh/faceLabels
-    // - instance/faMesh/faBoundary
+    // - timeValue/faMesh/faBoundary
+    // - timeValue/instance/faMesh/faceLabels
 
     bool looksValid = hasSystemFiles(pMesh);
 
@@ -97,23 +96,15 @@ bool Foam::faMesh::hasFiles(const polyMesh& pMesh)
     {
         const fileOperation& fp = Foam::fileHandler();
 
-        // The geometry instance for faMesh/faceLabels
-        // Must use READ_IF_PRESENT to avoid aborting if not available
-
-        const word instance = pMesh.time().findInstance
-        (
-            pMesh.dbDir()/faMesh::meshSubDir,
-            "faceLabels",
-            IOobject::READ_IF_PRESENT
-        );
+        fileName subDir(pMesh.dbDir()/faMesh::meshSubDir);
 
         for
         (
             const wordPair& expect
           : List<wordPair>
             ({
-                {"faceLabels", "labelList"},
-                {"faBoundary", "faBoundaryMesh"}
+                {"faBoundary", "faBoundaryMesh"},
+                {"faceLabels", "labelList"}
             })
         )
         {
@@ -124,18 +115,18 @@ bool Foam::faMesh::hasFiles(const polyMesh& pMesh)
             (
                 fp.filePath
                 (
-                    false,      // non-global
+                    false,  // non-global
                     IOobject
                     (
                         dataFile,
-                        instance,
+                        pMesh.time().findInstance(subDir, dataFile),
                         faMesh::meshSubDir,
                         pMesh,
-                        IOobject::READ_IF_PRESENT,
+                        IOobject::MUST_READ,
                         IOobject::NO_WRITE,
-                        IOobject::NO_REGISTER
+                        false
                     ),
-                    dataClass   // typeName (ununsed?)
+                    dataClass // typeName (ununsed?)
                 )
             );
 
@@ -145,8 +136,7 @@ bool Foam::faMesh::hasFiles(const polyMesh& pMesh)
             }
         }
 
-        // Everybody needs it, or they all fail
-        Pstream::reduceAnd(looksValid);
+        Pstream::broadcast(looksValid);
     }
 
     return looksValid;

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -103,54 +103,61 @@ inline void Foam::PtrList<T>::clear()
 
 template<class T>
 template<class... Args>
-inline void Foam::PtrList<T>::emplace_back(Args&&... args)
+inline void Foam::PtrList<T>::emplace_append(Args&&... args)
 {
-    UPtrList<T>::push_back(new T(std::forward<Args>(args)...));
+    UPtrList<T>::append(new T(std::forward<Args>(args)...));
 }
 
 
 template<class T>
-inline void Foam::PtrList<T>::push_back(T* ptr)
+inline void Foam::PtrList<T>::append(T* ptr)
 {
-    UPtrList<T>::push_back(ptr);
+    UPtrList<T>::append(ptr);
 }
 
 
 template<class T>
-inline void Foam::PtrList<T>::push_back(std::unique_ptr<T>&& ptr)
+inline void Foam::PtrList<T>::append(autoPtr<T>& ptr)
 {
-    UPtrList<T>::push_back(ptr.release());
+    UPtrList<T>::append(ptr.release());
 }
 
 
 template<class T>
-inline void Foam::PtrList<T>::push_back(autoPtr<T>&& ptr)
+inline void Foam::PtrList<T>::append(autoPtr<T>&& ptr)
 {
-    UPtrList<T>::push_back(ptr.release());
+    UPtrList<T>::append(ptr.release());
 }
 
 
 template<class T>
-inline void Foam::PtrList<T>::push_back(const refPtr<T>& ptr)
+inline void Foam::PtrList<T>::append(std::unique_ptr<T>&& ptr)
 {
-    UPtrList<T>::push_back(ptr.ptr());  // release or clone
+    UPtrList<T>::append(ptr.release());
 }
 
 
 template<class T>
-inline void Foam::PtrList<T>::push_back(const tmp<T>& ptr)
+inline void Foam::PtrList<T>::append(const refPtr<T>& ptr)
 {
-    UPtrList<T>::push_back(ptr.ptr());  // release or clone
+    UPtrList<T>::append(ptr.ptr());
 }
 
 
 template<class T>
-inline void Foam::PtrList<T>::push_back(PtrList<T>&& other)
+inline void Foam::PtrList<T>::append(const tmp<T>& ptr)
+{
+    UPtrList<T>::append(ptr.ptr());
+}
+
+
+template<class T>
+inline void Foam::PtrList<T>::append(PtrList<T>&& other)
 {
     if (this == &other)
     {
         FatalErrorInFunction
-            << "Attempted push_back to self"
+            << "Attempted append to self"
             << abort(FatalError);
     }
 
@@ -195,7 +202,7 @@ template<class T>
 inline Foam::autoPtr<T> Foam::PtrList<T>::set
 (
     const label i,
-    std::unique_ptr<T>&& ptr
+    autoPtr<T>& ptr
 )
 {
     return set(i, ptr.release());
@@ -217,10 +224,21 @@ template<class T>
 inline Foam::autoPtr<T> Foam::PtrList<T>::set
 (
     const label i,
+    std::unique_ptr<T>&& ptr
+)
+{
+    return set(i, ptr.release());
+}
+
+
+template<class T>
+inline Foam::autoPtr<T> Foam::PtrList<T>::set
+(
+    const label i,
     const refPtr<T>& ptr
 )
 {
-    return set(i, ptr.ptr());  // release or clone
+    return set(i, ptr.ptr());
 }
 
 
@@ -231,7 +249,7 @@ inline Foam::autoPtr<T> Foam::PtrList<T>::set
     const tmp<T>& ptr
 )
 {
-    return set(i, ptr.ptr());  // release or clone
+    return set(i, ptr.ptr());
 }
 
 

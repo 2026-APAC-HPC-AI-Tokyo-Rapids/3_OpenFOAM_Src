@@ -104,36 +104,18 @@ public:
 
     // Member Functions
 
-    // Component Access
-
         //- Access to the vector x component
-        const Cmpt& x() const noexcept { return this->v_[X]; }
+        inline const Cmpt& x() const;
 
         //- Access to the vector y component
-        const Cmpt& y() const noexcept { return this->v_[Y]; }
+        inline const Cmpt& y() const;
 
         //- Access to the vector x component
-        Cmpt& x() noexcept { return this->v_[X]; }
+        inline Cmpt& x();
 
         //- Access to the vector y component
-        Cmpt& y() noexcept { return this->v_[Y]; }
+        inline Cmpt& y();
 
-
-    // Vector Operations
-
-        //- The length (L2-norm) of the vector
-        inline scalar mag() const;
-
-        //- The length (L2-norm) squared of the vector.
-        inline scalar magSqr() const;
-
-        //- The L2-norm distance from another vector.
-        //- The mag() of the difference.
-        inline scalar dist(const Vector2D<Cmpt>& v2) const;
-
-        //- The L2-norm distance squared from another vector.
-        //- The magSqr() of the difference.
-        inline scalar distSqr(const Vector2D<Cmpt>& v2) const;
 
         //- Normalise the vector by its magnitude
         //  For small magnitudes (less than ROOTVSMALL) set to zero.
@@ -144,6 +126,7 @@ public:
         //- unit vector.
         inline Vector2D<Cmpt>& removeCollinear(const Vector2D<Cmpt>& unitVec);
 
+
         //- Perp dot product (dot product with perpendicular vector)
         inline scalar perp(const Vector2D<Cmpt>& b) const;
 
@@ -153,23 +136,6 @@ public:
             const Vector2D<Cmpt>& b,
             const scalar tol = 1e-10
         ) const;
-
-
-    // Comparison Operations
-
-        //- Lexicographically compare \em a and \em b with order (x:y)
-        static inline bool less_xy
-        (
-            const Vector2D<Cmpt>& a,
-            const Vector2D<Cmpt>& b
-        );
-
-        //- Lexicographically compare \em a and \em b with order (y:x)
-        static inline bool less_yx
-        (
-            const Vector2D<Cmpt>& a,
-            const Vector2D<Cmpt>& b
-        );
 };
 
 

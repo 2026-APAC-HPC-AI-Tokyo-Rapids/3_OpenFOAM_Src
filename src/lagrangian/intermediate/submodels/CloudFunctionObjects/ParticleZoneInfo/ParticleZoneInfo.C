@@ -196,19 +196,17 @@ Foam::ParticleZoneInfo<CloudType>::ParticleZoneInfo
     data_(),
     movedParticles_(),
     maxIDs_(Pstream::nProcs(), Zero),
-    writerPtr_(nullptr)
-{
-    if (Pstream::master())
-    {
-        const word writerType = this->coeffDict().getWord("writer");
-
-        writerPtr_ = coordSetWriter::New
+    writerPtr_
+    (
+        Pstream::master()
+      ? coordSetWriter::New
         (
-            writerType,
-            coordSetWriter::formatOptions(this->coeffDict(), writerType)
-        );
-    }
-
+            this->coeffDict().getWord("writer"),
+            this->coeffDict().subOrEmptyDict("formatOptions")
+        )
+      : nullptr
+    )
+{
     writeFile::read(this->coeffDict());
 
     const auto& cellZones = owner.mesh().cellZones();
@@ -287,7 +285,7 @@ void Foam::ParticleZoneInfo<CloudType>::postEvolve
     const typename parcelType::trackingData& td
 )
 {
-    Log_<< this->type() << ":" << nl
+    Info<< this->type() << ":" << nl
         << "    Cell zone                       = " << cellZoneName_ << nl
         << "    Contributions                   = "
         << returnReduce(movedParticles_.size(), sumOp<label>())
@@ -295,7 +293,7 @@ void Foam::ParticleZoneInfo<CloudType>::postEvolve
 
     if (!this->writeTime())
     {
-        Log_<< endl;
+        Info<< endl;
     }
 
     for (const auto& p : movedParticles_)
@@ -353,17 +351,14 @@ template<class CloudType>
 void Foam::ParticleZoneInfo<CloudType>::write()
 {
     autoPtr<OFstream> osPtr =
-        this->newFileAtTime
-        (
-            "particles",
-            this->owner().time().timeOutputValue()
-        );
+        this->createFile("particles", this->owner().time().timeOutputValue());
 
     if (Pstream::parRun())
     {
         // Find number of particles per proc
         labelList allMaxIDs(maxIDs_);
-        Pstream::listCombineReduce(allMaxIDs, maxEqOp<label>());
+        Pstream::listCombineGather(allMaxIDs, maxEqOp<label>());
+        Pstream::broadcast(allMaxIDs);
 
         // Combine into single list
         label n = returnReduce(data_.size(), sumOp<label>());
@@ -412,7 +407,7 @@ void Foam::ParticleZoneInfo<CloudType>::write()
                 }
             }
 
-            Log_<< "    Number of particles             = " << nData << nl
+            Info<< "    Number of particles             = " << nData << nl
                 << "    Written data to " << os.name() << endl;
 
             this->setModelProperty("data", globalParticles);
@@ -437,14 +432,14 @@ void Foam::ParticleZoneInfo<CloudType>::write()
             os << p << nl;
         }
 
-        Log_<< "    Number of particles             = " << data_.size() << nl
+        Info<< "    Number of particles             = " << data_.size() << nl
             << "    Written data to " << os.name() << endl;
 
         this->setModelProperty("data", data_);
         this->setModelProperty("maxIDs", maxIDs_);
     }
 
-    Log_<< endl;
+    Info<< endl;
 }
 
 

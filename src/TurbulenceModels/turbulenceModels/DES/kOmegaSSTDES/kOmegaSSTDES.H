@@ -31,13 +31,13 @@ Group
     grpDESTurbulence
 
 Description
-    k-omega-SST DES turbulence model for incompressible and compressible flows.
+    k-omega-SST DES turbulence model for incompressible and compressible flows
 
     Reference:
     \verbatim
-        Strelets, M. (2001).
-        Detached Eddy Simulation of Massively Separated Flows.
-        39th AIAA Aerospace Sciences Meeting and Exhibit, Reno, NV.
+        Strelets, M. (2001)
+        Detached Eddy Simulation of Massively Separated Flows,
+        39th AIAA Aerospace Sciences Meeting and Exhibit, Reno, NV
     \endverbatim
 
 Note
@@ -51,8 +51,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_kOmegaSSTDES_H
-#define Foam_kOmegaSSTDES_H
+#ifndef kOmegaSSTDES_H
+#define kOmegaSSTDES_H
 
 #include "DESModel.H"
 #include "kOmegaSSTBase.H"
@@ -65,7 +65,7 @@ namespace LESModels
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class kOmegaSSTDES Declaration
+                        class kOmegaSSTDES Declaration
 \*---------------------------------------------------------------------------*/
 
 template<class BasicTurbulenceModel>
@@ -84,16 +84,11 @@ class kOmegaSSTDES
 
 protected:
 
-    // Protected Data
-
-        //- Switch to activate grey-area enhanced sigma-(D)DES
-        Switch useSigma_;
+    // Protected data
 
         // Model coefficients
 
             dimensionedScalar kappa_;
-
-            //- DES coefficients
             dimensionedScalar CDESkom_;
             dimensionedScalar CDESkeps_;
 
@@ -109,19 +104,7 @@ protected:
         virtual void correctNut(const volScalarField& S2);
         virtual void correctNut();
 
-        tmp<volScalarField> r
-        (
-            const volScalarField& nur,
-            const volScalarField& magGradU
-        ) const;
-
-        //- Return square of strain rate
-        virtual tmp<volScalarField> S2
-        (
-            const volTensorField& gradU
-        ) const;
-
-        //- Return length scale
+        //- Length scale
         virtual tmp<volScalarField> dTilda
         (
             const volScalarField& magGradU,
@@ -133,13 +116,6 @@ protected:
         (
             const volScalarField& F1,
             const volTensorField& gradU
-        ) const;
-
-        //- Return (G/nu)_0
-        virtual tmp<volScalarField::Internal> GbyNu0
-        (
-            const volTensorField& gradU,
-            const volScalarField& S2
         ) const;
 
         //- Return G/nu
@@ -186,15 +162,6 @@ public:
 
         //- Re-read model coefficients if they have changed
         virtual bool read();
-
-        //- RAS length scale
-        virtual tmp<volScalarField> lengthScaleRAS() const;
-
-        //- LES length scale
-        virtual tmp<volScalarField> lengthScaleLES
-        (
-            const volScalarField& CDES
-        ) const;
 
         //- Return the LES field indicator
         virtual tmp<volScalarField> LESRegion() const;

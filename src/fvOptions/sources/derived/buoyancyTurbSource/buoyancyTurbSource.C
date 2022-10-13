@@ -183,12 +183,12 @@ Foam::fv::buoyancyTurbSource::buoyancyTurbSource
     tmp<volScalarField> tepsilon = turbPtr->epsilon();
     tmp<volScalarField> tomega = turbPtr->omega();
 
-    if (tepsilon.is_reference())
+    if (!tepsilon.isTmp())
     {
         isEpsilon_ = true;
         fieldNames_[0] = tepsilon().name();
     }
-    else if (tomega.is_reference())
+    else if (!tomega.isTmp())
     {
         isEpsilon_ = false;
         fieldNames_[0] = tomega().name();

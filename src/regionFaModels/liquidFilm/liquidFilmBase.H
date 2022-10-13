@@ -34,8 +34,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_liquidFilmBase_H
-#define Foam_liquidFilmBase_H
+#ifndef liquidFilmBase_H
+#define liquidFilmBase_H
 
 #include "runTimeSelectionTables.H"
 #include "autoPtr.H"
@@ -111,7 +111,7 @@ protected:
             //- Film pressure
             areaScalarField pf_;
 
-            //- Primary region pressure
+             //- Primary region pressure
             areaScalarField ppf_;
 
             //- Film momentum flux
@@ -164,10 +164,10 @@ public:
              dictionary,
              (
                 const word& modelType,
-                const fvMesh& mesh,
+                const fvPatch& patch,
                 const dictionary& dict
              ),
-             (modelType, mesh, dict)
+             (modelType, patch, dict)
          );
 
 
@@ -178,7 +178,7 @@ public:
         liquidFilmBase
         (
             const word& modelType,
-            const fvMesh& mesh,
+            const fvPatch& patch,
             const dictionary& dict
         );
 
@@ -194,7 +194,7 @@ public:
         //- Return a reference to the selected model using dictionary
         static autoPtr<liquidFilmBase> New
         (
-            const fvMesh& mesh,
+            const fvPatch& patch,
             const dictionary& dict
         );
 
@@ -289,7 +289,7 @@ public:
 
         // Thermo variables
 
-            //- Access const reference mu
+             //- Access const reference mu
             virtual const areaScalarField& mu() const = 0;
 
             //- Access const reference rho

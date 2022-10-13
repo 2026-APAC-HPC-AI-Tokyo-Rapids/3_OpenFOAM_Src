@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -46,8 +46,8 @@ Usage
         No backup of existing output files.
 
       - \par -remap \<name\>
-        Alternative remapping dictionary
-        (default: <tt>constant/remapping</tt>)
+        Use specified remapping dictionary instead of
+        <tt>constant/remapping</tt>
 
       - \par -results
         Convert results only to CCM format
@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
     (
         "remap",
         "name",
-        "Alternative remapping dictionary (default: 'constant/remapping')"
+        "Use specified remapping dictionary instead of <constant/remapping>"
     );
     argList::addBoolOption
     (
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
         // strip erroneous extension (.ccm, .ccmg, .ccmp)
         if (ext == "ccm" || ext == "ccmg" || ext == "ccmp")
         {
-            exportName.remove_ext();
+            exportName = exportName.lessExt();
         }
     }
     else if (args.found("case"))

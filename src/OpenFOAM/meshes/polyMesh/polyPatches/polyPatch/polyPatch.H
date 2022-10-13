@@ -384,7 +384,7 @@ public:
         }
 
         //- Return true if the given type is a constraint type
-        static bool constraintType(const word& patchType);
+        static bool constraintType(const word& pt);
 
         //- Return a list of all the constraint patch types
         static wordList constraintTypes();
@@ -399,14 +399,14 @@ public:
             return UIndirectList<T>(internalValues, faceCells());
         }
 
-        //- Slice List to patch, using the number of patch faces
+        //- Slice list to patch
         template<class T>
         const typename List<T>::subList patchSlice(const UList<T>& l) const
         {
             return typename List<T>::subList(l, this->size(), start_);
         }
 
-        //- Slice Field to patch, using the number of patch faces
+        //- Slice Field to patch
         template<class T>
         const typename Field<T>::subField patchSlice(const Field<T>& l) const
         {
@@ -449,9 +449,9 @@ public:
         // Other patch operations
 
             //- Return label of face in patch from global face label
-            label whichFace(const label facei) const noexcept
+            inline label whichFace(const label l) const
             {
-                return facei - start_;
+                return l - start_;
             }
 
 

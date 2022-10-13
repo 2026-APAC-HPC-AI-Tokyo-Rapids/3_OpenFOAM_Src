@@ -41,8 +41,7 @@ Author
 
 SourceFiles
     faPatchField.C
-    faPatchFieldBase.C
-    faPatchFieldNew.C
+    newPatchField.C
 
 \*---------------------------------------------------------------------------*/
 
@@ -58,127 +57,20 @@ namespace Foam
 {
 
 // Forward Declarations
+
 class objectRegistry;
 class dictionary;
 class faPatchFieldMapper;
 class areaMesh;
 
-template<class Type> class faPatchField;
-template<class Type> class calculatedFaPatchField;
+template<class Type>
+class faPatchField;
+
+template<class Type>
+class calculatedFaPatchField;
 
 template<class Type>
 Ostream& operator<<(Ostream&, const faPatchField<Type>&);
-
-/*---------------------------------------------------------------------------*\
-                      Class faPatchFieldBase Declaration
-\*---------------------------------------------------------------------------*/
-
-//- Template invariant parts for faPatchField
-class faPatchFieldBase
-{
-    // Private Data
-
-        //- Reference to patch
-        const faPatch& patch_;
-
-        //- Update index used so that updateCoeffs is called only once during
-        //- the construction of the matrix
-        bool updated_;
-
-        //- Optional patch type
-        //  Used to allow specified boundary conditions to be applied
-        //  to constraint patches by providing the constraint
-        //  patch type as 'patchType'
-        word patchType_;
-
-
-protected:
-
-    // Protected Member Functions
-
-        //- Read dictionary entries.
-        //  Useful when initially constructed without a dictionary
-        virtual void readDict(const dictionary& dict);
-
-        //- Set updated state
-        void setUpdated(bool state) noexcept
-        {
-            updated_ = state;
-        }
-
-
-public:
-
-    //- Debug switch to disallow the use of generic faPatchField
-    static int disallowGenericPatchField;
-
-    //- Runtime type information
-    TypeName("faPatchField");
-
-
-    // Constructors
-
-        //- Construct from patch
-        explicit faPatchFieldBase(const faPatch& p);
-
-        //- Construct from patch and patch type
-        explicit faPatchFieldBase(const faPatch& p, const word& patchType);
-
-        //- Construct from patch and dictionary
-        faPatchFieldBase(const faPatch& p, const dictionary& dict);
-
-        //- Copy construct with new patch
-        faPatchFieldBase(const faPatchFieldBase& rhs, const faPatch& p);
-
-        //- Copy construct
-        faPatchFieldBase(const faPatchFieldBase& rhs);
-
-
-    //- Destructor
-    virtual ~faPatchFieldBase() = default;
-
-
-    // Member Functions
-
-    // Access
-
-        //- The associated objectRegistry
-        /// const objectRegistry& db() const;
-
-        //- Return the patch
-        const faPatch& patch() const noexcept
-        {
-            return patch_;
-        }
-
-        //- The optional patch type
-        const word& patchType() const noexcept
-        {
-            return patchType_;
-        }
-
-        //- The optional patch type
-        word& patchType() noexcept
-        {
-            return patchType_;
-        }
-
-
-    // Solution
-
-        //- True if the boundary condition has already been updated
-        bool updated() const noexcept
-        {
-            return updated_;
-        }
-
-
-    // Check
-
-        //- Check that patches are identical
-        void checkPatch(const faPatchFieldBase& rhs) const;
-};
-
 
 /*---------------------------------------------------------------------------*\
                         Class faPatchField Declaration
@@ -187,13 +79,24 @@ public:
 template<class Type>
 class faPatchField
 :
-    public faPatchFieldBase,
     public Field<Type>
 {
     // Private Data
 
+        //- Reference to a patch
+        const faPatch& patch_;
+
         //- Reference to internal field
         const DimensionedField<Type, areaMesh>& internalField_;
+
+        //- Update index used so that updateCoeffs is called only once during
+        //  the construction of the matrix
+        bool updated_;
+
+        //- Optional patch type, used to allow specified boundary conditions
+        //- to be applied to constraint patches by providing the constraint
+        //- patch type as 'patchType'
+        word patchType_;
 
 
 public:
@@ -206,6 +109,13 @@ public:
 
     //- Type for a \em calculated patch
     typedef calculatedFaPatchField<Type> Calculated;
+
+
+    //- Runtime type information
+    TypeName("faPatchField");
+
+    //- Debug switch to disallow the use of
+    static int disallowGenericFaPatchField;
 
 
     // Declare run-time constructor selection tables
@@ -288,18 +198,18 @@ public:
         //- Construct as copy
         faPatchField(const faPatchField<Type>&);
 
+        //- Construct and return a clone
+        virtual tmp<faPatchField<Type>> clone() const
+        {
+            return tmp<faPatchField<Type>>(new faPatchField<Type>(*this));
+        }
+
         //- Construct as copy setting internal field reference
         faPatchField
         (
             const faPatchField<Type>&,
             const DimensionedField<Type, areaMesh>&
         );
-
-        //- Construct and return a clone
-        virtual tmp<faPatchField<Type>> clone() const
-        {
-            return tmp<faPatchField<Type>>(new faPatchField<Type>(*this));
-        }
 
         //- Construct and return a clone setting internal field reference
         virtual tmp<faPatchField<Type>> clone
@@ -363,21 +273,50 @@ public:
 
 
     //- Destructor
-    virtual ~faPatchField() = default;
+    virtual ~faPatchField<Type>() = default;
 
 
     // Member Functions
 
-        //- The type name for calculated patch fields
-        static const word& calculatedType();
+        // Access
 
-        //- The type name for zeroGradient patch fields
-        static const word& zeroGradientType();
+            //- Return local objectRegistry
+            const objectRegistry& db() const;
 
+            //- Return patch
+            const faPatch& patch() const
+            {
+                return patch_;
+            }
 
-        // Attributes
+            //- Return dimensioned internal field reference
+            const DimensionedField<Type, areaMesh>& internalField() const
+            {
+                return internalField_;
+            }
 
-            //- True if this patch field fixes a value.
+            //- Return internal field reference
+            const Field<Type>& primitiveField() const
+            {
+                return internalField_;
+            }
+
+            //- Optional patch type
+            const word& patchType() const
+            {
+                return patchType_;
+            }
+
+            //- Optional patch type
+            word& patchType()
+            {
+                return patchType_;
+            }
+
+            //- Return the type of the calculated for of faPatchField
+            static const word& calculatedType();
+
+            //- Return true if this patch field fixes a value.
             //  Needed to check if a level has to be specified while solving
             //  Poissons equations.
             virtual bool fixesValue() const
@@ -385,29 +324,16 @@ public:
                 return false;
             }
 
-            //- True if this patch field is coupled
+            //- Return true if this patch field is coupled
             virtual bool coupled() const
             {
                 return false;
             }
 
-
-        // Access
-
-            //- Return local objectRegistry
-            const objectRegistry& db() const;
-
-            //- Return dimensioned internal field reference
-            const DimensionedField<Type, areaMesh>&
-            internalField() const noexcept
+            //- Return true if the boundary condition has already been updated
+            bool updated() const
             {
-                return internalField_;
-            }
-
-            //- Return internal field reference
-            const Field<Type>& primitiveField() const noexcept
-            {
-                return internalField_;
+                return updated_;
             }
 
 
@@ -432,6 +358,13 @@ public:
             //- Return patch-normal gradient
             virtual tmp<Field<Type>> snGrad() const;
 
+            //- Update the coefficients associated with the patch field
+            //  Sets Updated to true
+            virtual void updateCoeffs()
+            {
+                updated_ = true;
+            }
+
             //- Return internal field next to patch as patch field
             virtual tmp<Field<Type>> patchInternalField() const;
 
@@ -441,10 +374,6 @@ public:
                 NotImplemented;
                 return *this;
             }
-
-            //- Update the coefficients associated with the patch field
-            //  Sets Updated to true
-            virtual void updateCoeffs();
 
             //- Initialise the evaluation of the patch field
             virtual void initEvaluate
@@ -542,7 +471,7 @@ public:
         virtual void operator==(const Type&);
 
 
-    // Ostream Operator
+    // Ostream operator
 
         friend Ostream& operator<< <Type>(Ostream&, const faPatchField<Type>&);
 };
@@ -557,12 +486,8 @@ public:
 #ifdef NoRepository
     #include "faPatchField.C"
     #include "calculatedFaPatchField.H"
-    #include "zeroGradientFaPatchField.H"
 #endif
 
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-// Runtime selection macros
 
 #define addToFaPatchFieldRunTimeSelection(PatchTypeField, typePatchTypeField) \
                                                                               \

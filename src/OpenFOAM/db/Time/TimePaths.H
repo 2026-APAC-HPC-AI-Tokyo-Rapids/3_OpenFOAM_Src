@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_TimePaths_H
-#define Foam_TimePaths_H
+#ifndef TimePaths_H
+#define TimePaths_H
 
 #include "fileName.H"
 #include "instantList.H"
@@ -122,16 +122,16 @@ public:
         inline bool processorCase(const bool isProcessorCase) noexcept;
 
         //- Return root path
-        inline const fileName& rootPath() const noexcept;
+        inline const fileName& rootPath() const;
 
         //- Return global case name
-        inline const fileName& globalCaseName() const noexcept;
+        inline const fileName& globalCaseName() const;
 
         //- Return case name
-        inline const fileName& caseName() const noexcept;
+        inline const fileName& caseName() const;
 
         //- The case name for modification (use with caution)
-        inline fileName& caseName() noexcept;
+        inline fileName& caseName();
 
         //- Return path for the case
         inline fileName path() const;
@@ -154,10 +154,10 @@ public:
 
 
         //- Return constant name
-        inline const word& constant() const noexcept;
+        inline const word& constant() const;
 
         //- Return system name
-        inline const word& system() const noexcept;
+        inline const word& system() const;
 
         //- Return the constant name for the case, which is
         //- \c ../constant() for parallel runs.

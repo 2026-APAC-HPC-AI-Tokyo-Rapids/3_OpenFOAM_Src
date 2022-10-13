@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -177,68 +177,45 @@ Foam::Field<Type>::Field
 
 
 template<class Type>
-Foam::Field<Type>::Field(const entry& e, const label len)
-{
-    assign(e, len);
-}
-
-
-template<class Type>
 Foam::Field<Type>::Field
 (
     const word& keyword,
     const dictionary& dict,
-    const label len,
-    enum keyType::option matchOpt
+    const label len
 )
-{
-    assign(keyword, dict, len, matchOpt);
-}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-template<class Type>
-void Foam::Field<Type>::assign(const entry& e, const label len)
 {
     if (len)
     {
-        ITstream& is = e.stream();
+        ITstream& is = dict.lookup(keyword);
 
         // Read first token
         token firstToken(is);
 
         if (firstToken.isWord("uniform"))
         {
-            // Resize to expected length (or -1 : retain current length)
-            if (len >= 0)
-            {
-                this->resize(len);
-            }
+            this->resize(len);
             operator=(pTraits<Type>(is));
         }
         else if (firstToken.isWord("nonuniform"))
         {
             is >> static_cast<List<Type>&>(*this);
             const label lenRead = this->size();
-
-            // Check lengths
-            if (len >= 0 && len != lenRead)
+            if (len != lenRead)
             {
                 if (len < lenRead && allowConstructFromLargerSize)
                 {
-                    // Truncate the data
-                    this->resize(len);
-
                     #ifdef FULLDEBUG
-                    IOWarningInFunction(is)
+                    IOWarningInFunction(dict)
                         << "Sizes do not match. Truncating " << lenRead
                         << " entries to " << len << endl;
                     #endif
+
+                    // Truncate the data
+                    this->resize(len);
                 }
                 else
                 {
-                    FatalIOErrorInFunction(is)
+                    FatalIOErrorInFunction(dict)
                         << "size " << lenRead
                         << " is not equal to the expected length " << len
                         << exit(FatalIOError);
@@ -247,7 +224,7 @@ void Foam::Field<Type>::assign(const entry& e, const label len)
         }
         else
         {
-            FatalIOErrorInFunction(is)
+            FatalIOErrorInFunction(dict)
                 << "Expected keyword 'uniform' or 'nonuniform', found "
                 << firstToken.info() << nl
                 << exit(FatalIOError);
@@ -256,21 +233,7 @@ void Foam::Field<Type>::assign(const entry& e, const label len)
 }
 
 
-template<class Type>
-void Foam::Field<Type>::assign
-(
-    const word& keyword,
-    const dictionary& dict,
-    const label len,
-    enum keyType::option matchOpt
-)
-{
-    if (len)
-    {
-        assign(dict.lookupEntry(keyword, matchOpt), len);
-    }
-}
-
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
 void Foam::Field<Type>::map
@@ -283,7 +246,7 @@ void Foam::Field<Type>::map
 
     if (f.size() != mapAddressing.size())
     {
-        f.resize(mapAddressing.size());
+        f.setSize(mapAddressing.size());
     }
 
     if (mapF.size() > 0)
@@ -325,7 +288,7 @@ void Foam::Field<Type>::map
 
     if (f.size() != mapAddressing.size())
     {
-        f.resize(mapAddressing.size());
+        f.setSize(mapAddressing.size());
     }
 
     if (mapWeights.size() != mapAddressing.size())
@@ -400,7 +363,7 @@ void Foam::Field<Type>::map
             // from distribution. Note: this behaviour is different compared
             // to local mapper.
             this->transfer(newMapF);
-            this->resize(mapper.size());
+            this->setSize(mapper.size());
         }
     }
     else
@@ -472,7 +435,7 @@ void Foam::Field<Type>::autoMap
             // from distribution. Note: this behaviour is different compared
             // to local mapper.
             this->transfer(fCpy);
-            this->resize(mapper.size());
+            this->setSize(mapper.size());
         }
     }
     else
@@ -492,7 +455,7 @@ void Foam::Field<Type>::autoMap
         }
         else
         {
-            this->resize(mapper.size());
+            this->setSize(mapper.size());
         }
     }
 }

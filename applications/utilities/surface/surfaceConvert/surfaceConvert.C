@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -68,12 +68,13 @@ using namespace Foam;
 
 static word getExtension(const fileName& name)
 {
-    return
-    (
-        name.has_ext("gz")
-      ? name.stem().ext()
-      : name.ext()
-    );
+    word ext(name.ext());
+    if (ext == "gz")
+    {
+        ext = name.lessExt().ext();
+    }
+
+    return ext;
 }
 
 

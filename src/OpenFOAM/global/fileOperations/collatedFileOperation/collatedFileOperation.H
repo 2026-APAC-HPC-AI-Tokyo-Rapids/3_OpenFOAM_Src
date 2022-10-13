@@ -67,20 +67,12 @@ class collatedFileOperation
 :
     public masterUncollatedFileOperation
 {
-    // Private Data
-
-        //- Communicator allocated/managed by us
-        label managedComm_;
-
-
-    // Private Member Functions
-
-        //- Any initialisation steps after constructing
-        void init(bool verbose);
-
 protected:
 
     // Protected Data
+
+        //- Any communicator allocated by me
+        const label myComm_;
 
         //- Threaded writer
         mutable OFstreamCollator writer_;

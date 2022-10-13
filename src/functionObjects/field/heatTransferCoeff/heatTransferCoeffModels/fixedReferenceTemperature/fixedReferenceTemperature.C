@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -44,27 +44,6 @@ namespace heatTransferCoeffModels
 }
 }
 
-
-// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
-
-void Foam::heatTransferCoeffModels::fixedReferenceTemperature::htc
-(
-    volScalarField& htc,
-    const FieldField<Field, scalar>& q
-)
-{
-    const auto& T = mesh_.lookupObject<volScalarField>(TName_);
-    const volScalarField::Boundary& Tbf = T.boundaryField();
-    const scalar eps = ROOTVSMALL;
-
-    volScalarField::Boundary& htcBf = htc.boundaryFieldRef();
-    for (const label patchi : patchSet_)
-    {
-        htcBf[patchi] = q[patchi]/(TRef_ - Tbf[patchi] + eps);
-    }
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::heatTransferCoeffModels::fixedReferenceTemperature::
@@ -89,14 +68,32 @@ bool Foam::heatTransferCoeffModels::fixedReferenceTemperature::read
     const dictionary& dict
 )
 {
-    if (!heatTransferCoeffModel::read(dict))
+    if (heatTransferCoeffModel::read(dict))
     {
-        return false;
+        dict.readEntry("TRef", TRef_);
+
+        return true;
     }
 
-    dict.readEntry("TRef", TRef_);
+    return false;
+}
 
-    return true;
+
+void Foam::heatTransferCoeffModels::fixedReferenceTemperature::htc
+(
+    volScalarField& htc,
+    const FieldField<Field, scalar>& q
+)
+{
+    const auto& T = mesh_.lookupObject<volScalarField>(TName_);
+    const volScalarField::Boundary& Tbf = T.boundaryField();
+    const scalar eps = ROOTVSMALL;
+
+    volScalarField::Boundary& htcBf = htc.boundaryFieldRef();
+    for (const label patchi : patchSet_)
+    {
+        htcBf[patchi] = q[patchi]/(TRef_ - Tbf[patchi] + eps);
+    }
 }
 
 

@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,6 +30,28 @@ License
 #include "globalMeshData.H"
 #include "PatchTools.H"
 
+// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+
+template
+<
+    class PrimitivePatchType,
+    class Type,
+    class TrackingData
+>
+Foam::scalar Foam::PatchEdgeFaceWave<PrimitivePatchType, Type, TrackingData>::
+propagationTol_ = 0.01;
+
+template
+<
+    class PrimitivePatchType,
+    class Type,
+    class TrackingData
+>
+Foam::label
+Foam::PatchEdgeFaceWave<PrimitivePatchType, Type, TrackingData>::
+dummyTrackData_ = 12345;
+
+
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 // Update info for edgeI, at position pt, with information from
@@ -47,7 +68,7 @@ template
 bool Foam::PatchEdgeFaceWave<PrimitivePatchType, Type, TrackingData>::
 updateEdge
 (
-    const label edgei,
+    const label edgeI,
     const label neighbourFacei,
     const Type& neighbourInfo,
     Type& edgeInfo
@@ -62,7 +83,7 @@ updateEdge
         (
             mesh_,
             patch_,
-            edgei,
+            edgeI,
             neighbourFacei,
             neighbourInfo,
             propagationTol_,
@@ -71,9 +92,10 @@ updateEdge
 
     if (propagate)
     {
-        if (changedEdge_.set(edgei))
+        if (!changedEdge_[edgeI])
         {
-            changedEdges_.push_back(edgei);
+            changedEdge_.set(edgeI);
+            changedEdges_.append(edgeI);
         }
     }
 
@@ -126,7 +148,7 @@ updateFace
     {
         if (changedFace_.set(facei))
         {
-            changedFaces_.push_back(facei);
+            changedFaces_.append(facei);
         }
     }
 
@@ -163,7 +185,7 @@ syncEdges()
         label patchEdgeI = patchEdges_[i];
         label coupledEdgeI = coupledEdges_[i];
 
-        if (changedEdge_.test(patchEdgeI))
+        if (changedEdge_[patchEdgeI])
         {
             const Type& data = allEdgeInfo_[patchEdgeI];
 
@@ -244,9 +266,10 @@ syncEdges()
                 td_
             );
 
-            if (changedEdge_.set(patchEdgeI))
+            if (!changedEdge_[patchEdgeI])
             {
-                changedEdges_.push_back(patchEdgeI);
+                changedEdge_.set(patchEdgeI);
+                changedEdges_.append(patchEdgeI);
             }
         }
     }
@@ -278,12 +301,18 @@ PatchEdgeFaceWave
     TrackingData& td
 )
 :
-    PatchEdgeFaceWaveBase(mesh, patch.nEdges(), patch.size()),
+    mesh_(mesh),
     patch_(patch),
     allEdgeInfo_(allEdgeInfo),
     allFaceInfo_(allFaceInfo),
     td_(td),
-    nEvals_(0)
+    changedEdge_(patch_.nEdges()),
+    changedEdges_(patch_.size()),
+    changedFace_(patch_.size()),
+    changedFaces_(patch_.size()),
+    nEvals_(0),
+    nUnvisitedEdges_(patch_.nEdges()),
+    nUnvisitedFaces_(patch_.size())
 {
     // Calculate addressing between patch_ and mesh.globalData().coupledPatch()
     // for ease of synchronisation
@@ -302,18 +331,18 @@ PatchEdgeFaceWave
     {
         FatalErrorInFunction
             << "size of edgeInfo work array is not equal to the number"
-            << " of edges in the patch" << nl
-            << "    edgeInfo   :" << allEdgeInfo_.size() << nl
-            << "    patch.nEdges:" << patch_.nEdges() << endl
+            << " of edges in the patch" << endl
+            << "    edgeInfo   :" << allEdgeInfo_.size() << endl
+            << "    patch.nEdges:" << patch_.nEdges()
             << exit(FatalError);
     }
     if (allFaceInfo_.size() != patch_.size())
     {
         FatalErrorInFunction
             << "size of edgeInfo work array is not equal to the number"
-            << " of faces in the patch" << nl
-            << "    faceInfo   :" << allFaceInfo_.size() << nl
-            << "    patch.size:" << patch_.size() << endl
+            << " of faces in the patch" << endl
+            << "    faceInfo   :" << allFaceInfo_.size() << endl
+            << "    patch.size:" << patch_.size()
             << exit(FatalError);
     }
 
@@ -323,7 +352,7 @@ PatchEdgeFaceWave
 
     if (debug)
     {
-        Pout<< "Seed edges                : " << nChangedEdges() << endl;
+        Pout<< "Seed edges                : " << changedEdges_.size() << endl;
     }
 
     // Iterate until nothing changes
@@ -332,10 +361,10 @@ PatchEdgeFaceWave
     if ((maxIter > 0) && (iter >= maxIter))
     {
         FatalErrorInFunction
-            << "Maximum number of iterations reached. Increase maxIter." << nl
-            << "    maxIter:" << maxIter << nl
-            << "    changedEdges:" << nChangedEdges() << nl
-            << "    changedFaces:" << nChangedFaces() << endl
+            << "Maximum number of iterations reached. Increase maxIter." << endl
+            << "    maxIter:" << maxIter << endl
+            << "    changedEdges:" << changedEdges_.size() << endl
+            << "    changedFaces:" << changedFaces_.size() << endl
             << exit(FatalError);
     }
 }
@@ -357,12 +386,18 @@ PatchEdgeFaceWave
     TrackingData& td
 )
 :
-    PatchEdgeFaceWaveBase(mesh, patch.nEdges(), patch.size()),
+    mesh_(mesh),
     patch_(patch),
     allEdgeInfo_(allEdgeInfo),
     allFaceInfo_(allFaceInfo),
     td_(td),
-    nEvals_(0)
+    changedEdge_(patch_.nEdges()),
+    changedEdges_(patch_.nEdges()),
+    changedFace_(patch_.size()),
+    changedFaces_(patch_.size()),
+    nEvals_(0),
+    nUnvisitedEdges_(patch_.nEdges()),
+    nUnvisitedFaces_(patch_.size())
 {
     // Calculate addressing between patch_ and mesh.globalData().coupledPatch()
     // for ease of synchronisation
@@ -411,9 +446,10 @@ setEdgeInfo
 
         // Mark edgeI as changed, both on list and on edge itself.
 
-        if (changedEdge_.set(edgeI))
+        if (!changedEdge_[edgeI])
         {
-            changedEdges_.push_back(edgeI);
+            changedEdge_.set(edgeI);
+            changedEdges_.append(edgeI);
         }
     }
 }
@@ -432,8 +468,10 @@ faceToEdge()
     changedEdges_.clear();
     changedEdge_ = false;
 
-    for (const label facei : changedFaces_)
+    forAll(changedFaces_, changedFacei)
     {
+        label facei = changedFaces_[changedFacei];
+
         if (!changedFace_.test(facei))
         {
             FatalErrorInFunction
@@ -473,10 +511,10 @@ faceToEdge()
 
     if (debug)
     {
-        Pout<< "Changed edges             : " << nChangedEdges() << endl;
+        Pout<< "Changed edges             : " << changedEdges_.size() << endl;
     }
 
-    return returnReduce(nChangedEdges(), sumOp<label>());
+    return returnReduce(changedEdges_.size(), sumOp<label>());
 }
 
 
@@ -495,23 +533,28 @@ edgeToFace()
 
     const labelListList& edgeFaces = patch_.edgeFaces();
 
-    for (const label edgei : changedEdges_)
+    forAll(changedEdges_, changedEdgeI)
     {
-        if (!changedEdge_.test(edgei))
+        label edgeI = changedEdges_[changedEdgeI];
+
+        if (!changedEdge_[edgeI])
         {
             FatalErrorInFunction
-                << "edge " << edgei
+                << "edge " << edgeI
                 << " not marked as having been changed" << nl
                 << "This might be caused by multiple occurrences of the same"
                 << " seed edge." << abort(FatalError);
         }
 
-        const Type& neighbourWallInfo = allEdgeInfo_[edgei];
+        const Type& neighbourWallInfo = allEdgeInfo_[edgeI];
 
         // Evaluate all connected faces
 
-        for (const label facei : edgeFaces[edgei])
+        const labelList& eFaces = edgeFaces[edgeI];
+        forAll(eFaces, eFacei)
         {
+            label facei = eFaces[eFacei];
+
             Type& currentWallInfo = allFaceInfo_[facei];
 
             if (!currentWallInfo.equal(neighbourWallInfo, td_))
@@ -519,7 +562,7 @@ edgeToFace()
                 updateFace
                 (
                     facei,
-                    edgei,
+                    edgeI,
                     neighbourWallInfo,
                     currentWallInfo
                 );
@@ -529,10 +572,10 @@ edgeToFace()
 
     if (debug)
     {
-        Pout<< "Changed faces             : " << nChangedFaces() << endl;
+        Pout<< "Changed faces             : " << changedFaces_.size() << endl;
     }
 
-    return returnReduce(nChangedFaces(), sumOp<label>());
+    return returnReduce(changedFaces_.size(), sumOp<label>());
 }
 
 

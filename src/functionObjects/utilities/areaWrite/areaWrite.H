@@ -210,7 +210,7 @@ public:
 
         //- Enable/disable verbose output
         //  \return old value
-        bool verbose(const bool on) noexcept;
+        bool verbose(const bool on);
 
         //- Read the areaWrite dictionary
         virtual bool read(const dictionary& dict);
@@ -231,16 +231,22 @@ public:
         virtual void readUpdate(const polyMesh::readUpdateState state);
 
         //- Get merge tolerance
-        static scalar mergeTol() noexcept;
+        static scalar mergeTol();
 
         //- Set merge tolerance and return old value
-        static scalar mergeTol(const scalar tol) noexcept;
+        static scalar mergeTol(const scalar tol);
 };
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#ifdef NoRepository
+    #include "areaWriteTemplates.C"
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

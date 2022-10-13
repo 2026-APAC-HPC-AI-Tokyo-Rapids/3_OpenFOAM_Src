@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2016 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -108,14 +108,23 @@ void Foam::patchSeedSet::calcSamples
 
             treeBoundBox patchBb
             (
-                treeBoundBox(pp.points(), pp.meshPoints())
-                    .extend(rndGen, 1e-4, ROOTVSMALL)
+                treeBoundBox(pp.points(), pp.meshPoints()).extend
+                (
+                    rndGen,
+                    1e-4
+                )
             );
+            patchBb.min() -= point::uniform(ROOTVSMALL);
+            patchBb.max() += point::uniform(ROOTVSMALL);
 
             indexedOctree<treeDataFace> boundaryTree
             (
-                treeDataFace(mesh(), patchFaces),  // boundary faces only
-
+                treeDataFace    // all information needed to search faces
+                (
+                    false,      // do not cache bb
+                    mesh(),
+                    patchFaces  // boundary faces only
+                ),
                 patchBb,        // overall search domain
                 8,              // maxLevel
                 10,             // leafsize
@@ -126,18 +135,23 @@ void Foam::patchSeedSet::calcSamples
             // to be found
             const scalar globalDistSqr
             (
-                //boundBox(pp.points(), pp.meshPoints(), true).magSqr()
+                //magSqr
+                //(
+                //    boundBox
+                //    (
+                //        pp.points(),
+                //        pp.meshPoints(),
+                //        true
+                //    ).span()
+                //)
                 GREAT
             );
 
             forAll(selectedLocations_, sampleI)
             {
-                const auto& treeData = boundaryTree.shapes();
                 const point& sample = selectedLocations_[sampleI];
 
                 pointIndexHit& nearInfo = nearest[sampleI].first();
-                auto& distSqrProc = nearest[sampleI].second();
-
                 nearInfo = boundaryTree.findNearest
                 (
                     sample,
@@ -146,15 +160,17 @@ void Foam::patchSeedSet::calcSamples
 
                 if (!nearInfo.hit())
                 {
-                    distSqrProc.first() = Foam::sqr(GREAT);
-                    distSqrProc.second() = Pstream::myProcNo();
+                    nearest[sampleI].second().first() = Foam::sqr(GREAT);
+                    nearest[sampleI].second().second() =
+                        Pstream::myProcNo();
                 }
                 else
                 {
-                    nearInfo.setPoint(treeData.centre(nearInfo.index()));
-
-                    distSqrProc.first() = sample.distSqr(nearInfo.point());
-                    distSqrProc.second() = Pstream::myProcNo();
+                    point fc(pp[nearInfo.index()].centre(pp.points()));
+                    nearInfo.setPoint(fc);
+                    nearest[sampleI].second().first() = magSqr(fc-sample);
+                    nearest[sampleI].second().second() =
+                        Pstream::myProcNo();
                 }
             }
 
@@ -162,7 +178,11 @@ void Foam::patchSeedSet::calcSamples
             // 2. Reduce on master. Select nearest processor.
 
             // Find nearest - globally consistent
-            Pstream::listCombineReduce(nearest, mappedPatchBase::nearestEqOp());
+            Pstream::listCombineAllGather
+            (
+                nearest,
+                mappedPatchBase::nearestEqOp()
+            );
 
             // 3. Pick up my local faces that have won
 
@@ -257,12 +277,12 @@ void Foam::patchSeedSet::calcSamples
             const point& cc = mesh().cellCentres()[celli];
             samplingPts.append
             (
-                info.point() + 1e-1*(cc-info.point())
+                info.hitPoint() + 1e-1*(cc-info.hitPoint())
             );
         }
         else
         {
-            samplingPts.append(info.point());
+            samplingPts.append(info.rawPoint());
         }
         samplingCells.append(celli);
         samplingFaces.append(facei);

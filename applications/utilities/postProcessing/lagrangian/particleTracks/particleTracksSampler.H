@@ -144,7 +144,7 @@ public:
 
         void resetCloud(const label localCloudSize)
         {
-            cloudGather_.reset(globalIndex::gatherOnly{}, localCloudSize);
+            cloudGather_.reset(localCloudSize, globalIndex::gatherOnly{});
             origParcelIds_.resize_nocopy(localCloudSize);
             origProcIds_.resize_nocopy(localCloudSize);
         }

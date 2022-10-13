@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,27 +36,30 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::null()
 
 
 template<class Type, template<class> class PatchField, class GeoMesh>
-inline const typename
+inline
+const typename
 Foam::GeometricField<Type, PatchField, GeoMesh>::Internal&
-Foam::GeometricField<Type, PatchField, GeoMesh>::internalField() const noexcept
+Foam::GeometricField<Type, PatchField, GeoMesh>::
+internalField() const
 {
     return *this;
 }
 
 
 template<class Type, template<class> class PatchField, class GeoMesh>
-inline const typename
+inline
+const typename
 Foam::GeometricField<Type, PatchField, GeoMesh>::Internal::FieldType&
-Foam::GeometricField<Type, PatchField, GeoMesh>::primitiveField() const noexcept
+Foam::GeometricField<Type, PatchField, GeoMesh>::primitiveField() const
 {
     return *this;
 }
 
 
 template<class Type, template<class> class PatchField, class GeoMesh>
-inline const typename
-Foam::GeometricField<Type, PatchField, GeoMesh>::Boundary&
-Foam::GeometricField<Type, PatchField, GeoMesh>::boundaryField() const noexcept
+inline const typename Foam::GeometricField<Type, PatchField, GeoMesh>::
+Boundary&
+Foam::GeometricField<Type, PatchField, GeoMesh>::boundaryField() const
 {
     return boundaryField_;
 }
@@ -65,7 +67,7 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::boundaryField() const noexcept
 
 template<class Type, template<class> class PatchField, class GeoMesh>
 inline Foam::label
-Foam::GeometricField<Type, PatchField, GeoMesh>::timeIndex() const noexcept
+Foam::GeometricField<Type, PatchField, GeoMesh>::timeIndex() const
 {
     return timeIndex_;
 }
@@ -73,9 +75,22 @@ Foam::GeometricField<Type, PatchField, GeoMesh>::timeIndex() const noexcept
 
 template<class Type, template<class> class PatchField, class GeoMesh>
 inline Foam::label&
-Foam::GeometricField<Type, PatchField, GeoMesh>::timeIndex() noexcept
+Foam::GeometricField<Type, PatchField, GeoMesh>::timeIndex()
 {
     return timeIndex_;
+}
+
+
+// * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
+
+template<class Type, template<class> class PatchField, class GeoMesh>
+inline
+const typename
+Foam::GeometricField<Type, PatchField, GeoMesh>::Internal&
+Foam::GeometricField<Type, PatchField, GeoMesh>::
+operator()() const
+{
+    return *this;
 }
 
 

@@ -58,20 +58,22 @@ namespace Foam
 
 Foam::autoPtr<Foam::coordSetWriter> Foam::sampledSets::newWriter
 (
-    word writerType,
-    const dictionary& topDict,
+    word writeType,
+    const dictionary& formatOptions,
     const dictionary& setDict
 )
 {
     // Per-set adjustment
-    setDict.readIfPresent<word>("setFormat", writerType);
+    setDict.readIfPresent<word>("setFormat", writeType);
 
-    return coordSetWriter::New
+    dictionary options = formatOptions.subOrEmptyDict(writeType);
+
+    options.merge
     (
-        writerType,
-        // Top-level/set-specific "formatOptions"
-        coordSetWriter::formatOptions(topDict, setDict, writerType)
+        setDict.subOrEmptyDict("formatOptions").subOrEmptyDict(writeType)
     );
+
+    return coordSetWriter::New(writeType, options);
 }
 
 
@@ -164,7 +166,7 @@ void Foam::sampledSets::gatherAllSets()
     {
         const coordSet& coords = localSets[seti];
 
-        globalIndices_[seti].reset(globalIndex::gatherOnly{}, coords.size());
+        globalIndices_[seti].reset(coords.size(), globalIndex::gatherOnly{});
         gatheredSets_.set(seti, coords.gatherSort(gatheredSorting_[seti]));
     }
 }
@@ -194,7 +196,7 @@ Foam::IOobjectList Foam::sampledSets::preCheckFields(unsigned request)
 
     // Parallel consistency (no-op in serial)
     // Probably not needed...
-    /// Pstream::mapCombineReduce(selected, HashSetOps::plusEqOp<word>());
+    /// Pstream::mapCombineAllGather(selected, HashSetOps::plusEqOp<word>());
 
 
     DynamicList<label> missed(fieldSelection_.size());
@@ -336,7 +338,7 @@ void Foam::sampledSets::initDict(const dictionary& dict, const bool initial)
                 writers_.set
                 (
                     seti,
-                    newWriter(writeFormat_, dict_, subDict)
+                    newWriter(writeFormat_, writeFormatOptions_, subDict)
                 );
 
                 // Use outputDir/TIME/set-name
@@ -394,7 +396,7 @@ void Foam::sampledSets::initDict(const dictionary& dict, const bool initial)
                 writers_.set
                 (
                     seti,
-                    newWriter(writeFormat_, dict_, subDict)
+                    newWriter(writeFormat_, writeFormatOptions_, subDict)
                 );
 
                 // Use outputDir/TIME/set-name
@@ -444,6 +446,7 @@ Foam::sampledSets::sampledSets
     searchEngine_(mesh_),
     samplePointScheme_(),
     writeFormat_(),
+    writeFormatOptions_(dict.subOrEmptyDict("formatOptions")),
     selectedFieldNames_(),
     writers_(),
     probeFilePtrs_(),
@@ -481,6 +484,7 @@ Foam::sampledSets::sampledSets
     searchEngine_(mesh_),
     samplePointScheme_(),
     writeFormat_(),
+    writeFormatOptions_(dict.subOrEmptyDict("formatOptions")),
     selectedFieldNames_(),
     writers_(),
     probeFilePtrs_(),
@@ -543,6 +547,12 @@ bool Foam::sampledSets::read(const dictionary& dict)
         // Close all streams
         probeFilePtrs_.clear();
     }
+
+    // const dictionary formatOptions(dict.subOrEmptyDict("formatOptions"));
+    // Writer type and format options
+    // const word writerType =
+    //     (eptr ? dict.get<word>("setFormat") : word::null);
+    // writerType_ = (eptr ? dict.get<word>("setFormat") : word::null);
 
     initDict(dict, true);
 

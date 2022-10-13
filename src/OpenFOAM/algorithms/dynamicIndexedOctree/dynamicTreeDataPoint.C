@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,13 +26,14 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "dynamicTreeDataPoint.H"
+#include "treeBoundBox.H"
 #include "dynamicIndexedOctree.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-    defineTypeName(dynamicTreeDataPoint);
+defineTypeNameAndDebug(dynamicTreeDataPoint, 0);
 }
 
 
@@ -50,10 +50,10 @@ Foam::dynamicTreeDataPoint::dynamicTreeDataPoint
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-Foam::treeBoundBox
-Foam::dynamicTreeDataPoint::bounds(const labelUList& indices) const
+const Foam::DynamicList<Foam::point>&
+Foam::dynamicTreeDataPoint::shapePoints() const
 {
-    return treeBoundBox(points_, indices);
+    return points_;
 }
 
 
@@ -70,10 +70,10 @@ Foam::volumeType Foam::dynamicTreeDataPoint::getVolumeType
 bool Foam::dynamicTreeDataPoint::overlaps
 (
     const label index,
-    const treeBoundBox& searchBox
+    const treeBoundBox& cubeBb
 ) const
 {
-    return searchBox.contains(centre(index));
+    return cubeBb.contains(points_[index]);
 }
 
 
@@ -84,7 +84,16 @@ bool Foam::dynamicTreeDataPoint::overlaps
     const scalar radiusSqr
 ) const
 {
-    return (centre.distSqr(this->centre(index)) <= radiusSqr);
+    const point& p = points_[index];
+
+    const scalar distSqr = magSqr(p - centre);
+
+    if (distSqr <= radiusSqr)
+    {
+        return true;
+    }
+
+    return false;
 }
 
 
@@ -98,11 +107,13 @@ void Foam::dynamicTreeDataPoint::findNearest
     point& nearestPoint
 ) const
 {
-    for (const label index : indices)
+    forAll(indices, i)
     {
-        const point& pt = centre(index);
+        const label index = indices[i];
 
-        const scalar distSqr = sample.distSqr(pt);
+        const point& pt = points_[index];
+
+        scalar distSqr = magSqr(pt - sample);
 
         if (distSqr < nearestDistSqr)
         {
@@ -125,30 +136,42 @@ void Foam::dynamicTreeDataPoint::findNearest
     point& nearestPoint
 ) const
 {
-    const treeBoundBox lnBb(ln.box());
-
     // Best so far
-    scalar nearestDistSqr = linePoint.distSqr(nearestPoint);
+    scalar nearestDistSqr = magSqr(linePoint - nearestPoint);
 
-    for (const label index : indices)
+    forAll(indices, i)
     {
-        const point& pt = centre(index);
+        const label index = indices[i];
 
-        if (tightest.contains(pt))
+        const point& shapePt = points_[index];
+
+        if (tightest.contains(shapePt))
         {
             // Nearest point on line
-            pointHit pHit = ln.nearestDist(pt);
-            const scalar distSqr = sqr(pHit.distance());
+            pointHit pHit = ln.nearestDist(shapePt);
+            scalar distSqr = sqr(pHit.distance());
 
             if (distSqr < nearestDistSqr)
             {
                 nearestDistSqr = distSqr;
                 minIndex = index;
-                linePoint = pHit.point();
-                nearestPoint = pt;
+                linePoint = pHit.rawPoint();
+                nearestPoint = shapePt;
 
-                tightest = lnBb;
-                tightest.grow(pHit.distance());
+                {
+                    point& minPt = tightest.min();
+                    minPt = min(ln.start(), ln.end());
+                    minPt.x() -= pHit.distance();
+                    minPt.y() -= pHit.distance();
+                    minPt.z() -= pHit.distance();
+                }
+                {
+                    point& maxPt = tightest.max();
+                    maxPt = max(ln.start(), ln.end());
+                    maxPt.x() += pHit.distance();
+                    maxPt.y() += pHit.distance();
+                    maxPt.z() += pHit.distance();
+                }
             }
         }
     }

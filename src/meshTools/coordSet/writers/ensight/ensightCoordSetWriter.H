@@ -91,7 +91,7 @@ class ensightWriter
 
     // Private Data
 
-        //- Output format option (default: ASCII)
+        //- Output format option (default: IOstream::ASCII)
         IOstreamOption::streamFormat writeFormat_;
 
         //- Collate times (default: true)

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,6 +38,12 @@ Foam::fileName Foam::IOstream::staticName_("stream");
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 const Foam::fileName& Foam::IOstream::name() const
+{
+    return staticName_;
+}
+
+
+Foam::fileName& Foam::IOstream::name()
 {
     return staticName_;
 }
@@ -112,22 +118,22 @@ void Foam::IOstream::print(Ostream& os) const
 
 void Foam::IOstream::print(Ostream& os, const int streamState) const
 {
-    if (streamState == std::ios_base::goodbit)
+    if (streamState == ios_base::goodbit)
     {
         os  << "ios_base::goodbit set : the last operation on stream succeeded"
             << endl;
     }
-    else if (streamState & std::ios_base::badbit)
+    else if (streamState & ios_base::badbit)
     {
         os  << "ios_base::badbit set : characters possibly lost"
             << endl;
     }
-    else if (streamState & std::ios_base::failbit)
+    else if (streamState & ios_base::failbit)
     {
         os  << "ios_base::failbit set : some type of formatting error"
             << endl;
     }
-    else if (streamState & std::ios_base::eofbit)
+    else if (streamState & ios_base::eofbit)
     {
         os  << "ios_base::eofbit set : at end of stream"
             << endl;

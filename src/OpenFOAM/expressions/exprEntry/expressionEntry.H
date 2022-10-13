@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2014-2018 Bernhard Gschaider
+    Original code Copyright (C) 2014-2018 Bernhard Gschaider
     Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
@@ -65,8 +65,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_exprTools_expressionEntry_H
-#define Foam_exprTools_expressionEntry_H
+#ifndef exprTools_expressionEntry_H
+#define exprTools_expressionEntry_H
 
 #include "exprString.H"
 #include "primitiveEntry.H"
@@ -115,8 +115,8 @@ public:
 
     // Constructors
 
-        //- Default construct
-        expressionEntry() noexcept = default;
+        //- Construct null
+        expressionEntry() = default;
 
 
     // Selectors

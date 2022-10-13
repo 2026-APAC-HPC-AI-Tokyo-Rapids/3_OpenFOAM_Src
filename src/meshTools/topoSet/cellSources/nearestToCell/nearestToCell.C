@@ -85,7 +85,7 @@ void Foam::nearestToCell::combine(topoSet& set, const bool add) const
         );
     }
 
-    Pstream::listCombineReduce(nearest, mappedPatchBase::nearestEqOp());
+    Pstream::listCombineAllGather(nearest, mappedPatchBase::nearestEqOp());
 
     for (const auto& near : nearest)
     {

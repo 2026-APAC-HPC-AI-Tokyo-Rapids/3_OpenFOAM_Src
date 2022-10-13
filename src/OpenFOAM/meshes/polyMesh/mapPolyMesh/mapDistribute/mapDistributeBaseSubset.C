@@ -158,7 +158,7 @@ void Foam::mapDistributeBase::exchangeMasks
         {
             if (proci != myRank && recvMasks[proci].size())
             {
-                UIPstream::read
+                IPstream::read
                 (
                     UPstream::commsTypes::nonBlocking,
                     proci,
@@ -174,7 +174,7 @@ void Foam::mapDistributeBase::exchangeMasks
         {
             if (proci != myRank && sendMasks[proci].size())
             {
-                UOPstream::write
+                OPstream::write
                 (
                     UPstream::commsTypes::nonBlocking,
                     proci,
@@ -186,8 +186,8 @@ void Foam::mapDistributeBase::exchangeMasks
             }
         }
 
-        // Wait for outstanding requests
-        UPstream::waitRequests(startOfRequests);
+        // Wait for all to finish
+        Pstream::waitRequests(startOfRequests);
     }
 
     // Receiving myself is just a copy

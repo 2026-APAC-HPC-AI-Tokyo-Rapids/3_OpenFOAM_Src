@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -43,24 +43,6 @@ namespace fv
 }
 
 
-// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
-
-void Foam::fv::limitTemperature::writeFileHeader(Ostream& os)
-{
-    writeHeaderValue(os, "Tmin", Foam::name(Tmin_));
-    writeHeaderValue(os, "Tmax", Foam::name(Tmax_));
-    writeCommented(os, "Time");
-    writeTabbed(os, "nDampedCellsMin_[count]");
-    writeTabbed(os, "nDampedCellsMin_[%]");
-    writeTabbed(os, "nDampedCellsMax_[count]");
-    writeTabbed(os, "nDampedCellsMax_[%]");
-
-    os  << endl;
-
-    writtenHeader_ = true;
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::fv::limitTemperature::limitTemperature
@@ -72,48 +54,10 @@ Foam::fv::limitTemperature::limitTemperature
 )
 :
     fv::cellSetOption(name, modelType, dict, mesh),
-    writeFile(mesh, name, typeName, dict, false),
-    Tmin_(0),
-    Tmax_(0),
-    phase_(word::null)
+    Tmin_(coeffs_.get<scalar>("min")),
+    Tmax_(coeffs_.get<scalar>("max")),
+    phase_(coeffs_.getOrDefault<word>("phase", word::null))
 {
-    if (isActive())
-    {
-        read(dict);
-    }
-}
-
-
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
-
-bool Foam::fv::limitTemperature::read(const dictionary& dict)
-{
-    if (!(fv::cellSetOption::read(dict) && writeFile::read(dict)))
-    {
-        return false;
-    }
-
-    coeffs_.readEntry("min", Tmin_);
-    coeffs_.readEntry("max", Tmax_);
-    coeffs_.readIfPresent("phase", phase_);
-
-    if (Tmax_ < Tmin_)
-    {
-        FatalIOErrorInFunction(dict)
-            << "Minimum temperature limit cannot exceed maximum limit" << nl
-            << "min = " << Tmin_ << nl
-            << "max = " << Tmax_
-            << exit(FatalIOError);
-    }
-
-    if (Tmin_ < 0)
-    {
-        FatalIOErrorInFunction(dict)
-            << "Minimum temperature limit cannot be negative" << nl
-            << "min = " << Tmin_
-            << exit(FatalIOError);
-    }
-
     // Set the field name to that of the energy
     // field from which the temperature is obtained
     const auto& thermo =
@@ -125,20 +69,39 @@ bool Foam::fv::limitTemperature::read(const dictionary& dict)
     fieldNames_.resize(1, thermo.he().name());
 
     fv::option::resetApplied();
+}
 
 
-    if (canResetFile())
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+bool Foam::fv::limitTemperature::read(const dictionary& dict)
+{
+    if (fv::cellSetOption::read(dict))
     {
-        resetFile(typeName);
+        coeffs_.readEntry("min", Tmin_);
+        coeffs_.readEntry("max", Tmax_);
+
+        if (Tmax_ < Tmin_)
+        {
+            FatalIOErrorInFunction(dict)
+                << "Minimum temperature limit cannot exceed maximum limit" << nl
+                << "min = " << Tmin_ << nl
+                << "max = " << Tmax_
+                << exit(FatalIOError);
+        }
+
+        if (Tmin_ < 0)
+        {
+            FatalIOErrorInFunction(dict)
+                << "Minimum temperature limit cannot be negative" << nl
+                << "min = " << Tmin_
+                << exit(FatalIOError);
+        }
+
+        return true;
     }
 
-    if (canWriteHeader())
-    {
-        writeFileHeader(file());
-    }
-
-
-    return true;
+    return false;
 }
 
 
@@ -196,31 +159,16 @@ void Foam::fv::limitTemperature::correct(volScalarField& he)
         return (denom ? 1e-2*round(1e4*num/denom) : 0);
     };
 
-    const scalar nBelowMinPercent = percent(nBelowMin, nTotCells);
-    const scalar nAboveMaxPercent = percent(nAboveMax, nTotCells);
-
     Info<< type() << ' ' << name_ << " Lower limited " << nBelowMin << " ("
-        << nBelowMinPercent
+        << percent(nBelowMin, nTotCells)
         << "%) of cells, with min limit " << Tmin_ << endl;
 
     Info<< type() << ' ' << name_ << " Upper limited " << nAboveMax << " ("
-        << nAboveMaxPercent
+        << percent(nAboveMax, nTotCells)
         << "%) of cells, with max limit " << Tmax_ << endl;
 
     Info<< type() << ' ' << name_ << " Unlimited Tmin " << Tmin0 << endl;
     Info<< type() << ' ' << name_ << " Unlimited Tmax " << Tmax0 << endl;
-
-
-    if (canWriteToFile())
-    {
-        file()
-            << mesh_.time().timeOutputValue() << token::TAB
-            << nBelowMin << token::TAB
-            << nBelowMinPercent << token::TAB
-            << nAboveMax << token::TAB
-            << nAboveMaxPercent
-            << endl;
-    }
 
 
     // Handle boundaries in the case of 'all'
@@ -261,7 +209,7 @@ void Foam::fv::limitTemperature::correct(volScalarField& he)
     }
 
 
-    if (returnReduceOr(changedValues))
+    if (returnReduce(changedValues, orOp<bool>()))
     {
         // We've changed internal values so give
         // boundary conditions opportunity to correct

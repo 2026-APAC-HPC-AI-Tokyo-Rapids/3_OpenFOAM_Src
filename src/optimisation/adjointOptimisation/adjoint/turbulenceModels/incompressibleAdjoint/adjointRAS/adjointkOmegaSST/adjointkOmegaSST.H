@@ -330,37 +330,16 @@ protected:
             tmp<volScalarField> dR_dnut();
 
             //- Nut Jacobian wrt omega
-            tmp<volScalarField> dnut_domega
-            (
-                const volScalarField& F2,
-                const volScalarField& S,
-                const volScalarField& case_1_nut,
-                const volScalarField& case_2_nut,
-                const volScalarField& case_3_nut
-            ) const;
+            tmp<volScalarField> dnut_domega() const;
 
             //- Nut Jacobian wrt k
-            tmp<volScalarField> dnut_dk
-            (
-                const volScalarField& F2,
-                const volScalarField& S,
-                const volScalarField& case_2_nut
-            ) const;
+            tmp<volScalarField> dnut_dk() const;
 
             //- F2 Jacobian wrt omega
-            tmp<volScalarField> dF2_domega
-            (
-                const volScalarField& F2,
-                const volScalarField& case_2_nut,
-                const volScalarField& case_3_nut
-            ) const;
+            tmp<volScalarField> dF2_domega() const;
 
             //- F2 Jacobian wrt k
-            tmp<volScalarField> dF2_dk
-            (
-                const volScalarField& F2,
-                const volScalarField& case_2_nut
-            ) const;
+            tmp<volScalarField> dF2_dk() const;
 
             //- GbyNu Jacobian wrt omega
             tmp<volScalarField> dGPrime_domega() const;
@@ -458,11 +437,7 @@ protected:
                 //- Contributions from nut(U)
                 tmp<volVectorField> nutMeanFlowSource
                 (
-                    tmp<volScalarField>& mult,
-                    const volScalarField& F2,
-                    const volScalarField& S,
-                    const volScalarField& case_1_nut,
-                    const volTensorField& gradU
+                    tmp<volScalarField>& mult
                 ) const;
 
 
@@ -590,18 +565,6 @@ public:
         //  Needs to be implemented for objectives related to nut, defined  in
         //  the internal field
         virtual tmp<volScalarField> nutJacobianTMVar2() const;
-
-        //- Jacobian of nut wrt the flow velocity
-        //  Assumes we want to get contributions of mult*d(nut)/dU
-        //  Since the dependency of nut to U is usually through a differential
-        //  operator, the term multiplying d(nut)/dU is passed as an argument
-        //  to this function; the latter should then compute the
-        //  contribution of the afforementioned term to the adjoint mean flow
-        //  equations
-        virtual tmp<volVectorField> nutJacobianU
-        (
-            tmp<volScalarField>& dNutdUMult
-        ) const;
 
         //- Diffusion coeff at the boundary for k
         virtual tmp<scalarField> diffusionCoeffVar1(label patchI) const;

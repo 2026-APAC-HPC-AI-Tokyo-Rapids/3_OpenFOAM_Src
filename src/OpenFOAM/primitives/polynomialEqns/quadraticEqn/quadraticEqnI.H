@@ -27,6 +27,10 @@ License
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
+inline Foam::quadraticEqn::quadraticEqn()
+{}
+
+
 inline Foam::quadraticEqn::quadraticEqn(const Foam::zero)
 :
     VectorSpace<quadraticEqn, scalar, 3>(Foam::zero{})
@@ -47,6 +51,42 @@ inline Foam::quadraticEqn::quadraticEqn
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+inline Foam::scalar Foam::quadraticEqn::a() const
+{
+    return this->v_[A];
+}
+
+
+inline Foam::scalar Foam::quadraticEqn::b() const
+{
+    return this->v_[B];
+}
+
+
+inline Foam::scalar Foam::quadraticEqn::c() const
+{
+    return this->v_[C];
+}
+
+
+inline Foam::scalar& Foam::quadraticEqn::a()
+{
+    return this->v_[A];
+}
+
+
+inline Foam::scalar& Foam::quadraticEqn::b()
+{
+    return this->v_[B];
+}
+
+
+inline Foam::scalar& Foam::quadraticEqn::c()
+{
+    return this->v_[C];
+}
+
 
 inline Foam::scalar Foam::quadraticEqn::value(const scalar x) const
 {

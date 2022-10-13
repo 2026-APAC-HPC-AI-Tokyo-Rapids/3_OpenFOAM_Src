@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -230,11 +230,12 @@ void Foam::blockFaces::projectFace::project
             {
                 if (hits[i].hit())
                 {
+                    const point& hitPt = hits[i].hitPoint();
                     if (debugStr)
                     {
-                        debugStr().writeLine(points[i], hits[i].point());
+                        debugStr().write(linePointRef(points[i], hitPt));
                     }
-                    points[i] = hits[i].point();
+                    points[i] = hitPt;
                 }
             }
         }
@@ -303,7 +304,7 @@ void Foam::blockFaces::projectFace::project
             forAll(points, i)
             {
                 const point predicted(points[i] + residual[i]);
-                debugStr().writeLine(points[i], predicted);
+                debugStr().write(linePointRef(points[i], predicted));
             }
         }
 
@@ -355,7 +356,7 @@ void Foam::blockFaces::projectFace::project
             forAll(points, i)
             {
                 const point predicted(points[i] + residual[i]);
-                debugStr().writeLine(points[i], predicted);
+                debugStr().write(linePointRef(points[i], predicted));
             }
         }
 

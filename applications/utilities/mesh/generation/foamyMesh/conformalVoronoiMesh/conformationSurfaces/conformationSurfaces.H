@@ -188,7 +188,7 @@ public:
 
             //- Check if the supplied bound box overlaps any part of any of
             //  the surfaces
-            bool overlaps(const boundBox& bb) const;
+            bool overlaps(const treeBoundBox& bb) const;
 
             //- Check if points are inside surfaces to conform to
             Field<bool> inside(const pointField& samplePts) const;

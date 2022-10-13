@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 ------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -76,6 +76,9 @@ protected:
         //- Reference to the mesh database
         const fvMesh& mesh_;
 
+        //- Reference to the patch
+        const fvPatch& patch_;
+
         //- Time index to check that all defined sources have been applied
         label checkTimeIndex_;
 
@@ -116,11 +119,11 @@ public:
 
     // Constructors
 
-        //- Default construct from mesh
-        explicit optionList(const fvMesh& mesh);
+        //- Default construct from patch
+        explicit optionList(const fvPatch& p);
 
-        //- Construct from mesh and dictionary
-        optionList(const fvMesh& mesh, const dictionary& dict);
+        //- Construct from patch and dictionary
+        optionList(const fvPatch& p, const dictionary&);
 
 
     //- Destructor

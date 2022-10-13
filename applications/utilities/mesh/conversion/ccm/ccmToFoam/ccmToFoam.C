@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -60,8 +60,8 @@ Usage
         Use numbered patch/zone (not names) directly from ccm ids.
 
       - \par -remap \<name\>
-        Alternative remapping dictionary
-        (default: <tt>constant/remapping</tt>)
+        Use specified remapping dictionary instead of
+        <tt>constant/remapping</tt>
 
       - \par -scale \<factor\>
         Specify an alternative geometry scaling factor.
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     (
         "remap",
         "name",
-        "Alternative remapping dictionary (default: 'constant/remapping')"
+        "Use specified remapping dictionary instead of <constant/remapping>"
     );
     argList::addOption
     (
@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
         // strip erroneous extension (.ccm, .ccmg, .ccmp)
         if (ext == "ccm" || ext == "ccmg" || ext == "ccmp")
         {
-            exportName.remove_ext();
+            exportName = exportName.lessExt();
         }
     }
     else if (args.found("export"))

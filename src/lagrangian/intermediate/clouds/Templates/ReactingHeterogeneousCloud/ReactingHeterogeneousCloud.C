@@ -247,8 +247,7 @@ template<class CloudType>
 void Foam::ReactingHeterogeneousCloud<CloudType>::info()
 {
     CloudType::info();
-
-    heterogeneousReactionModel_->info();
+    heterogeneousReactionModel_->info(Info);
 }
 
 

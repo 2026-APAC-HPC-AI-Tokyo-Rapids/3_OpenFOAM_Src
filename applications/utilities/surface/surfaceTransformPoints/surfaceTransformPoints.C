@@ -64,12 +64,13 @@ using namespace Foam::coordinateRotations;
 
 static word getExtension(const fileName& name)
 {
-    return
-    (
-        name.has_ext("gz")
-      ? name.stem().ext()
-      : name.ext()
-    );
+    word ext(name.ext());
+    if (ext == "gz")
+    {
+        ext = name.lessExt().ext();
+    }
+
+    return ext;
 }
 
 

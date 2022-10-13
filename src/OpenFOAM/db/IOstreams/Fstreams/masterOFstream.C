@@ -52,7 +52,6 @@ void Foam::masterOFstream::checkWrite
 
     OFstream os
     (
-        atomic_,
         fName,
         IOstreamOption(IOstreamOption::BINARY, version(), compression_),
         append_
@@ -84,7 +83,7 @@ void Foam::masterOFstream::checkWrite
     const std::string& s
 )
 {
-    checkWrite(fName, s.data(), s.length());
+    checkWrite(fName, &s[0], s.length());
 }
 
 
@@ -96,7 +95,11 @@ void Foam::masterOFstream::commit()
         filePaths[Pstream::myProcNo()] = pathName_;
         Pstream::gatherList(filePaths);
 
-        bool uniform = fileOperation::uniformFile(filePaths);
+        bool uniform =
+            fileOperations::masterUncollatedFileOperation::uniformFile
+            (
+                filePaths
+            );
 
         Pstream::broadcast(uniform);
 
@@ -123,7 +126,7 @@ void Foam::masterOFstream::commit()
             string s(this->str());
             this->reset();
 
-            os.write(s.data(), s.length());
+            os.write(&s[0], s.length());
         }
 
         labelList recvSizes;
@@ -174,16 +177,14 @@ void Foam::masterOFstream::commit()
 
 Foam::masterOFstream::masterOFstream
 (
-    IOstreamOption::atomicType atomic,
     const fileName& pathName,
     IOstreamOption streamOpt,
-    IOstreamOption::appendType append,
+    const bool append,
     const bool valid
 )
 :
     OStringStream(streamOpt),
     pathName_(pathName),
-    atomic_(atomic),
     compression_(streamOpt.compression()),
     append_(append),
     valid_(valid)

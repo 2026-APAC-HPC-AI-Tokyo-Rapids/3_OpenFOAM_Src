@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2014 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,8 +36,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_OSstream_H
-#define Foam_OSstream_H
+#ifndef OSstream_H
+#define OSstream_H
 
 #include "Ostream.H"
 #include "fileName.H"
@@ -91,19 +91,7 @@ public:
             std::ostream& os,
             const string& streamName,
             IOstreamOption::streamFormat fmt,
-            IOstreamOption::compressionType cmp = IOstreamOption::UNCOMPRESSED
-        )
-        :
-            OSstream(os, streamName, IOstreamOption(fmt, cmp))
-        {}
-
-        //- Construct wrapper around std::ostream, set stream status
-        OSstream
-        (
-            std::ostream& os,
-            const string& streamName,
-            IOstreamOption::streamFormat fmt,
-            IOstreamOption::versionNumber ver,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion,
             IOstreamOption::compressionType cmp = IOstreamOption::UNCOMPRESSED
         )
         :
@@ -115,39 +103,21 @@ public:
 
     // Characteristics
 
-        //- Get the name of the output serial stream.
-        //- (eg, the name of the Fstream file name)
-        virtual const fileName& name() const { return name_; }
+        //- Get the name of the stream.
+        //  Useful for Fstream to remember the filename
+        virtual const fileName& name() const
+        {
+            return name_;
+        }
 
-
-    // STL stream
-
-        //- Const access to underlying std::ostream
-        virtual const std::ostream& stdStream() const { return os_; }
-
-        //- Access to underlying std::ostream
-        virtual std::ostream& stdStream() { return os_; }
-
-
-    // Stream State
+        //- Return stream name for modification
+        virtual fileName& name()
+        {
+            return name_;
+        }
 
         //- Get stream flags
-        virtual ios_base::fmtflags flags() const
-        {
-            return os_.flags();
-        }
-
-        //- Set stream flags
-        virtual ios_base::fmtflags flags(const ios_base::fmtflags f)
-        {
-            return os_.flags(f);
-        }
-
-        //- Set stream state to match that of the std::ostream
-        void syncState()
-        {
-            setState(os_.rdstate());
-        }
+        virtual ios_base::fmtflags flags() const;
 
 
     // Write Functions
@@ -185,11 +155,11 @@ public:
             //- Write int64_t
             virtual Ostream& write(const int64_t val);
 
-            //- Write float
-            virtual Ostream& write(const float val);
+            //- Write floatScalar
+            virtual Ostream& write(const floatScalar val);
 
-            //- Write double
-            virtual Ostream& write(const double val);
+            //- Write doubleScalar
+            virtual Ostream& write(const doubleScalar val);
 
             //- Write binary block
             virtual Ostream& write(const char* data, std::streamsize count);
@@ -214,6 +184,9 @@ public:
 
 
         // Stream state functions
+
+            //- Set stream flags
+            virtual ios_base::fmtflags flags(const ios_base::fmtflags f);
 
             //- Flush stream
             virtual void flush();
@@ -241,6 +214,21 @@ public:
             //- Set precision of output field
             //  \return old precision
             virtual int precision(const int p);
+
+
+        // STL stream
+
+            //- Access to underlying std::ostream
+            virtual std::ostream& stdStream()
+            {
+                return os_;
+            }
+
+            //- Const access to underlying std::ostream
+            virtual const std::ostream& stdStream() const
+            {
+                return os_;
+            }
 
 
         // Print

@@ -37,7 +37,7 @@ Foam::ILList<LListBase, T>::ILList(const ILList<LListBase, T>& lst)
 {
     for (const auto& item : lst)
     {
-        this->push_back(item.clone().ptr());
+        this->append(item.clone().ptr());
     }
 }
 
@@ -63,7 +63,7 @@ Foam::ILList<LListBase, T>::ILList
 {
     for (const auto& item : lst)
     {
-        this->push_back(item.clone(cloneArg).ptr());
+        this->append(item.clone(cloneArg).ptr());
     }
 }
 
@@ -80,27 +80,11 @@ Foam::ILList<LListBase, T>::~ILList()
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class LListBase, class T>
-void Foam::ILList<LListBase, T>::pop_front(label n)
+bool Foam::ILList<LListBase, T>::eraseHead()
 {
-    if (n > this->size())
-    {
-        n = this->size();
-    }
-
-    while (n > 0)
-    {
-        T* p = this->removeHead();
-        delete p;
-        --n;
-    }
-}
-
-
-template<class LListBase, class T>
-void Foam::ILList<LListBase, T>::clear()
-{
-    this->pop_front(this->size());
-    LListBase::clear();
+    T* p = this->removeHead();
+    delete p;
+    return bool(p);
 }
 
 
@@ -110,6 +94,20 @@ bool Foam::ILList<LListBase, T>::erase(T* item)
     T* p = remove(item);
     delete p;
     return bool(p);
+}
+
+
+template<class LListBase, class T>
+void Foam::ILList<LListBase, T>::clear()
+{
+    label len = this->size();
+
+    while (len--)
+    {
+        eraseHead();
+    }
+
+    LListBase::clear();
 }
 
 
@@ -130,7 +128,7 @@ void Foam::ILList<LListBase, T>::operator=(const ILList<LListBase, T>& lst)
 
     for (const auto& item : lst)
     {
-        this->push_back(item.clone().ptr());
+        this->append(item.clone().ptr());
     }
 }
 

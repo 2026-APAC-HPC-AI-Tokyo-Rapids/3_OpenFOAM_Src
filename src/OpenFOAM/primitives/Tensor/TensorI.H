@@ -150,6 +150,132 @@ inline Foam::Tensor<Cmpt>::Tensor(Istream& is)
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Cmpt>
+inline const Cmpt& Foam::Tensor<Cmpt>::xx() const
+{
+    return this->v_[XX];
+}
+
+
+template<class Cmpt>
+inline const Cmpt& Foam::Tensor<Cmpt>::xy() const
+{
+    return this->v_[XY];
+}
+
+
+template<class Cmpt>
+inline const Cmpt& Foam::Tensor<Cmpt>::xz() const
+{
+    return this->v_[XZ];
+}
+
+
+template<class Cmpt>
+inline const Cmpt& Foam::Tensor<Cmpt>::yx() const
+{
+    return this->v_[YX];
+}
+
+
+template<class Cmpt>
+inline const Cmpt& Foam::Tensor<Cmpt>::yy() const
+{
+    return this->v_[YY];
+}
+
+
+template<class Cmpt>
+inline const Cmpt& Foam::Tensor<Cmpt>::yz() const
+{
+    return this->v_[YZ];
+}
+
+
+template<class Cmpt>
+inline const Cmpt& Foam::Tensor<Cmpt>::zx() const
+{
+    return this->v_[ZX];
+}
+
+
+template<class Cmpt>
+inline const Cmpt& Foam::Tensor<Cmpt>::zy() const
+{
+    return this->v_[ZY];
+}
+
+
+template<class Cmpt>
+inline const Cmpt& Foam::Tensor<Cmpt>::zz() const
+{
+    return this->v_[ZZ];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Tensor<Cmpt>::xx()
+{
+    return this->v_[XX];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Tensor<Cmpt>::xy()
+{
+    return this->v_[XY];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Tensor<Cmpt>::xz()
+{
+    return this->v_[XZ];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Tensor<Cmpt>::yx()
+{
+    return this->v_[YX];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Tensor<Cmpt>::yy()
+{
+    return this->v_[YY];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Tensor<Cmpt>::yz()
+{
+    return this->v_[YZ];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Tensor<Cmpt>::zx()
+{
+    return this->v_[ZX];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Tensor<Cmpt>::zy()
+{
+    return this->v_[ZY];
+}
+
+
+template<class Cmpt>
+inline Cmpt& Foam::Tensor<Cmpt>::zz()
+{
+    return this->v_[ZZ];
+}
+
+
+template<class Cmpt>
 inline Foam::Vector<Cmpt> Foam::Tensor<Cmpt>::x() const
 {
     return Vector<Cmpt>(this->v_[XX], this->v_[XY], this->v_[XZ]);
@@ -943,7 +1069,7 @@ template<class Cmpt>
 // Workaround for gcc (11+) that fails to handle tensor dot vector
 __attribute__((optimize("no-tree-vectorize")))
 #endif
-inline Vector<Cmpt>
+inline typename innerProduct<Tensor<Cmpt>, Vector<Cmpt>>::type
 operator&(const Tensor<Cmpt>& t, const Vector<Cmpt>& v)
 {
     return Vector<Cmpt>
@@ -957,7 +1083,7 @@ operator&(const Tensor<Cmpt>& t, const Vector<Cmpt>& v)
 
 //- Inner-product of a Vector and a Tensor
 template<class Cmpt>
-inline Vector<Cmpt>
+inline typename innerProduct<Vector<Cmpt>, Tensor<Cmpt>>::type
 operator&(const Vector<Cmpt>& v, const Tensor<Cmpt>& t)
 {
     return Vector<Cmpt>

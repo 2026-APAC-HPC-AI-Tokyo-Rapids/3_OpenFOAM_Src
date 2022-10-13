@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -231,7 +231,7 @@ void Foam::fileFormats::OBJedgeFormat::write
 )
 {
     // ASCII only, allow output compression
-    streamOpt.format(IOstreamOption::ASCII);
+    streamOpt.format(IOstream::ASCII);
 
     const pointField& pointLst = mesh.points();
     const edgeList& edgeLst = mesh.edges();
@@ -246,7 +246,7 @@ void Foam::fileFormats::OBJedgeFormat::write
 
 
     os  << "# Wavefront OBJ file written " << clock::dateTime().c_str() << nl
-        << "o " << os.name().stem() << nl
+        << "o " << os.name().nameLessExt() << nl
         << nl
         << "# points : " << pointLst.size() << nl
         << "# lines  : " << edgeLst.size() << nl;

@@ -381,7 +381,9 @@ void Foam::meshToMesh::normaliseWeights
     scalarListList& wght
 ) const
 {
-    if (returnReduceOr(wght.size()))
+    const label nCell = returnReduce(wght.size(), sumOp<label>());
+
+    if (nCell > 0)
     {
         forAll(wght, celli)
         {
@@ -493,19 +495,15 @@ void Foam::meshToMesh::calculate(const word& methodName, const bool normalise)
         );
 
         // create some dummy patch info
-        polyPatchList patches(1);
-        patches.set
+        List<polyPatch*> patches(1);
+        patches[0] = new polyPatch
         (
+            "defaultFaces",
+            newTgt.nBoundaryFaces(),
+            newTgt.nInternalFaces(),
             0,
-            new polyPatch
-            (
-                "defaultFaces",
-                newTgt.nBoundaryFaces(),
-                newTgt.nInternalFaces(),
-                0,
-                newTgt.boundaryMesh(),
-                word::null
-            )
+            newTgt.boundaryMesh(),
+            word::null
         );
 
         newTgt.addPatches(patches);

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,14 +35,13 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_dimensionedType_H
-#define Foam_dimensionedType_H
+#ifndef dimensionedType_H
+#define dimensionedType_H
 
 #include "word.H"
 #include "direction.H"
 #include "dimensionSet.H"
 #include "VectorSpace.H"
-#include "IOobjectOption.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -108,7 +107,7 @@ class dimensioned
         (
             const word& key,
             const dictionary& dict,
-            IOobjectOption::readOption readOpt = IOobjectOption::MUST_READ,
+            const bool mandatory = true, //!< entry is mandatory
             const bool checkDims = true, //!< verify dimensions read
             enum keyType::option matchOpt = keyType::REGEX
         );
@@ -284,22 +283,22 @@ public:
     // Member Functions
 
         //- Return const reference to name.
-        const word& name() const noexcept { return name_; }
+        const word& name() const;
 
         //- Return non-const reference to name.
-        word& name() noexcept { return name_; }
+        word& name();
 
         //- Return const reference to dimensions.
-        const dimensionSet& dimensions() const noexcept { return dimensions_; }
+        const dimensionSet& dimensions() const;
 
         //- Return non-const reference to dimensions.
-        dimensionSet& dimensions() noexcept { return dimensions_; }
+        dimensionSet& dimensions();
 
         //- Return const reference to value.
-        const Type& value() const noexcept { return value_; }
+        const Type& value() const;
 
         //- Return non-const reference to value.
-        Type& value() noexcept { return value_; }
+        Type& value();
 
         //- Return a component as a dimensioned<cmptType>
         dimensioned<cmptType> component(const direction d) const;

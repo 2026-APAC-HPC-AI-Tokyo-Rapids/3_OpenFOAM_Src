@@ -78,7 +78,7 @@ public:
 
 
     //- Destructor
-    virtual ~InjectionModelList() = default;
+    virtual ~InjectionModelList();
 
 
 
@@ -127,8 +127,8 @@ public:
 
         // I-O
 
-            //- Write injection info
-            virtual void info();
+            //- Write injection info to stream
+            virtual void info(Ostream& os);
 };
 
 

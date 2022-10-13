@@ -263,7 +263,7 @@ public:
         virtual bool open
         (
             const fileName& file,
-            bool parallel = UPstream::parRun()
+            bool parallel = Pstream::parRun()
         );
 
         //- End the file contents and close the file after writing.

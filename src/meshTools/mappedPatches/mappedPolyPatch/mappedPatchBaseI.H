@@ -196,87 +196,16 @@ inline bool Foam::mappedPatchBase::sameRegion() const noexcept
 }
 
 
-inline Foam::uniformDimensionedScalarField&
-Foam::mappedPatchBase::updateSampleMeshTime() const
-{
-    if (!updateSampleMeshTimePtr_)
-    {
-        const auto& mesh = sampleMesh();
-
-        updateSampleMeshTimePtr_ =
-            autoPtr<uniformDimensionedScalarField>::New
-            (
-                IOobject
-                (
-                    "updateSampleMeshTime",
-                    mesh.pointsInstance(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE,
-                    false
-                )
-            );
-    }
-
-    return updateSampleMeshTimePtr_();
-}
-
-
-inline Foam::uniformDimensionedScalarField&
-Foam::mappedPatchBase::updateMeshTime() const
-{
-    if (!updateMeshTimePtr_)
-    {
-        const auto& mesh = patch_.boundaryMesh().mesh();
-
-        updateMeshTimePtr_ =
-            autoPtr<uniformDimensionedScalarField>::New
-            (
-                IOobject
-                (
-                    "updateMeshTime",
-                    mesh.pointsInstance(),
-                    mesh,
-                    IOobject::NO_READ,
-                    IOobject::NO_WRITE,
-                    false
-                )
-            );
-    }
-
-    return updateMeshTimePtr_();
-}
-
-
-inline bool Foam::mappedPatchBase::upToDate() const
-{
-    const polyMesh& thisMesh = patch_.boundaryMesh().mesh();
-
-    if (sameWorld())
-    {
-        return
-            sampleMesh().upToDatePoints(updateSampleMeshTime())
-         && thisMesh.upToDatePoints(updateMeshTime());
-    }
-    else
-    {
-        // If not the same world we do not know what the other side is doing
-        // so only check our local side
-        return thisMesh.upToDatePoints(updateMeshTime());
-    }
-}
-
-
 inline const Foam::mapDistribute& Foam::mappedPatchBase::map() const
 {
-    if (!upToDate())
+    const polyMesh& thisMesh = patch_.boundaryMesh().mesh();
+    bool topoChange =
+        (sameWorld() && sampleMesh().topoChanging())
+     || thisMesh.topoChanging();
+
+    if (topoChange)
     {
         mapPtr_.reset(nullptr);
-
-        if (AMIPtr_)
-        {
-            AMIPtr_->upToDate() = false;
-        }
     }
 
     if (!mapPtr_)
@@ -293,13 +222,12 @@ inline const Foam::AMIPatchToPatchInterpolation& Foam::mappedPatchBase::AMI
     bool forceUpdate
 ) const
 {
-    if (!upToDate())
-    {
-        mapPtr_.reset(nullptr);
-        AMIPtr_->upToDate() = false;
-    }
+    const polyMesh& thisMesh = patch_.boundaryMesh().mesh();
+    bool topoChange =
+        (sameWorld() && sampleMesh().topoChanging())
+     || thisMesh.topoChanging();
 
-    if (forceUpdate)
+    if (topoChange || forceUpdate)
     {
         AMIPtr_->upToDate() = false;
     }

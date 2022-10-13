@@ -222,34 +222,14 @@ castellatedMeshControls
             //- Optional automatic gap refinement. See section in
             //  refinementRegions ('gapLevel', 'gapMode')
 
-            //- Optional removal of cells in thin gaps.
-            //  Block any gap (opposite surfaces or opposite disconnected region
-            //  of surface):
-            //  - thinner than 2*blockcellsize where blockcellsize
-            //    is the size of a cell at blockLevel
-            //  Note: it does not relate to the refinement level of the cells
-            //        it 'blocks'/deletes.
+            //- Optional removal of cells in thin gaps. Start removing cells
+            //  if at refinement level 10 we're detecting thin gaps.
             //blockLevel 10;
 
             //- Optional early detection of connections between inside and
             //  outside locations. Default is only after all refinement has
             //  been done.
             //leakLevel 10;
-
-            // Additional refinement for regions of high curvature. Expressed
-            // (bit similar to gapLevel) as:
-            // - number of cells per radius of curvature. (usually 1 is
-            //   good enough)
-            // - starting cell level? Not used at the moment.
-            // - maximum cell level. This can be smaller or larger than the
-            //   max 'surface' level
-            // - minumum curvature radius to ignore (expressed as a cell level).
-            //   This can be used to avoid detecting small sharp surface
-            //   features. Set to -1 to ignore.
-            //   (sometimes you want more refinement than sharp features since
-            //    these can be done with feature edge snapping (so can leave
-            //    level (0 0))
-            //curvatureLevel (10 0 10 -1);
         }
     }
 
@@ -569,10 +549,7 @@ snapControls
         //  multiRegionFeatureSnap) have the other points follow these points
         //  instead of having their own independent movement, i.e. have snapping
         //  to multi-region edges/points take priority. This might aid snapping
-        //  to sharp edges that are also region edges. The default is false
-        //  since it might also introduce problems - at morphing the patching
-        //  might still be wrong so points get 'released' instead of behaving
-        //  as any other point.
+        //  to sharp edges that are also region edges. The default is false.
         //releasePoints true;
         //- Walk along feature edges, adding missing ones. Default is true.
         //stringFeatures false;

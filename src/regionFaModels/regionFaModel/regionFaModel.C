@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -117,7 +117,7 @@ const Foam::volSurfaceMapping& Foam::regionModels::regionFaModel::vsm() const
 
 Foam::regionModels::regionFaModel::regionFaModel
 (
-    const fvMesh& mesh,
+    const fvPatch& patch,
     const word& regionType,
     const word& modelName,
     const dictionary& dict,
@@ -128,15 +128,16 @@ Foam::regionModels::regionFaModel::regionFaModel
     (
         IOobject
         (
-            IOobject::groupName(regionFaModelName, dict.get<word>("region")),
-            mesh.time().constant(),
-            mesh.time(),
+            IOobject::groupName(regionFaModelName, patch.name()),
+            patch.boundaryMesh().mesh().time().constant(),
+            patch.boundaryMesh().mesh().time(),
             IOobject::NO_READ,
             IOobject::NO_WRITE
         )
     ),
-    primaryMesh_(mesh),
-    time_(mesh.time()),
+    primaryMesh_(patch.boundaryMesh().mesh()),
+    patch_(patch),
+    time_(patch.boundaryMesh().mesh().time()),
     active_(dict.get<Switch>("active")),
     infoOutput_(false),
     modelName_(modelName),
@@ -144,7 +145,8 @@ Foam::regionModels::regionFaModel::regionFaModel
     coeffs_(dict.subOrEmptyDict(modelName + "Coeffs")),
     outputPropertiesPtr_(nullptr),
     vsmPtr_(nullptr),
-    regionName_(dict.get<word>("region"))
+    patchID_(patch.index()),
+    regionName_(dict.lookup("region"))
 {
     constructMeshObjects();
     initialise();
@@ -198,6 +200,5 @@ Foam::scalar Foam::regionModels::regionFaModel::CourantNumber() const
 {
     return 0;
 }
-
 
 // ************************************************************************* //

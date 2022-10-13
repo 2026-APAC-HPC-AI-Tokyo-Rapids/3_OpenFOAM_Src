@@ -30,6 +30,7 @@ License
 
 #include <mpi.h>
 #include <cinttypes>
+#include <cstring>  // memmove
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

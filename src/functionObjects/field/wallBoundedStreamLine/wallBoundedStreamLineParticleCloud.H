@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_wallBoundedStreamLineParticleCloud_H
-#define Foam_wallBoundedStreamLineParticleCloud_H
+#ifndef wallBoundedStreamLineParticleCloud_H
+#define wallBoundedStreamLineParticleCloud_H
 
 #include "Cloud.H"
 #include "wallBoundedStreamLineParticle.H"
@@ -54,13 +54,7 @@ class wallBoundedStreamLineParticleCloud
 :
     public Cloud<wallBoundedStreamLineParticle>
 {
-public:
-
-    //- Type of parcel the cloud was instantiated for
-    typedef wallBoundedStreamLineParticle parcelType;
-
-
-    // Generated Methods
+    // Private Member Functions
 
         //- No copy construct
         wallBoundedStreamLineParticleCloud
@@ -70,6 +64,12 @@ public:
 
         //- No copy assignment
         void operator=(const wallBoundedStreamLineParticleCloud&) = delete;
+
+
+public:
+
+    //- Type of parcel the cloud was instantiated for
+    typedef wallBoundedStreamLineParticle parcelType;
 
 
     // Constructors

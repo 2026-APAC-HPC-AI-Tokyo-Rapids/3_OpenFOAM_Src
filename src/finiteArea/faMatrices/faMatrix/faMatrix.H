@@ -64,47 +64,6 @@ template<class T> class UIndirectList;
 template<class Type>
 Ostream& operator<<(Ostream&, const faMatrix<Type>&);
 
-template<class Type>
-tmp<GeometricField<Type, faPatchField, areaMesh>> operator&
-(
-    const faMatrix<Type>&,
-    const DimensionedField<Type, areaMesh>&
-);
-
-template<class Type>
-tmp<GeometricField<Type, faPatchField, areaMesh>> operator&
-(
-    const faMatrix<Type>&,
-    const tmp<DimensionedField<Type, areaMesh>>&
-);
-
-template<class Type>
-tmp<GeometricField<Type, faPatchField, areaMesh>> operator&
-(
-    const faMatrix<Type>&,
-    const tmp<GeometricField<Type, faPatchField, areaMesh>>&
-);
-
-template<class Type>
-tmp<GeometricField<Type, faPatchField, areaMesh>> operator&
-(
-    const tmp<faMatrix<Type>>&,
-    const DimensionedField<Type, areaMesh>&
-);
-
-template<class Type>
-tmp<GeometricField<Type, faPatchField, areaMesh>> operator&
-(
-    const tmp<faMatrix<Type>>&,
-    const tmp<DimensionedField<Type, areaMesh>>&
-);
-
-template<class Type>
-tmp<GeometricField<Type, faPatchField, areaMesh>> operator&
-(
-    const tmp<faMatrix<Type>>&,
-    const tmp<GeometricField<Type, faPatchField, areaMesh>>&
-);
 
 /*---------------------------------------------------------------------------*\
                           Class faMatrix Declaration
@@ -508,37 +467,6 @@ public:
         void operator*=(const tmp<areaScalarField>&);
 
         void operator*=(const dimensioned<scalar>&);
-
-
-    // Friend Operators
-
-        friend tmp<GeometricField<Type, faPatchField, areaMesh>>
-        operator& <Type>
-        (
-            const faMatrix<Type>&,
-            const DimensionedField<Type, areaMesh>&
-        );
-
-        friend tmp<GeometricField<Type, faPatchField, areaMesh>>
-        operator& <Type>
-        (
-            const faMatrix<Type>&,
-            const tmp<GeometricField<Type, faPatchField, areaMesh>>&
-        );
-
-        friend tmp<GeometricField<Type, faPatchField, areaMesh>>
-        operator& <Type>
-        (
-            const tmp<faMatrix<Type>>&,
-            const DimensionedField<Type, areaMesh>&
-        );
-
-        friend tmp<GeometricField<Type, faPatchField, areaMesh>>
-        operator& <Type>
-        (
-            const tmp<faMatrix<Type>>&,
-            const tmp<GeometricField<Type, faPatchField, areaMesh>>&
-        );
 
 
     // Ostream Operator

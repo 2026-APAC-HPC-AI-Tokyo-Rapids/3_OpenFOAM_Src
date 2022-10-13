@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,6 +31,7 @@ License
 #include "stringOps.H"
 #include "UIListStream.H"
 #include "cellModel.H"
+#include <algorithm>
 #include <cctype>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -87,8 +88,6 @@ static void skipComments(ISstream& iss)
             }
         }
     }
-
-    iss.syncState();
 }
 
 
@@ -202,11 +201,11 @@ Foam::fileFormats::ABAQUSCore::abaqusToFoamFaceAddr()
 
 
 Foam::fileFormats::ABAQUSCore::shapeType
-Foam::fileFormats::ABAQUSCore::getElementType(const string& elemTypeName)
+Foam::fileFormats::ABAQUSCore::getElementType(const std::string& elemTypeName)
 {
-    // Check for element-type.
-    #undef  checkElemType
-    #define checkElemType(Name) elemTypeName.contains(Name)
+    // Check for element-type
+    #undef checkElemType
+    #define checkElemType(test) (elemTypeName.find(test) != std::string::npos)
 
     if
     (

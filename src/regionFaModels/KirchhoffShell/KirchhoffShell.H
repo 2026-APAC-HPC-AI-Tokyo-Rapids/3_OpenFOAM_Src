@@ -61,8 +61,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_regionModels_KirchhoffShell_H
-#define Foam_regionModels_KirchhoffShell_H
+#ifndef KirchhoffShell_H
+#define KirchhoffShell_H
 
 #include "volFieldsFwd.H"
 #include "vibrationShellModel.H"
@@ -158,7 +158,7 @@ public:
         KirchhoffShell
         (
             const word& modelType,
-            const fvMesh& mesh,
+            const fvPatch& patch,
             const dictionary& dict
         );
 

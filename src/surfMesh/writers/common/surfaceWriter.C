@@ -29,8 +29,8 @@ License
 #include "proxySurfaceWriter.H"
 #include "MeshedSurfaceProxy.H"
 
-#include "fileFormats.H"
 #include "Time.H"
+#include "globalIndex.H"
 #include "coordinateRotation.H"
 #include "transformField.H"
 #include "addToRunTimeSelectionTable.H"
@@ -57,29 +57,6 @@ bool Foam::surfaceWriter::supportedType(const word& writeType)
      || wordDictConstructorTablePtr_->found(writeType)
      || MeshedSurfaceProxy<face>::canWriteType(writeType)
     );
-}
-
-
-Foam::dictionary Foam::surfaceWriter::formatOptions
-(
-    const dictionary& dict,
-    const word& formatName,
-    const word& entryName
-)
-{
-    return fileFormats::getFormatOptions(dict, formatName, entryName);
-}
-
-
-Foam::dictionary Foam::surfaceWriter::formatOptions
-(
-    const dictionary& dict,
-    const dictionary& surfDict,
-    const word& formatName,
-    const word& entryName
-)
-{
-    return fileFormats::getFormatOptions(dict, surfDict, formatName, entryName);
 }
 
 
@@ -167,7 +144,6 @@ Foam::surfaceWriter::surfaceWriter()
     adjustedSurf_(),
     mergeDim_(defaultMergeDim),
     geometryScale_(1),
-    geometryCentre_(Zero),
     geometryTransform_(),
     upToDate_(false),
     wroteGeom_(false),
@@ -175,7 +151,6 @@ Foam::surfaceWriter::surfaceWriter()
     useTimeDir_(false),
     isPointData_(false),
     verbose_(false),
-    commType_(UPstream::commsTypes::scheduled),
     nFields_(0),
     currTime_(),
     outputPath_(),
@@ -192,35 +167,21 @@ Foam::surfaceWriter::surfaceWriter(const dictionary& options)
 {
     options.readIfPresent("verbose", verbose_);
 
-    UPstream::commsTypeNames.readIfPresent("commsType", options, commType_);
-
     geometryScale_ = 1;
-    geometryCentre_ = Zero;
     geometryTransform_.clear();
 
     options.readIfPresent("scale", geometryScale_);
 
+    const dictionary* dictptr;
+
     // Optional cartesian coordinate system transform
-    const auto* dictptr = options.findDict("transform", keyType::LITERAL);
-
-    if (dictptr)
+    if ((dictptr = options.findDict("transform", keyType::LITERAL))!= nullptr)
     {
-        dictptr->readIfPresent("rotationCentre", geometryCentre_);
-
-        // 'origin' (READ_IF_PRESENT)
-        geometryTransform_ =
-            coordSystem::cartesian(*dictptr, IOobjectOption::READ_IF_PRESENT);
+        geometryTransform_ = coordSystem::cartesian(*dictptr);
     }
 
     fieldLevel_ = options.subOrEmptyDict("fieldLevel");
     fieldScale_ = options.subOrEmptyDict("fieldScale");
-
-    if (verbose_)
-    {
-        Info<< "Create surfaceWriter ("
-            << (this->isPointData() ? "point" : "face") << " data):"
-            << " commsType=" << UPstream::commsTypeNames[commType_] << endl;
-    }
 }
 
 
@@ -426,7 +387,7 @@ bool Foam::surfaceWriter::expire()
 
 bool Foam::surfaceWriter::hasSurface() const
 {
-    return surf_.good();
+    return surf_.valid();
 }
 
 
@@ -434,7 +395,7 @@ bool Foam::surfaceWriter::empty() const
 {
     const bool value = surf_.faces().empty();
 
-    return (parallel_ ? returnReduceAnd(value) : value);
+    return (parallel_ ? returnReduce(value, andOp<bool>()) : value);
 }
 
 
@@ -463,7 +424,6 @@ bool Foam::surfaceWriter::merge() const
 
     if (!upToDate_)
     {
-        // Similar to expire
         adjustedSurf_.clear();
 
         if (parallel_ && Pstream::parRun())
@@ -507,47 +467,27 @@ const Foam::meshedSurfRef& Foam::surfaceWriter::adjustSurface() const
         adjustedSurf_.clear();
     }
 
-    if (!adjustedSurf_.good())
+    if (!adjustedSurf_.valid())
     {
         adjustedSurf_.reset(surface());
 
-        tmp<pointField> tpts;
-
-        if (geometryTransform_.valid())
+        if
+        (
+            geometryTransform_.valid()
+         &&
+            (
+                (magSqr(geometryTransform_.origin()) > ROOTVSMALL)
+             || !geometryTransform_.R().is_identity()
+            )
+        )
         {
-            if (!geometryTransform_.R().is_identity())
-            {
-                if (magSqr(geometryCentre_) > ROOTVSMALL)
-                {
-                    // Set centre of rotation,
-                    // followed by forward transform (local -> global)
-                    tpts =
-                        geometryTransform_.globalPosition
-                        (
-                            adjustedSurf_.points0() - geometryCentre_
-                        );
-
-                    // Unset centre of rotation
-                    tpts.ref() += geometryCentre_;
-                }
-                else
-                {
-                    // Forward transform (local -> global)
-                    tpts =
-                        geometryTransform_.globalPosition
-                        (
-                            adjustedSurf_.points0()
-                        );
-                }
-            }
-            else if (magSqr(geometryTransform_.origin()) > ROOTVSMALL)
-            {
-                // Translate only (local -> global)
-                tpts = (adjustedSurf_.points0() + geometryTransform_.origin());
-            }
+            // Forward transform
+            adjustedSurf_.movePoints
+            (
+                geometryTransform_.globalPosition(adjustedSurf_.points0())
+            );
         }
 
-        adjustedSurf_.movePoints(tpts);
         adjustedSurf_.scalePoints(geometryScale_);
     }
 
@@ -572,23 +512,7 @@ Foam::tmp<Foam::Field<Type>> Foam::surfaceWriter::mergeFieldTemplate
         auto tfield = tmp<Field<Type>>::New();
         auto& allFld = tfield.ref();
 
-        // Update any expired global index (as required)
-
-        const globalIndex& globIndex =
-        (
-            this->isPointData()
-          ? mergedSurf_.pointGlobalIndex()
-          : mergedSurf_.faceGlobalIndex()
-        );
-
-        globIndex.gather
-        (
-            fld,
-            allFld,
-            UPstream::msgType(),
-            commType_,
-            UPstream::worldComm
-        );
+        globalIndex::gatherOp(fld, allFld);
 
         // Renumber (point data) to correspond to merged points
         if

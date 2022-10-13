@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2014-2015 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -148,15 +148,26 @@ void Foam::medialAxisMeshMover::update(const dictionary& coeffDict)
         )
     );
 
-    const scalar minMedialAxisAngle
+    // Note: parameter name changed
+    // "minMedianAxisAngle" -> "minMedialAxisAngle" (DEC-2013)
+    // but not previously reported.
+    scalar minMedialAxisAngle(Zero);
+    if
     (
-        meshRefinement::get<scalar>
+       !coeffDict.readCompat
         (
-            coeffDict,
             "minMedialAxisAngle",
-            dryRun_
+            {{ "minMedianAxisAngle", 1712 }},
+            minMedialAxisAngle,
+            keyType::REGEX,
+            !dryRun_
         )
-    );
+    )
+    {
+        FatalIOError
+            << "Entry '" << "minMedialAxisAngle"
+            << "' not found in dictionary " << coeffDict.name() << endl;
+    }
 
     const scalar minMedialAxisAngleCos(Foam::cos(degToRad(minMedialAxisAngle)));
 
@@ -727,7 +738,7 @@ void Foam::medialAxisMeshMover::syncPatchDisplacement
     const indirectPrimitivePatch& pp = adaptPatchPtr_();
     const labelList& meshPoints = pp.meshPoints();
 
-    //label nChangedTotal = 0;
+    label nChangedTotal = 0;
 
     while (true)
     {
@@ -819,9 +830,9 @@ void Foam::medialAxisMeshMover::syncPatchDisplacement
         //    }
         //}
 
-        //nChangedTotal += nChanged;
+        nChangedTotal += nChanged;
 
-        if (!returnReduceOr(nChanged))
+        if (!returnReduce(nChanged, sumOp<label>()))
         {
             break;
         }
@@ -1148,7 +1159,7 @@ void Foam::medialAxisMeshMover::findIsolatedRegions
         }
 
 
-        if (!returnReduceOr(nChanged))
+        if (returnReduce(nChanged, sumOp<label>()) == 0)
         {
             break;
         }
@@ -1238,9 +1249,10 @@ void Foam::medialAxisMeshMover::findIsolatedRegions
         }
     }
 
+    reduce(nPointCounter, sumOp<label>());
     Info<< typeName
-        << " : Number of isolated points extrusion stopped : "
-        << returnReduce(nPointCounter, sumOp<label>()) << endl;
+        << " : Number of isolated points extrusion stopped : "<< nPointCounter
+        << endl;
 }
 
 
@@ -1546,19 +1558,27 @@ void Foam::medialAxisMeshMover::calculateDisplacement
                 if (str)
                 {
                     const point& pt = mesh().points()[pointI];
-                    str().writeLine(pt, pt+patchDisp[patchPointI]);
+                    str().write(linePointRef(pt, pt+patchDisp[patchPointI]));
                 }
                 if (medialVecStr)
                 {
                     const point& pt = mesh().points()[pointI];
-                    medialVecStr().writeLine(pt, medialVec_[pointI]);
+                    medialVecStr().write
+                    (
+                        linePointRef
+                        (
+                            pt,
+                            medialVec_[pointI]
+                        )
+                    );
                 }
             }
         }
     }
 
+    reduce(numThicknessRatioExclude, sumOp<label>());
     Info<< typeName << " : Reducing layer thickness at "
-        << returnReduce(numThicknessRatioExclude, sumOp<label>())
+        << numThicknessRatioExclude
         << " nodes where thickness to medial axis distance is large " << endl;
 
 

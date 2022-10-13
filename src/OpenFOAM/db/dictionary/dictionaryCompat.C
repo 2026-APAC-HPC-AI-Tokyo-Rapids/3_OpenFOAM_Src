@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -71,6 +71,17 @@ Foam::dictionary::const_searcher Foam::dictionary::csearchCompat
 }
 
 
+bool Foam::dictionary::foundCompat
+(
+    const word& keyword,
+    std::initializer_list<std::pair<const char*,int>> compat,
+    enum keyType::option matchOpt
+) const
+{
+    return csearchCompat(keyword, compat, matchOpt).good();
+}
+
+
 const Foam::entry* Foam::dictionary::findCompat
 (
     const word& keyword,
@@ -82,17 +93,6 @@ const Foam::entry* Foam::dictionary::findCompat
 }
 
 
-bool Foam::dictionary::foundCompat
-(
-    const word& keyword,
-    std::initializer_list<std::pair<const char*,int>> compat,
-    enum keyType::option matchOpt
-) const
-{
-    return static_cast<bool>(findCompat(keyword, compat, matchOpt));
-}
-
-
 const Foam::entry& Foam::dictionary::lookupEntryCompat
 (
     const word& keyword,
@@ -100,9 +100,9 @@ const Foam::entry& Foam::dictionary::lookupEntryCompat
     enum keyType::option matchOpt
 ) const
 {
-    const entry* eptr = findCompat(keyword, compat, matchOpt);
+    const const_searcher finder(csearchCompat(keyword, compat, matchOpt));
 
-    if (!eptr)
+    if (!finder.good())
     {
         FatalIOErrorInFunction(*this)
             << "Entry '" << keyword << "' not found in dictionary "
@@ -110,7 +110,7 @@ const Foam::entry& Foam::dictionary::lookupEntryCompat
             << exit(FatalIOError);
     }
 
-    return *eptr;
+    return finder.ref();
 }
 
 

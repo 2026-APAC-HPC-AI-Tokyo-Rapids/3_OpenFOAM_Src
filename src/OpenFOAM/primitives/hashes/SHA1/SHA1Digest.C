@@ -211,19 +211,25 @@ bool Foam::SHA1Digest::operator==(const SHA1Digest& rhs) const
 
 bool Foam::SHA1Digest::operator==(const std::string& hexdigits) const
 {
-    // Interpret empty string as '0000..'
-    size_t len = hexdigits.length();
+    // Null or empty string is not an error - interpret as '0000..'
+    if (hexdigits.empty())
+    {
+        return empty();
+    }
 
-    return len ? isEqual(hexdigits.data(), len) : empty();
+    return isEqual(hexdigits.data(), hexdigits.length());
 }
 
 
 bool Foam::SHA1Digest::operator==(const char* hexdigits) const
 {
-    // Interpret nullptr or empty string as '0000..'
-    size_t len = (hexdigits ? strlen(hexdigits) : 0);
+    // Null or empty string is not an error - interpret as '0000..'
+    if (!hexdigits || !*hexdigits)
+    {
+        return empty();
+    }
 
-    return len ? isEqual(hexdigits, len) : empty();
+    return isEqual(hexdigits, std::char_traits<char>::length(hexdigits));
 }
 
 

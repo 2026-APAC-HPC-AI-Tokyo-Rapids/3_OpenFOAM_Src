@@ -18,7 +18,6 @@ defaultFieldValues
 (
     volScalarFieldValue alpha.air 1
     volScalarFieldValue alpha.particles 0
-    // areaScalarFieldValue h 1e-3
 );
 
 regions

@@ -1,7 +1,5 @@
-#include "labelList.H"
+#include "label.H"
 #include "autoPtr.H"
-#include "ZoneMesh.H"
-#include "topoSet.H"
 
 namespace Foam
 {
@@ -16,19 +14,8 @@ namespace Foam
     (
         const bool allGeometry,
         const word& name,
-        const polyMesh& mesh,
         const PatchType& pp,
-        const labelList& meshFaces,
-        const labelList& meshEdges,
         pointSet& points
-    );
-
-    template<class Zone>
-    label checkZones
-    (
-        const polyMesh& mesh,
-        const ZoneMesh<Zone, polyMesh>& zones,
-        topoSet& set
     );
 
     label checkTopology

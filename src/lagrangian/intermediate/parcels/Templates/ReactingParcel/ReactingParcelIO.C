@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -62,7 +62,7 @@ Foam::ReactingParcel<ParcelType>::ReactingParcel
     {
         DynamicList<scalar> Ymix;
 
-        if (is.format() == IOstreamOption::ASCII)
+        if (is.format() == IOstream::ASCII)
         {
             is >> mass0_;
         }
@@ -384,7 +384,7 @@ Foam::Ostream& Foam::operator<<
     const ReactingParcel<ParcelType>& p
 )
 {
-    if (os.format() == IOstreamOption::ASCII)
+    if (os.format() == IOstream::ASCII)
     {
         os  << static_cast<const ParcelType&>(p)
             << token::SPACE << p.mass0()

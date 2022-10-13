@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -38,8 +38,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_OTstream_H
-#define Foam_OTstream_H
+#ifndef OTstream_H
+#define OTstream_H
 
 #include "token.H"
 #include "Ostream.H"
@@ -66,7 +66,7 @@ public:
         //- Default construct, set stream status
         explicit OTstream(IOstreamOption streamOpt = IOstreamOption())
         :
-            Ostream(IOstreamOption(streamOpt.format(), streamOpt.version())),
+            Ostream(streamOpt.format(), streamOpt.version()),
             DynamicList<token>()
         {
             setOpened();
@@ -76,7 +76,7 @@ public:
         //- Copy construct
         OTstream(const OTstream& os)
         :
-            Ostream(static_cast<IOstreamOption>(os)),
+            Ostream(os.format(), os.version()),
             DynamicList<token>(os.tokens())
         {
             setOpened();
@@ -86,7 +86,7 @@ public:
         //- Move construct
         OTstream(OTstream&& os)
         :
-            Ostream(static_cast<IOstreamOption>(os)),
+            Ostream(os.format(), os.version()),
             DynamicList<token>(std::move(os.tokens()))
         {
             setOpened();
@@ -146,11 +146,11 @@ public:
         //- Write int64_t as a label
         virtual Ostream& write(const int64_t val);
 
-        //- Write float
-        virtual Ostream& write(const float val);
+        //- Write floatScalar
+        virtual Ostream& write(const floatScalar val);
 
-        //- Write double
-        virtual Ostream& write(const double val);
+        //- Write doubleScalar
+        virtual Ostream& write(const doubleScalar val);
 
         //- Write binary block with 8-byte alignment.
         virtual Ostream& write(const char* data, std::streamsize count);
@@ -259,10 +259,14 @@ public:
     // Additional constructors and methods (as per v2012 and earlier)
     #ifdef Foam_IOstream_extras
 
-        //- Construct empty with format
-        explicit OTstream(IOstreamOption::streamFormat fmt)
+        //- Construct empty with format, version
+        explicit OTstream
+        (
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
+        )
         :
-            OTstream(IOstreamOption(fmt))
+            OTstream(IOstreamOption(fmt, ver))
         {}
 
     #endif /* Foam_IOstream_extras */

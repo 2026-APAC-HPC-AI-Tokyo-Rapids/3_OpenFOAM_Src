@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -1103,7 +1103,9 @@ int main(int argc, char *argv[])
         // Update proc maps
         if (cellProcAddressing.headerOk())
         {
-            if (returnReduceAnd(cellProcAddressing.size() == mesh.nCells()))
+            bool localOk = (cellProcAddressing.size() == mesh.nCells());
+
+            if (returnReduce(localOk, andOp<bool>()))
             {
                 Info<< "Renumbering processor cell decomposition map "
                     << cellProcAddressing.name() << endl;
@@ -1127,7 +1129,9 @@ int main(int argc, char *argv[])
 
         if (faceProcAddressing.headerOk())
         {
-            if (returnReduceAnd(faceProcAddressing.size() == mesh.nFaces()))
+            bool localOk = (faceProcAddressing.size() == mesh.nFaces());
+
+            if (returnReduce(localOk, andOp<bool>()))
             {
                 Info<< "Renumbering processor face decomposition map "
                     << faceProcAddressing.name() << endl;
@@ -1167,7 +1171,9 @@ int main(int argc, char *argv[])
 
         if (pointProcAddressing.headerOk())
         {
-            if (returnReduceAnd(pointProcAddressing.size() == mesh.nPoints()))
+            bool localOk = (pointProcAddressing.size() == mesh.nPoints());
+
+            if (returnReduce(localOk, andOp<bool>()))
             {
                 Info<< "Renumbering processor point decomposition map "
                     << pointProcAddressing.name() << endl;
@@ -1191,13 +1197,12 @@ int main(int argc, char *argv[])
 
         if (boundaryProcAddressing.headerOk())
         {
-            if
+            bool localOk =
             (
-                returnReduceAnd
-                (
-                    boundaryProcAddressing.size() == mesh.boundaryMesh().size()
-                )
-            )
+                boundaryProcAddressing.size()
+             == mesh.boundaryMesh().size()
+            );
+            if (returnReduce(localOk, andOp<bool>()))
             {
                 // No renumbering needed
             }

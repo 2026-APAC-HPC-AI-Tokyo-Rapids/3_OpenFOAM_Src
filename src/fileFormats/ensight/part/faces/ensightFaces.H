@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -97,7 +97,7 @@ public:
     // Static Functions
 
         //- The ensight element name for the specified 'Face' type
-        static inline const char* key(const elemType etype) noexcept;
+        static inline const char* key(const elemType etype);
 
 
 private:
@@ -162,10 +162,7 @@ public:
 
         //- The global size of all element types.
         //  This value is only meaningful after a reduce operation.
-        label totalSize() const noexcept;
-
-        //- Same as totalSize
-        label total() const noexcept { return totalSize(); }
+        label total() const;
 
         //- The global size of the specified element type.
         //  This value is only meaningful after a reduce operation.

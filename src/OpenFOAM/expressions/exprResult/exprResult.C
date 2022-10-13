@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2018 Bernhard Gschaider
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -254,11 +254,8 @@ Foam::expressions::exprResult::exprResult
 {
     DebugInFunction << nl;
 
-    const auto* hasValue = dict.findEntry("value", keyType::LITERAL);
-
-    if (hasValue)
+    if (dict.found("value"))
     {
-        const auto& valueEntry = *hasValue;
         const bool uniform = isUniform_;
 
         const label len =
@@ -271,12 +268,12 @@ Foam::expressions::exprResult::exprResult
         const bool ok =
         (
             // Just use <scalar> for <label>?
-            readChecked<scalar>(valueEntry, len, uniform)
-         || readChecked<vector>(valueEntry, len, uniform)
-         || readChecked<tensor>(valueEntry, len, uniform)
-         || readChecked<symmTensor>(valueEntry, len, uniform)
-         || readChecked<sphericalTensor>(valueEntry, len, uniform)
-         || readChecked<bool>(valueEntry, len, uniform)
+            readChecked<scalar>("value", dict, len, uniform)
+         || readChecked<vector>("value", dict, len, uniform)
+         || readChecked<tensor>("value", dict, len, uniform)
+         || readChecked<symmTensor>("value", dict, len, uniform)
+         || readChecked<sphericalTensor>("value", dict, len, uniform)
+         || readChecked<bool>("value", dict, len, uniform)
         );
 
         if (!ok)
@@ -590,7 +587,7 @@ void Foam::expressions::exprResult::writeDict
     const bool subDict
 ) const
 {
-    // const auto oldFmt = os.format(IOstreamOption::ASCII);
+    // const auto oldFmt = os.format(IOstream::ASCII);
 
     DebugInFunction
         << Foam::name(this) << nl
@@ -634,7 +631,7 @@ void Foam::expressions::exprResult::writeField
     const word& keyword
 ) const
 {
-    // const auto oldFmt = os.format(IOstreamOption::ASCII);
+    // const auto oldFmt = os.format(IOstream::ASCII);
 
     DebugInFunction
         << Foam::name(this) << nl
@@ -665,7 +662,7 @@ void Foam::expressions::exprResult::writeValue
     Ostream& os
 ) const
 {
-    // const auto oldFmt = os.format(IOstreamOption::ASCII);
+    // const auto oldFmt = os.format(IOstream::ASCII);
 
     DebugInFunction
         << Foam::name(this) << nl

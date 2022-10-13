@@ -78,7 +78,7 @@ class FacePostProcessing
         bool resetOnWrite_;
 
         //- Flag to indicate whether data should be written to file
-        bool logToFile_;
+        bool log_;
 
         //- Total time
         scalar totalTime_;

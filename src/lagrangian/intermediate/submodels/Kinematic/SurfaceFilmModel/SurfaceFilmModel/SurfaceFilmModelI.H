@@ -30,55 +30,48 @@ License
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class CloudType>
-const Foam::dimensionedVector& Foam::SurfaceFilmModel<CloudType>::g()
-const noexcept
+const Foam::dimensionedVector& Foam::SurfaceFilmModel<CloudType>::g() const
 {
     return g_;
 }
 
 
 template<class CloudType>
-Foam::label Foam::SurfaceFilmModel<CloudType>::nParcelsTransferred()
-const noexcept
-{
-    return nParcelsTransferred_;
-}
-
-template<class CloudType>
 Foam::label& Foam::SurfaceFilmModel<CloudType>::nParcelsTransferred()
-noexcept
 {
     return nParcelsTransferred_;
 }
 
 
 template<class CloudType>
-Foam::label Foam::SurfaceFilmModel<CloudType>::nParcelsInjected()
-const noexcept
+Foam::label Foam::SurfaceFilmModel<CloudType>::nParcelsTransferred() const
 {
-    return nParcelsInjected_;
+    return nParcelsTransferred_;
 }
 
 
 template<class CloudType>
 Foam::label& Foam::SurfaceFilmModel<CloudType>::nParcelsInjected()
-noexcept
 {
     return nParcelsInjected_;
 }
 
 
 template<class CloudType>
-Foam::scalar Foam::SurfaceFilmModel<CloudType>::totalMassTransferred()
-const noexcept
+Foam::label Foam::SurfaceFilmModel<CloudType>::nParcelsInjected() const
+{
+    return nParcelsInjected_;
+}
+
+template<class CloudType>
+Foam::scalar& Foam::SurfaceFilmModel<CloudType>::totalMassTransferred()
 {
     return totalMassTransferred_;
 }
 
 
 template<class CloudType>
-Foam::scalar& Foam::SurfaceFilmModel<CloudType>::totalMassTransferred()
-noexcept
+Foam::scalar Foam::SurfaceFilmModel<CloudType>::totalMassTransferred() const
 {
     return totalMassTransferred_;
 }

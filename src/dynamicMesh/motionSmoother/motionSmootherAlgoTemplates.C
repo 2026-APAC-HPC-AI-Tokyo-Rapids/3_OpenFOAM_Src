@@ -300,16 +300,18 @@ Type Foam::motionSmootherAlgo::get
     const Type& defaultValue
 )
 {
-    // If noExit, emit FatalIOError message without exiting
-    IOobjectOption::readOption readOpt
-    (
-        noExit
-      ? IOobjectOption::READ_IF_PRESENT : IOobjectOption::MUST_READ
-    );
-
     Type val(defaultValue);
 
-    if (!dict.readEntry(keyword, val, matchOpt, readOpt))
+    if
+    (
+       !dict.readEntry
+        (
+            keyword,
+            val,
+            matchOpt,
+            !noExit
+        )
+    )
     {
         FatalIOError
             << "Entry '" << keyword << "' not found in dictionary "

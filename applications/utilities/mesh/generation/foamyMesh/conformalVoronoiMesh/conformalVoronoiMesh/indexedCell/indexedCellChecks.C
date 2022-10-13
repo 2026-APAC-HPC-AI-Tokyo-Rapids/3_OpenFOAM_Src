@@ -26,7 +26,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "plane.H"
-#include "tetrahedron.H"
+#include "tetPointRef.H"
 #include "pointConversion.H"
 #include "CGALTriangulation3DKernel.H"
 

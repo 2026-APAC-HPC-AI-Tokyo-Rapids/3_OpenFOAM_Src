@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2012 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,8 +36,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_ISstream_H
-#define Foam_ISstream_H
+#ifndef ISstream_H
+#define ISstream_H
 
 #include "Istream.H"
 #include "fileName.H"
@@ -93,19 +93,7 @@ public:
             std::istream& is,
             const string& streamName,
             IOstreamOption::streamFormat fmt,
-            IOstreamOption::compressionType cmp = IOstreamOption::UNCOMPRESSED
-        )
-        :
-            ISstream(is, streamName, IOstreamOption(fmt, cmp))
-        {}
-
-        //- Construct wrapper around std::istream, set stream status
-        ISstream
-        (
-            std::istream& is,
-            const string& streamName,
-            IOstreamOption::streamFormat fmt,
-            IOstreamOption::versionNumber ver,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion,
             IOstreamOption::compressionType cmp = IOstreamOption::UNCOMPRESSED
         )
         :
@@ -121,42 +109,21 @@ public:
 
     // Characteristics
 
-        //- The name of the input serial stream.
-        //- (eg, the name of the Fstream file name)
-        virtual const fileName& name() const { return name_; }
+        //- Return the name of the stream.
+        //  Useful for Fstream to return the filename
+        virtual const fileName& name() const
+        {
+            return name_;
+        }
 
-        //- The name of the input serial stream, for modification.
-        virtual fileName& name() { return name_; }
-
-
-    // STL stream
-
-        //- Const access to underlying std::istream
-        virtual const std::istream& stdStream() const { return is_; }
-
-        //- Access to underlying std::istream
-        virtual std::istream& stdStream() { return is_; }
-
-
-    // Stream State
+        //- Return stream name for modification
+        virtual fileName& name()
+        {
+            return name_;
+        }
 
         //- Return flags of output stream
-        virtual ios_base::fmtflags flags() const
-        {
-            return is_.flags();
-        }
-
-        //- Set stream flags
-        virtual ios_base::fmtflags flags(const ios_base::fmtflags f)
-        {
-            return is_.flags(f);
-        }
-
-        //- Set stream state to match that of the std::istream
-        void syncState()
-        {
-            setState(is_.rdstate());
-        }
+        virtual ios_base::fmtflags flags() const;
 
 
     // Special-purpose Functions
@@ -216,11 +183,11 @@ public:
             //- Read a label
             virtual Istream& read(label& val);
 
-            //- Read a float
-            virtual Istream& read(float& val);
+            //- Read a floatScalar
+            virtual Istream& read(floatScalar& val);
 
-            //- Read a double
-            virtual Istream& read(double& val);
+            //- Read a doubleScalar
+            virtual Istream& read(doubleScalar& val);
 
             //- Read binary block
             virtual Istream& read(char* buf, std::streamsize count);
@@ -236,6 +203,27 @@ public:
 
             //- Rewind the stream so that it may be read again
             virtual void rewind();
+
+
+        // Stream state functions
+
+            //- Set stream flags
+            virtual ios_base::fmtflags flags(const ios_base::fmtflags flags);
+
+
+        // STL stream
+
+            //- Access to underlying std::istream
+            virtual std::istream& stdStream()
+            {
+                return is_;
+            }
+
+            //- Const access to underlying std::istream
+            virtual const std::istream& stdStream() const
+            {
+                return is_;
+            }
 
 
         // Print

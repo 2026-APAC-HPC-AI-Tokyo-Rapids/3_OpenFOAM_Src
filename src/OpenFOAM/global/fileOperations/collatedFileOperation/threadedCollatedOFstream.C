@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017-2018 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,7 +35,6 @@ License
 Foam::threadedCollatedOFstream::threadedCollatedOFstream
 (
     OFstreamCollator& writer,
-    IOstreamOption::atomicType atomic,
     const fileName& pathName,
     IOstreamOption streamOpt,
     const bool useThread
@@ -44,29 +43,9 @@ Foam::threadedCollatedOFstream::threadedCollatedOFstream
     OStringStream(streamOpt),
     writer_(writer),
     pathName_(pathName),
-    atomic_(atomic),
     compression_(streamOpt.compression()),
     useThread_(useThread),
     headerEntries_()
-{}
-
-
-Foam::threadedCollatedOFstream::threadedCollatedOFstream
-(
-    OFstreamCollator& writer,
-    const fileName& pathName,
-    IOstreamOption streamOpt,
-    const bool useThread
-)
-:
-    threadedCollatedOFstream
-    (
-        writer,
-        IOstreamOption::NON_ATOMIC,
-        pathName,
-        streamOpt,
-        useThread
-    )
 {}
 
 
@@ -79,9 +58,8 @@ Foam::threadedCollatedOFstream::~threadedCollatedOFstream()
         decomposedBlockData::typeName,
         pathName_,
         str(),
-        IOstreamOption(IOstreamOption::BINARY, version(), compression_),
-        atomic_,
-        IOstreamOption::NON_APPEND,
+        IOstreamOption(IOstream::BINARY, version(), compression_),
+        false,  // append=false
         useThread_,
         headerEntries_
     );

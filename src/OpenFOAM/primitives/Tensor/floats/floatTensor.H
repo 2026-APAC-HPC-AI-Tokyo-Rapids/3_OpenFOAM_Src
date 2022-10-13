@@ -1,7 +1,7 @@
 // Compatibility include
 
-#ifndef FoamCompat_floatTensor_H
-#define FoamCompat_floatTensor_H
+#ifndef floatTensor_H
+#define floatTensor_H
 
 #include "tensor.H"
 

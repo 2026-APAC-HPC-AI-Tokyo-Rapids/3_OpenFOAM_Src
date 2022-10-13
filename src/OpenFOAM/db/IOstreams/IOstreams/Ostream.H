@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -96,14 +96,15 @@ public:
         {}
 
 
-        //- Construct with format (uncompressed)
+        //- Construct with format, version (compression)
         explicit Ostream
         (
             IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion,
             IOstreamOption::compressionType cmp = IOstreamOption::UNCOMPRESSED
         )
         :
-            Ostream(IOstreamOption(fmt, cmp))
+            Ostream(IOstreamOption(fmt, ver, cmp))
         {}
 
 
@@ -146,11 +147,11 @@ public:
             //- Write int64_t
             virtual Ostream& write(const int64_t val) = 0;
 
-            //- Write float
-            virtual Ostream& write(const float val) = 0;
+            //- Write floatScalar
+            virtual Ostream& write(const floatScalar val) = 0;
 
-            //- Write double
-            virtual Ostream& write(const double val) = 0;
+            //- Write doubleScalar
+            virtual Ostream& write(const doubleScalar val) = 0;
 
             //- Write binary block.
             virtual Ostream& write(const char* data, std::streamsize count) = 0;

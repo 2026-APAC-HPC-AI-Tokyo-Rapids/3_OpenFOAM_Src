@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -108,23 +108,19 @@ int main(int argc, char *argv[])
 
             forAll(fluidRegions, i)
             {
-                fvMesh& mesh = fluidRegions[i];
-
                 Info<< "\nSolving for fluid region "
                     << fluidRegions[i].name() << endl;
-                #include "readFluidMultiRegionPIMPLEControls.H"
                 #include "setRegionFluidFields.H"
+                #include "readFluidMultiRegionPIMPLEControls.H"
                 #include "solveFluid.H"
             }
 
             forAll(solidRegions, i)
             {
-                fvMesh& mesh = solidRegions[i];
-
                 Info<< "\nSolving for solid region "
                     << solidRegions[i].name() << endl;
-                #include "readSolidMultiRegionPIMPLEControls.H"
                 #include "setRegionSolidFields.H"
+                #include "readSolidMultiRegionPIMPLEControls.H"
                 #include "solveSolid.H"
             }
 
@@ -139,24 +135,20 @@ int main(int argc, char *argv[])
 
                     forAll(fluidRegions, i)
                     {
-                        fvMesh& mesh = fluidRegions[i];
-
                         Info<< "\nSolving for fluid region "
                             << fluidRegions[i].name() << endl;
-                        #include "readFluidMultiRegionPIMPLEControls.H"
-                        #include "setRegionFluidFields.H"
-                        frozenFlow = true;
-                        #include "solveFluid.H"
+                       #include "setRegionFluidFields.H"
+                       #include "readFluidMultiRegionPIMPLEControls.H"
+                       frozenFlow = true;
+                       #include "solveFluid.H"
                     }
 
                     forAll(solidRegions, i)
                     {
-                        fvMesh& mesh = solidRegions[i];
-
                         Info<< "\nSolving for solid region "
                             << solidRegions[i].name() << endl;
-                        #include "readSolidMultiRegionPIMPLEControls.H"
                         #include "setRegionSolidFields.H"
+                        #include "readSolidMultiRegionPIMPLEControls.H"
                         #include "solveSolid.H"
                     }
                 }

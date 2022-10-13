@@ -43,8 +43,7 @@ void evaluateConstraintTypes(GeometricField<Type, fvPatchField, volMesh>& fld)
 {
     auto& fldBf = fld.boundaryFieldRef();
 
-    const UPstream::commsTypes commsType = UPstream::defaultCommsType;
-    const label startOfRequests = UPstream::nRequests();
+    const UPstream::commsTypes commsType(UPstream::defaultCommsType);
 
     if
     (
@@ -52,6 +51,8 @@ void evaluateConstraintTypes(GeometricField<Type, fvPatchField, volMesh>& fld)
      || commsType == UPstream::commsTypes::nonBlocking
     )
     {
+        const label startOfRequests = UPstream::nRequests();
+
         forAll(fldBf, patchi)
         {
             fvPatchField<Type>& tgtField = fldBf[patchi];
@@ -67,7 +68,11 @@ void evaluateConstraintTypes(GeometricField<Type, fvPatchField, volMesh>& fld)
         }
 
         // Wait for outstanding requests
-        if (commsType == UPstream::commsTypes::nonBlocking)
+        if
+        (
+            UPstream::parRun()
+         && commsType == UPstream::commsTypes::nonBlocking
+        )
         {
             UPstream::waitRequests(startOfRequests);
         }

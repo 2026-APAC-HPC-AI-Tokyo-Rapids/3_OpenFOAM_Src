@@ -368,9 +368,9 @@ const Foam::entry& Foam::dictionary::lookupEntry
     enum keyType::option matchOpt
 ) const
 {
-    const entry* eptr = findEntry(keyword, matchOpt);
+    const const_searcher finder(csearch(keyword, matchOpt));
 
-    if (!eptr)
+    if (!finder.good())
     {
         FatalIOErrorInFunction(*this)
             << "Entry '" << keyword << "' not found in dictionary "
@@ -378,7 +378,7 @@ const Foam::entry& Foam::dictionary::lookupEntry
             << exit(FatalIOError);
     }
 
-    return *eptr;
+    return finder.ref();
 }
 
 
@@ -504,12 +504,12 @@ Foam::dictionary& Foam::dictionary::subDictOrAdd
 {
     searcher finder(search(keyword, matchOpt));
 
-    dictionary* dictPtr = finder.dictPtr();
+    dictionary* ptr = finder.dictPtr();
 
-    if (dictPtr)
+    if (ptr)
     {
         // Found and a sub-dictionary
-        return *dictPtr;
+        return *ptr;
     }
 
     if (finder.good())
@@ -521,9 +521,9 @@ Foam::dictionary& Foam::dictionary::subDictOrAdd
             << exit(FatalIOError);
     }
 
-    dictPtr = this->set(keyword, dictionary())->dictPtr();
+    ptr = this->set(keyword, dictionary())->dictPtr();
 
-    if (!dictPtr)
+    if (!ptr)
     {
         FatalIOErrorInFunction(*this)
             << "Failed to insert sub-dictionary '" << keyword
@@ -532,7 +532,7 @@ Foam::dictionary& Foam::dictionary::subDictOrAdd
             << exit(FatalIOError);
     }
 
-    return *dictPtr;
+    return *ptr;
 }
 
 
@@ -545,12 +545,10 @@ Foam::dictionary Foam::dictionary::subOrEmptyDict
 {
     const const_searcher finder(csearch(keyword, matchOpt));
 
-    const dictionary* dictPtr = finder.dictPtr();
-
-    if (dictPtr)
+    if (finder.isDict())
     {
         // Found and a sub-dictionary
-        return *dictPtr;
+        return finder.dict();
     }
 
     if (mandatory)
@@ -583,12 +581,10 @@ const Foam::dictionary& Foam::dictionary::optionalSubDict
 {
     const const_searcher finder(csearch(keyword, matchOpt));
 
-    const dictionary* dictPtr = finder.dictPtr();
-
-    if (dictPtr)
+    if (finder.isDict())
     {
         // Found and a sub-dictionary
-        return *dictPtr;
+        return finder.dict();
     }
 
     if (finder.good())
@@ -791,12 +787,10 @@ Foam::entry* Foam::dictionary::set(entry* entryPtr)
     // Find non-recursive with patterns
     searcher finder(search(entryPtr->keyword(), keyType::REGEX));
 
-    dictionary* dictPtr = finder.dictPtr();
-
     // Clear dictionary so merge acts like overwrite
-    if (dictPtr)
+    if (finder.isDict())
     {
-        dictPtr->clear();
+        finder.dict().clear();
     }
 
     return add(entryPtr, true);

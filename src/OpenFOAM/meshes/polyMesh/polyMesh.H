@@ -414,7 +414,7 @@ public:
             void setInstance
             (
                 const fileName& instance,
-                const IOobjectOption::writeOption wOpt = IOobject::AUTO_WRITE
+                const IOobject::writeOption wOpt = IOobject::AUTO_WRITE
             );
 
 
@@ -604,14 +604,6 @@ public:
             (
                 const List<polyPatch*>& p,
                 const bool validBoundary = true
-            );
-
-            //- Add mesh zones
-            void addZones
-            (
-                PtrList<pointZone>&& pz,
-                PtrList<faceZone>&& fz,
-                PtrList<cellZone>&& cz
             );
 
             //- Add mesh zones

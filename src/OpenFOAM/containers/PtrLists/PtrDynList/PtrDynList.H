@@ -43,6 +43,8 @@ SourceFiles
 
 #include "PtrList.H"
 #include <type_traits>
+#include <memory>
+#include <utility>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -98,10 +100,23 @@ public:
 
     // Member Functions
 
-    // Sizing
+    // Access
 
         //- Size of the underlying storage.
-        label capacity() const noexcept { return capacity_; }
+        inline label capacity() const noexcept;
+
+        //- Return const pointer to element (can be nullptr),
+        //- with bounds checking.
+        //  The return value can be tested as a bool.
+        const T* get(const label i) const { return this->test(i); }
+
+        //- Return const pointer to element (if set) or nullptr,
+        //- with bounds checking.
+        //  The return value can be tested as a bool.
+        const T* set(const label i) const { return this->test(i); }
+
+
+    // Sizing
 
         //- Reserve allocation space for at least this size.
         inline void reserve(const label len);
@@ -141,60 +156,58 @@ public:
         template<int AnySizeMin>
         inline void swap(PtrDynList<T, AnySizeMin>& other);
 
-        //- Construct an element at the end of the list
+        //- Construct and append an element to the end of the list
         template<class... Args>
-        inline void emplace_back(Args&&... args);
+        inline void emplace_append(Args&&... args);
 
         //- Append an element to the end of the list
-        inline void push_back(T* ptr);
+        inline void append(T* ptr);
 
         //- Move append an element to the end of the list
-        inline void push_back(std::unique_ptr<T>&& ptr);
+        inline void append(autoPtr<T>& ptr);
 
         //- Move append an element to the end of the list
-        inline void push_back(autoPtr<T>&& ptr);
+        inline void append(autoPtr<T>&& ptr);
+
+        //- Move append an element to the end of the list
+        inline void append(std::unique_ptr<T>&& ptr);
 
         //- Move or clone append a tmp to the end of the list
-        inline void push_back(const refPtr<T>& ptr);
+        inline void append(const refPtr<T>& ptr);
 
         //- Move or clone append a tmp to the end of the list
-        inline void push_back(const tmp<T>& ptr);
+        inline void append(const tmp<T>& ptr);
 
         //- Move append another list to the end of this list.
-        inline void push_back(PtrList<T>&& other);
+        inline void append(PtrList<T>&& other);
 
         //- Move append another list to the end of this list.
         template<int AnySizeMin>
-        inline void push_back(PtrDynList<T, AnySizeMin>&& other);
+        inline void append(PtrDynList<T, AnySizeMin>&& other);
 
-        //- Reduce size by 1 or more elements. Can be called on an empty list.
-        inline void pop_back(label n = 1);
-
-        //- Remove and return the top element. Can be called on an empty list.
+        //- Remove and return the top element
         inline autoPtr<T> remove();
 
         //- Construct and set an element
         template<class... Args>
         inline autoPtr<T> emplace(const label i, Args&&... args);
 
-        //- Set element to given pointer and return old element (can be null).
-        //- Auto-sizes list as required.
+        //- Set element to given pointer and return old element (can be null)
         inline autoPtr<T> set(const label i, T* ptr);
 
-        //- Set element to given pointer and return old element
-        //- Auto-sizes list as required.
-        inline autoPtr<T> set(const label i, std::unique_ptr<T>&& ptr);
+        //- Set element to given autoPtr and return old element
+        inline autoPtr<T> set(const label i, autoPtr<T>& ptr);
 
         //- Set element to given autoPtr and return old element
-        //- Auto-sizes list as required.
         inline autoPtr<T> set(const label i, autoPtr<T>&& ptr);
 
+        //- Set element to given pointer and return old element
+        inline autoPtr<T> set(const label i, std::unique_ptr<T>&& ptr);
+
         //- Set element to given refPtr and return old element
-        //- Auto-sizes list as required.
         inline autoPtr<T> set(const label i, const refPtr<T>& ptr);
 
         //- Set element to given tmp and return old element
-        //- Auto-sizes list as required.
         inline autoPtr<T> set(const label i, const tmp<T>& ptr);
 
         //- Reorder elements. Reordering must be unique (ie, shuffle).
@@ -222,52 +235,6 @@ public:
         //- Move assignment with different sizing parameters
         template<int AnySizeMin>
         inline void operator=(PtrDynList<T, AnySizeMin>&& list);
-
-
-    // Housekeeping
-
-        //- Set element to given autoPtr and return old element
-        autoPtr<T> set(const label i, autoPtr<T>& ptr)
-        {
-            return this->set(i, std::move(ptr));
-        }
-
-        //- Move append an element to the end of the list
-        void append(autoPtr<T>& ptr) { this->push_back(std::move(ptr)); }
-
-        //- Append an element to the end of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(T* ptr) { this->push_back(ptr); }
-
-        //- Move append an element to the end of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(std::unique_ptr<T>&& ptr)
-        {
-            this->push_back(std::move(ptr));
-        }
-
-        //- Move append an element to the end of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(autoPtr<T>&& ptr) { this->push_back(std::move(ptr)); }
-
-        //- Move or clone append a tmp to the end of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(const refPtr<T>& ptr) { this->push_back(ptr); }
-
-        //- Move or clone append a tmp to the end of the list
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(const tmp<T>& ptr) { this->push_back(ptr); }
-
-        //- Move append another list to the end of this list.
-        //FOAM_DEPRECATED_FOR(2022-10, "push_back()")
-        void append(PtrList<T>&& other) { this->push_back(std::move(other)); }
-
-        //- Move append another list to the end of this list.
-        template<int AnySizeMin>
-        void append(PtrDynList<T, AnySizeMin>&& other)
-        {
-            this->push_back(std::move(other));
-        }
 };
 
 

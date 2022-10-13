@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -42,14 +42,13 @@ Original Authors
 #include "argList.H"
 #include "OSspecific.H"
 #include "faMesh.H"
-#include "faMeshTools.H"
 #include "IOdictionary.H"
 #include "IOobjectList.H"
+
 #include "areaFields.H"
 #include "edgeFields.H"
 #include "faFieldDecomposer.H"
 #include "faMeshReconstructor.H"
-#include "faMeshSubset.H"
 #include "PtrListOps.H"
 #include "foamVtkIndPatchWriter.H"
 #include "OBJstream.H"
@@ -132,8 +131,8 @@ int main(int argc, char *argv[])
     // Create
     faMesh aMesh(mesh, meshDefDict);
 
-    // Mesh information (less verbose)
-    faMeshTools::printMeshChecks(aMesh, 0);
+    // Mesh information
+    #include "printMeshSummary.H"
 
     if (args.found("write-edges-obj"))
     {

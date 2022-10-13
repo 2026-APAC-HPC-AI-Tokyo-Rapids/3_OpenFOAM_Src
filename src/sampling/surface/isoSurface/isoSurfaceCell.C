@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -36,7 +36,7 @@ License
 #include "triSurface.H"
 #include "triSurfaceTools.H"
 #include "Time.H"
-#include "triangle.H"
+#include "triPoints.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -131,7 +131,8 @@ Foam::pointIndexHit Foam::isoSurfaceCell::collapseSurface
     if (localTris.size() == 1)
     {
         const labelledTri& tri = localTris[0];
-        info.hitPoint(tri.centre(localPoints));
+        info.setPoint(tri.centre(localPoints));
+        info.setHit();
     }
     else if (localTris.size() == 2)
     {
@@ -156,7 +157,7 @@ Foam::pointIndexHit Foam::isoSurfaceCell::collapseSurface
              || (n0 & n1) >= 0
             )
             {
-                info.hitPoint
+                info.setPoint
                 (
                     0.5
                   * (
@@ -164,6 +165,7 @@ Foam::pointIndexHit Foam::isoSurfaceCell::collapseSurface
                       + tri1.centre(localPoints)
                     )
                 );
+                info.setHit();
             }
         }
     }
@@ -202,7 +204,8 @@ Foam::pointIndexHit Foam::isoSurfaceCell::collapseSurface
 
             if (minCos > 0)
             {
-                info.hitPoint(calcCentre(surf));
+                info.setPoint(calcCentre(surf));
+                info.setHit();
             }
         }
     }
@@ -368,7 +371,7 @@ void Foam::isoSurfaceCell::calcSnappedCc
                 if (info.hit())
                 {
                     snappedCc[celli] = snappedPoints.size();
-                    snappedPoints.append(info.point());
+                    snappedPoints.append(info.hitPoint());
 
                     //Pout<< "cell:" << celli
                     //    << " at " << mesh_.cellCentres()[celli]
@@ -1188,7 +1191,7 @@ Foam::isoSurfaceCell::isoSurfaceCell
 
     if (debug && isA<fvMesh>(mesh))
     {
-        const auto& fvmesh = refCast<const fvMesh>(mesh);
+        const auto& fvmesh = dynamicCast<const fvMesh>(mesh);
 
         volScalarField debugField
         (

@@ -197,7 +197,10 @@ void Foam::faceReflecting::initialise(const dictionary& coeffs)
     List<treeBoundBox> meshBb
     (
         1,
-        treeBoundBox(mesh_.points()).extend(rndGen, 1e-3)
+        treeBoundBox
+        (
+            boundBox(mesh_.points(), false)
+        ).extend(rndGen, 1e-3)
     );
 
     // Dummy bounds dictionary
@@ -326,11 +329,12 @@ void Foam::faceReflecting::calculate()
     // Distribute ray indexes to all proc's
     // Make sure all the processors have the same information
 
-    Pstream::listCombineReduce(refDisDirsIndex, maxEqOp<label>());
-    Pstream::mapCombineReduce(refFacesDirIndex, minEqOp<label>());
+    Pstream::listCombineAllGather(refDisDirsIndex, maxEqOp<label>());
+    Pstream::mapCombineAllGather(refFacesDirIndex, minEqOp<label>());
 
-    const scalar maxBounding =
-        returnReduce(5.0*mesh_.bounds().mag(), maxOp<scalar>());
+    scalar maxBounding = 5.0*mag(mesh_.bounds().max() - mesh_.bounds().min());
+
+    reduce(maxBounding, maxOp<scalar>());
 
     // Shoot Rays
     // From faces t = 0, r = 0 and a > 0 to all 'used' discrete reflected
@@ -371,7 +375,7 @@ void Foam::faceReflecting::calculate()
             }
         }
 
-    } while (returnReduceOr(i < Cfs_->size()));
+    }while (returnReduce(i < Cfs_->size(), orOp<bool>()));
 
     List<pointIndexHit> hitInfo(startIndex.size());
 
@@ -439,8 +443,8 @@ void Foam::faceReflecting::calculate()
     {
         r[bandI].setSize(triangleIndex.size());
     }
-    labelList refDirIndex(triangleIndex.size(), -1);
-    labelList refIndex(triangleIndex.size(), -1);
+    labelList refDirIndex(triangleIndex.size());
+    labelList refIndex(triangleIndex.size());
     // triangleIndex includes hits on non-reflecting and reflecting faces
     forAll(triangleIndex, i)
     {

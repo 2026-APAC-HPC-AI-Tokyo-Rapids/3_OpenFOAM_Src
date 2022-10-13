@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -120,6 +120,7 @@ int main(int argc, char *argv[])
 
     // Less frequently used - reduce some clutter
     argList::setAdvanced("decomposeParDict");
+    argList::setAdvanced("noFunctionObjects");
 
     argList::addArgument("output", "The output surface file");
 
@@ -157,7 +158,7 @@ int main(int argc, char *argv[])
 
     const auto userOutFileName = args.get<fileName>(1);
 
-    if (!userOutFileName.has_ext())
+    if (!userOutFileName.hasExt())
     {
         FatalErrorInFunction
             << "Missing extension on output name " << userOutFileName
@@ -302,19 +303,17 @@ int main(int argc, char *argv[])
             Pstream::mapCombineGather(patchSize, plusEqOp<label>());
             Pstream::mapCombineGather(zoneSize, plusEqOp<label>());
 
-            if (Pstream::master())
+            // Allocate compact numbering for all patches/faceZones
+            forAllConstIters(patchSize, iter)
             {
-                // Allocate compact numbering for all patches/faceZones
-                forAllConstIters(patchSize, iter)
-                {
-                    compactZoneID.insert(iter.key(), compactZoneID.size());
-                }
-
-                forAllConstIters(zoneSize, iter)
-                {
-                    compactZoneID.insert(iter.key(), compactZoneID.size());
-                }
+                compactZoneID.insert(iter.key(), compactZoneID.size());
             }
+
+            forAllConstIters(zoneSize, iter)
+            {
+                compactZoneID.insert(iter.key(), compactZoneID.size());
+            }
+
             Pstream::broadcast(compactZoneID);
 
 
@@ -393,9 +392,13 @@ int main(int argc, char *argv[])
         // Gather all faces
         List<faceList> gatheredFaces(Pstream::nProcs());
         gatheredFaces[Pstream::myProcNo()] = allBoundary.localFaces();
-        for (face& f : gatheredFaces[Pstream::myProcNo()])
+        forAll(gatheredFaces[Pstream::myProcNo()], i)
         {
-            inplaceRenumber(pointToGlobal, f);
+            inplaceRenumber
+            (
+                pointToGlobal,
+                gatheredFaces[Pstream::myProcNo()][i]
+            );
         }
         Pstream::gatherList(gatheredFaces);
 

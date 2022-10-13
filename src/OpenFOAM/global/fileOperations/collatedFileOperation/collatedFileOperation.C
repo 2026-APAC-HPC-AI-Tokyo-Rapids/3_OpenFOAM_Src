@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017-2018 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -217,17 +217,12 @@ bool Foam::fileOperations::collatedFileOperation::appendObject
 
     // Note: cannot do append + compression. This is a limitation
     // of ogzstream (or rather most compressed formats)
-    //
-    // File should always be created as non-atomic
-    // (consistency between append/non-append)
 
     OFstream os
     (
         pathName,
-        // UNCOMPRESSED (binary only)
-        IOstreamOption(IOstreamOption::BINARY, streamOpt.version()),
-        // Append on sub-ranks
-        (isMaster ? IOstreamOption::NON_APPEND : IOstreamOption::APPEND)
+        IOstreamOption(IOstream::BINARY, streamOpt.version()),  // UNCOMPRESSED
+        !isMaster  // append slaves
     );
 
     if (!os.good())
@@ -258,17 +253,6 @@ bool Foam::fileOperations::collatedFileOperation::appendObject
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-void Foam::fileOperations::collatedFileOperation::init(bool verbose)
-{
-    verbose = (verbose && Foam::infoDetailLevel > 0);
-
-    if (verbose)
-    {
-        this->printBanner(ioRanks_.size());
-    }
-}
-
-
 Foam::fileOperations::collatedFileOperation::collatedFileOperation
 (
     bool verbose
@@ -287,12 +271,15 @@ Foam::fileOperations::collatedFileOperation::collatedFileOperation
         ),
         false
     ),
-    managedComm_(comm_),
+    myComm_(comm_),
     writer_(mag(maxThreadFileBufferSize), comm_),
     nProcs_(Pstream::nProcs()),
     ioRanks_(ioRanks())
 {
-    init(verbose);
+    if (verbose && Foam::infoDetailLevel > 0)
+    {
+        this->printBanner(ioRanks_.size());
+    }
 }
 
 
@@ -305,12 +292,15 @@ Foam::fileOperations::collatedFileOperation::collatedFileOperation
 )
 :
     masterUncollatedFileOperation(comm, false),
-    managedComm_(-1),  // Externally managed
+    myComm_(-1),
     writer_(mag(maxThreadFileBufferSize), comm),
     nProcs_(Pstream::nProcs()),
     ioRanks_(ioRanks)
 {
-    init(verbose);
+    if (verbose && Foam::infoDetailLevel > 0)
+    {
+        this->printBanner(ioRanks_.size());
+    }
 }
 
 
@@ -321,9 +311,9 @@ Foam::fileOperations::collatedFileOperation::~collatedFileOperation()
     // Wait for any outstanding file operations
     flush();
 
-    if (UPstream::isUserComm(managedComm_))
+    if (myComm_ != -1 && myComm_ != UPstream::worldComm)
     {
-        UPstream::freeCommunicator(managedComm_);
+        UPstream::freeCommunicator(myComm_);
     }
 }
 
@@ -386,12 +376,11 @@ bool Foam::fileOperations::collatedFileOperation::writeObject
                 << endl;
         }
 
-        // Note: currently still NON_ATOMIC (Dec-2022)
         masterOFstream os
         (
             pathName,
             streamOpt,
-            IOstreamOption::NON_APPEND,
+            false,  // append=false
             valid
         );
 
@@ -430,12 +419,11 @@ bool Foam::fileOperations::collatedFileOperation::writeObject
                     << endl;
             }
 
-            // Note: currently still NON_ATOMIC (Dec-2022)
             masterOFstream os
             (
                 pathName,
                 streamOpt,
-                IOstreamOption::NON_APPEND,
+                false,  // append=false
                 valid
             );
 
@@ -488,7 +476,6 @@ bool Foam::fileOperations::collatedFileOperation::writeObject
                 writer_.waitAll();
             }
 
-            // Note: currently still NON_ATOMIC (Dec-2022)
             threadedCollatedOFstream os
             (
                 writer_,

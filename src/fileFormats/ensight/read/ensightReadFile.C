@@ -27,64 +27,7 @@ License
 
 #include "ensightReadFile.H"
 
-// * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
-
-Foam::IOstreamOption::streamFormat
-Foam::ensightReadFile::detectBinaryHeader(const fileName& pathname)
-{
-    IOstreamOption::streamFormat fmt(IOstreamOption::BINARY);
-
-    // Detect BINARY vs ASCII by testing for initial "(C|Fortran) Binary"
-    {
-        IFstream ifs(pathname, IOstreamOption::BINARY);
-
-        if (!ifs.good())
-        {
-            FatalErrorInFunction
-                << "Cannot read file " << ifs.name() << nl
-                << exit(FatalError);
-        }
-
-        istream& iss = ifs.stdStream();
-
-        // Binary string is *exactly* 80 characters
-        string buf(size_t(80), '\0');
-        iss.read(&buf[0], 80);
-
-        if (!iss)
-        {
-            // Truncated?
-            buf.erase(iss.gcount());
-        }
-
-        // Truncate at the first embedded '\0'
-        const auto endp = buf.find('\0');
-        if (endp != std::string::npos)
-        {
-            buf.erase(endp);
-        }
-
-        // ASCII if it does not contain "C Binary"
-        if (!buf.contains("Binary") && !buf.contains("binary"))
-        {
-            fmt = IOstreamOption::ASCII;
-        }
-    }
-
-    return fmt;
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-Foam::ensightReadFile::ensightReadFile
-(
-    const fileName& pathname
-)
-:
-    IFstream(pathname, ensightReadFile::detectBinaryHeader(pathname))
-{}
-
 
 Foam::ensightReadFile::ensightReadFile
 (
@@ -105,7 +48,6 @@ Foam::Istream& Foam::ensightReadFile::read
 )
 {
     stdStream().read(buf, count);
-    syncState();
     return *this;
 }
 
@@ -119,8 +61,6 @@ Foam::Istream& Foam::ensightReadFile::read(string& value)
         // Binary string is *exactly* 80 characters
         value.resize(80, '\0');
         iss.read(&value[0], 80);
-
-        syncState();
 
         if (!iss)
         {
@@ -172,7 +112,6 @@ Foam::Istream& Foam::ensightReadFile::read(label& value)
     else
     {
         stdStream() >> ivalue;
-        syncState();
     }
 
     value = ivalue;
@@ -180,27 +119,7 @@ Foam::Istream& Foam::ensightReadFile::read(label& value)
 }
 
 
-Foam::Istream& Foam::ensightReadFile::read(float& value)
-{
-    if (format() == IOstreamOption::BINARY)
-    {
-        read
-        (
-            reinterpret_cast<char*>(&value),
-            sizeof(value)
-        );
-    }
-    else
-    {
-        stdStream() >> value;
-        syncState();
-    }
-
-    return *this;
-}
-
-
-Foam::Istream& Foam::ensightReadFile::read(double& value)
+Foam::Istream& Foam::ensightReadFile::read(scalar& value)
 {
     float fvalue;
 
@@ -211,14 +130,14 @@ Foam::Istream& Foam::ensightReadFile::read(double& value)
             reinterpret_cast<char*>(&fvalue),
             sizeof(fvalue)
         );
+
+        value = fvalue;
     }
     else
     {
-        stdStream() >> fvalue;
-        syncState();
+        stdStream() >> value;
     }
 
-    value = fvalue;
     return *this;
 }
 

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -76,7 +76,9 @@ void thermalBaffleModel::init()
         nTotalEdges +=
             nLayers_*(rbm[patchi].nEdges() - rbm[patchi].nInternalEdges());
 
-        label nTotalFaces = 0;
+        reduce(nTotalEdges, sumOp<label>());
+
+        label nFaces = 0;
         forAll(rbm, patchi)
         {
             if (
@@ -88,23 +90,19 @@ void thermalBaffleModel::init()
                    )
                 )
             {
-                nTotalFaces += rbm[patchi].size();
+                nFaces += rbm[patchi].size();
             }
         }
+        reduce(nFaces, sumOp<label>());
 
-        oneD_ =
-        (
-            returnReduce(nTotalEdges, sumOp<label>())
-         == returnReduce(nTotalFaces, sumOp<label>())
-        );
-
-        if (oneD_)
+        if (nTotalEdges == nFaces)
         {
-            Info << "\nThe thermal baffle is 1D\n" << endl;
+            oneD_ = true;
+            Info << "\nThe thermal baffle is 1D \n" << endl;
         }
         else
         {
-            Info << "\nThe thermal baffle is 3D\n" << endl;
+            Info << "\nThe thermal baffle is 3D \n" << endl;
         }
 
         forAll(intCoupledPatchIDs_, i)

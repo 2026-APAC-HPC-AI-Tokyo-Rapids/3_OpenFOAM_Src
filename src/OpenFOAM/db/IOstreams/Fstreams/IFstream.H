@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_IFstream_H
-#define Foam_IFstream_H
+#ifndef IFstream_H
+#define IFstream_H
 
 #include "ISstream.H"
 #include "className.H"
@@ -64,21 +64,22 @@ public:
 
     // Constructors
 
-        //- Construct from pathname, default or specified stream options
+        //- Construct from pathname
         explicit IFstream
         (
             const fileName& pathname,
             IOstreamOption streamOpt = IOstreamOption()
         );
 
-        //- Construct from pathname and format
+        //- Construct from pathname, format (version)
         IFstream
         (
             const fileName& pathname,
-            IOstreamOption::streamFormat fmt
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
         )
         :
-            IFstream(pathname, IOstreamOption(fmt))
+            IFstream(pathname, IOstreamOption(fmt, ver))
         {}
 
 

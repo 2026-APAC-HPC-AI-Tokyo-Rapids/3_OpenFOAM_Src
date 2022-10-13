@@ -95,11 +95,11 @@ class triSurface
     // Demand Driven
 
         //- Edge-face addressing (sorted)
-        mutable std::unique_ptr<labelListList> sortedEdgeFacesPtr_;
+        mutable unique_ptr<labelListList> sortedEdgeFacesPtr_;
 
         //- Label of face that 'owns' edge
         //- i.e. e.vec() is righthanded walk along face
-        mutable std::unique_ptr<labelList> edgeOwnerPtr_;
+        mutable unique_ptr<labelList> edgeOwnerPtr_;
 
 
     // Private Member Functions

@@ -337,13 +337,14 @@ void Foam::cyclicACMIPolyPatch::resetAMI(const UList<point>& points) const
             Pout<< "patch:" << patch.name() << " size:" << patch.size()
                 << " non-overlap patch: " << patch.nonOverlapPatch().name()
                 << " size:" << patch.nonOverlapPatch().size()
-                << endl;
+                << " mask size:" << patch.srcMask().size() << endl;
         }
         {
             const cyclicACMIPolyPatch& patch = this->neighbPatch();
             Pout<< "patch:" << patch.name() << " size:" << patch.size()
                 << " non-overlap patch: " << patch.nonOverlapPatch().name()
                 << " size:" << patch.nonOverlapPatch().size()
+                << " mask size:" << patch.neighbPatch().tgtMask().size()
                 << endl;
         }
     }

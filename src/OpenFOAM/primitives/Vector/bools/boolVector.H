@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -40,8 +40,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_boolVector_H
-#define Foam_boolVector_H
+#ifndef boolVector_H
+#define boolVector_H
 
 #include "FixedList.H"
 
@@ -83,12 +83,6 @@ public:
         //- Move assignment
         boolVector& operator=(boolVector&&) = default;
 
-        //- The front() accessor (from FixedList) has no purpose
-        void front() = delete;
-
-        //- The back() accessor (from FixedList) has no purpose
-        void back() = delete;
-
 
     // Constructors
 
@@ -112,17 +106,17 @@ public:
         //- True if all components are set
         //
         //  \note Method name compatibility with bitSet
-        inline bool all() const noexcept;
+        inline bool all() const;
 
         //- True if any components are set
         //
         //  \note Method name compatibility with bitSet
-        inline bool any() const noexcept;
+        inline bool any() const;
 
         //- True if no components are set
         //
         //  \note Method name compatibility with bitSet
-        inline bool none() const noexcept;
+        inline bool none() const;
 
         //- Count number of items set.
         //  \param on can be set to false to count the number of unset bits
@@ -132,25 +126,25 @@ public:
         inline unsigned int count(const bool on=true) const;
 
 
-    // Component Access
+    // Access
 
         //- The x component
-        bool x() const noexcept { return get<0>(); }
+        inline bool x() const;
 
         //- The y component
-        bool y() const noexcept { return get<1>(); }
+        inline bool y() const;
 
         //- The z component
-        bool z() const noexcept { return get<2>(); }
+        inline bool z() const;
 
         //- The x component
-        bool& x() noexcept { return get<0>(); }
+        inline bool& x();
 
         //- The y component
-        bool& y() noexcept { return get<1>(); }
+        inline bool& y();
 
         //- The z component
-        bool& z() noexcept { return get<2>(); }
+        inline bool& z();
 
 
     // Edit

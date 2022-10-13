@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015-2016 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018,2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -119,8 +119,8 @@ void Foam::decompositionConstraints::preserveFaceZones::add
 
     if (decompositionConstraint::debug & 2)
     {
-        Info<< type() << " : unblocked "
-            << returnReduce(nUnblocked, sumOp<label>()) << " faces" << endl;
+        reduce(nUnblocked, sumOp<label>());
+        Info<< type() << " : unblocked " << nUnblocked << " faces" << endl;
     }
 
     syncTools::syncFaceList(mesh, blockedFace, andEqOp<bool>());
@@ -140,7 +140,7 @@ void Foam::decompositionConstraints::preserveFaceZones::apply
     // If the decomposition has not enforced the constraint do it over
     // here.
 
-    label nChanged = 0;
+    label nChanged;
 
     do
     {
@@ -188,13 +188,16 @@ void Foam::decompositionConstraints::preserveFaceZones::apply
             }
         }
 
+        reduce(nChanged, sumOp<label>());
+
         if (decompositionConstraint::debug & 2)
         {
-            Info<< type() << " : changed decomposition on "
-                << returnReduce(nChanged, sumOp<label>()) << " cells" << endl;
+            reduce(nChanged, sumOp<label>());
+            Info<< type() << " : changed decomposition on " << nChanged
+                << " cells" << endl;
         }
 
-    } while (returnReduceOr(nChanged));
+    } while (nChanged > 0);
 }
 
 

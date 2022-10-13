@@ -308,38 +308,30 @@ const Foam::IOobject* Foam::IOobjectList::cfindObject
     const word& objName
 ) const
 {
-    // Like HashPtrTable::get(), or lookup() with a nullptr
-    const IOobject* io = nullptr;
+    const_iterator iter = cfind(objName);
 
-    const const_iterator iter(cfind(objName));
-    if (iter.good())
+    if (iter.found())
     {
-        io = iter.val();
-    }
+        const IOobject* io = iter.val();
 
-    if (IOobject::debug)
-    {
-        if (io)
+        if (io->isHeaderClass<Type>())
         {
-            if (io->isHeaderClass<Type>())
+            if (IOobject::debug)
             {
                 InfoInFunction << "Found " << objName << endl;
             }
-            else
-            {
-                InfoInFunction << "Found " << objName
-                    << " with different type" << endl;
-            }
+
+            return io;
         }
-        else
+        else if (IOobject::debug)
         {
-            InfoInFunction << "Could not find " << objName << endl;
+            InfoInFunction
+                << "Found " << objName << " of different type" << endl;
         }
     }
-
-    if (io && io->isHeaderClass<Type>())
+    else if (IOobject::debug)
     {
-        return io;
+        InfoInFunction << "Could not find " << objName << endl;
     }
 
     return nullptr;

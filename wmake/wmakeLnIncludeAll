@@ -7,7 +7,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2011-2016 OpenFOAM Foundation
-#     Copyright (C) 2018-2022 OpenCFD Ltd.
+#     Copyright (C) 2018-2020 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -66,22 +66,19 @@ die()
 # Parallel operation requested
 nCores=0
 
-unset opt_force opt_update
+unset optForce optUpdate
 
 while [ "$#" -gt 0 ]
 do
     case "$1" in
-        ('') ;;
-        (- | --) shift; break ;;  # Stop option parsing
-
         -h | -help*)
             printHelp
             ;;
         -f | -force)
-            opt_force='-force'
+            optForce=true
             ;;
         -u | -update)
-            opt_update='-update'
+            optUpdate=true
             ;;
         -s | -silent | -quiet)
             export WM_QUIET=true
@@ -153,7 +150,7 @@ do
 
     find "$checkDir" -depth -name Make -type d -print | while read MakeDir
     do
-        topDir="${MakeDir%/Make}"   # trim /Make from the end
+        topDir=${MakeDir%/Make}    # trim /Make from the end
         if [ -d "$topDir" ]
         then
             if grep -qe '^ *LIB *=' "$MakeDir/files" 2>/dev/null
@@ -169,9 +166,9 @@ do
                         wait -n
                         joblist=($(jobs -p))
                     done
-                    wmakeLnInclude $opt_force $opt_update -- "$topDir" &
+                    wmakeLnInclude ${optForce:+-force} ${optUpdate:+-update} $topDir &
                 else
-                    wmakeLnInclude $opt_force $opt_update -- "$topDir"
+                    wmakeLnInclude ${optForce:+-force} ${optUpdate:+-update} $topDir
                 fi
             elif [ -d "$topDir/lnInclude" ]
             then

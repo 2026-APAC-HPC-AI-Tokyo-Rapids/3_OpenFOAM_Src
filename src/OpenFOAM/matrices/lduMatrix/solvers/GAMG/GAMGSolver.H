@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,11 +56,12 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_GAMGSolver_H
-#define Foam_GAMGSolver_H
+#ifndef GAMGSolver_H
+#define GAMGSolver_H
 
 #include "GAMGAgglomeration.H"
 #include "lduMatrix.H"
+#include "labelField.H"
 #include "primitiveFields.H"
 #include "LUscalarMatrix.H"
 
@@ -77,7 +78,9 @@ class GAMGSolver
 :
     public lduMatrix::solver
 {
-    // Private Data
+    // Private data
+
+        bool cacheAgglomeration_;
 
         //- Number of pre-smoothing sweeps
         label nPreSweeps_;
@@ -99,9 +102,6 @@ class GAMGSolver
 
         //- Number of smoothing sweeps on finest mesh
         label nFinestSweeps_;
-
-        //- Cache the agglomeration (default: true)
-        bool cacheAgglomeration_;
 
         //- Choose if the corrections should be interpolated after injection.
         //  By default corrections are not interpolated.

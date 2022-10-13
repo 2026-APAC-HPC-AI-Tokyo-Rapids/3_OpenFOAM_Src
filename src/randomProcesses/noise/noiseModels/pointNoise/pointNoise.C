@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -74,18 +74,9 @@ void pointNoise::processData
     const Function1Types::CSV<scalar>& data
 )
 {
-    if (!Pstream::master())
-    {
-        // Only ever called on master, report if we have odd logic...
-        WarningInFunction
-            << "Currently only to be called from master process..." << endl;
-        return;
-    }
+    Info<< "Reading data file " << data.fName() << endl;
 
-    Info<< "Reading data file: "
-        << fileObr_.time().relativePath(data.fName()) << endl;
-
-    const word fNameBase(data.fName().stem());
+    const word fNameBase(data.fName().nameLessExt());
 
     // Time and pressure history data
     scalarField t, p;
@@ -122,13 +113,19 @@ void pointNoise::processData
     // RMS pressure [Pa]
     if (writePrmsf_)
     {
-        auto filePtr = newFile(outDir/"Prms_f");
-        auto& os = filePtr();
+        graph g
+        (
+            "Prms(f)",
+            "f [Hz]",
+            "Prms(f) [Pa]",
+            f,
+            RMSmeanPf(p)
+        );
 
-        Info<< "    Writing " << os.name() << endl;
+        g.setXRange(fLower_, fUpper_);
 
-        writeFileHeader(os, "f [Hz]", "Prms(f) [Pa]");
-        writeFreqDataToFile(os, f, RMSmeanPf(p));
+        Info<< "    Creating graph for " << g.title() << endl;
+        g.write(outDir, graph::wordify(g.title()), graphFormat_);
     }
 
     // PSD [Pa^2/Hz]
@@ -136,42 +133,55 @@ void pointNoise::processData
 
     if (writePSDf_)
     {
-        auto filePtr = newFile(outDir/"PSD_f");
-        auto& os = filePtr();
+        graph g
+        (
+            "PSD(f)",
+            "f [Hz]",
+            "PSD(f) [PaPa_Hz]",
+            f,
+            PSDf
+        );
 
-        Info<< "    Writing " << os.relativeName() << endl;
+        g.setXRange(fLower_, fUpper_);
 
-        writeFileHeader(os, "f [Hz]", "PSD(f) [PaPa_Hz]");
-        writeFreqDataToFile(os, f, PSDf);
+        Info<< "    Creating graph for " << g.title() << endl;
+        g.write(outDir, graph::wordify(g.title()), graphFormat_);
     }
 
     // PSD [dB/Hz]
     if (writePSD_)
     {
-        auto filePtr = newFile(outDir/"PSD_dB_Hz_f");
-        auto& os = filePtr();
+        graph g
+        (
+            "PSD_dB_Hz(f)",
+            "f [Hz]",
+            "PSD(f) [dB_Hz]",
+            f,
+            PSD(PSDf)
+        );
 
-        Info<< "    Writing " << os.relativeName() << endl;
+        g.setXRange(fLower_, fUpper_);
 
-        writeFileHeader(os, "f [Hz]", "PSD(f) [dB_Hz]");
-        writeFreqDataToFile(os, f, PSD(PSDf));
+        Info<< "    Creating graph for " << g.title() << endl;
+        g.write(outDir, graph::wordify(g.title()), graphFormat_);
     }
 
     // SPL [dB]
     if (writeSPL_)
     {
-        auto filePtr = newFile(outDir/"SPL_dB_f");
-        auto& os = filePtr();
-
-        Info<< "    Writing " << os.relativeName() << endl;
-
-        writeFileHeader
+        graph g
         (
-            os,
+            "SPL_dB(f)",
             "f [Hz]",
-            "SPL(f) [" + weightingTypeNames_[SPLweighting_] + "]"
+            "SPL(f) [" + weightingTypeNames_[SPLweighting_] + "]",
+            f,
+            SPL(PSDf*deltaf, f)
         );
-        writeFreqDataToFile(os, f, SPL(PSDf*deltaf, f));
+
+        g.setXRange(fLower_, fUpper_);
+
+        Info<< "    Creating graph for " << g.title() << endl;
+        g.write(outDir, graph::wordify(g.title()), graphFormat_);
     }
 
     if (writeOctaves_)
@@ -195,38 +205,26 @@ void pointNoise::processData
         // Integrated PSD = P(rms)^2 [Pa^2]
         scalarField Prms13f(octaves(PSDf, f, octave13BandIDs));
 
-        auto filePtr = newFile(outDir/"SPL13_dB_fm");
-        auto& os = filePtr();
-
-        Info<< "    Writing " << os.relativeName() << endl;
-
-        writeFileHeader
+        graph g
         (
-            os,
+            "SPL13_dB(fm)",
             "fm [Hz]",
-            "SPL(fm) [" + weightingTypeNames_[SPLweighting_] + "]"
-        );
-        writeFreqDataToFile
-        (
-            os,
+            "SPL(fm) [" + weightingTypeNames_[SPLweighting_] + "]",
             octave13FreqCentre,
             SPL(Prms13f, octave13FreqCentre)
         );
+
+        Info<< "    Creating graph for " << g.title() << endl;
+        g.write(outDir, graph::wordify(g.title()), graphFormat_);
     }
 }
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-pointNoise::pointNoise
-(
-    const dictionary& dict,
-    const objectRegistry& obr,
-    const word& name,
-    const bool readFields
-)
+pointNoise::pointNoise(const dictionary& dict, const bool readFields)
 :
-    noiseModel(dict, obr, name, false)
+    noiseModel(dict, false)
 {
     if (readFields)
     {

@@ -81,7 +81,7 @@ void Foam::solidBodyFvGeometryScheme::setMeshMotionData()
             << endl;
 
         // Quick return if no points have moved
-        if (returnReduceAnd(changedPoints.none()))
+        if (returnReduce(changedPoints.none(), andOp<label>()))
         {
             return;
         }

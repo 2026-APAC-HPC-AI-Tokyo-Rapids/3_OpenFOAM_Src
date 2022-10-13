@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_masterOFstream_H
-#define Foam_masterOFstream_H
+#ifndef masterOFstream_H
+#define masterOFstream_H
 
 #include "StringStream.H"
 
@@ -55,19 +55,13 @@ class masterOFstream
 {
     // Private Data
 
-        //- The backend file name
         const fileName pathName_;
 
-        //- Atomic file creation (ignored with append)
-        const IOstreamOption::atomicType atomic_;
-
-        //- Output file compression
         const IOstreamOption::compressionType compression_;
 
-        //- Open file in append mode
-        const IOstreamOption::appendType append_;
+        const bool append_;
 
-        //- Should file be written (on this processor)
+        //- Should file be written
         const bool valid_;
 
 
@@ -92,32 +86,30 @@ public:
 
     // Constructors
 
-        //- Construct with specified atomic behaviour (with worldComm)
-        //- from pathname, stream option, optional append
-        masterOFstream
-        (
-            IOstreamOption::atomicType atomic,
-            const fileName& pathname,
-            IOstreamOption streamOpt = IOstreamOption(),
-            IOstreamOption::appendType append = IOstreamOption::NON_APPEND,
-            const bool valid = true
-        );
-
-        //- Construct (with worldComm)
-        //- from pathname, stream option, optional append
+        //- Construct from pathname and set stream status
         explicit masterOFstream
         (
             const fileName& pathname,
             IOstreamOption streamOpt = IOstreamOption(),
-            IOstreamOption::appendType append = IOstreamOption::NON_APPEND,
+            const bool append = false,
+            const bool valid = true
+        );
+
+        //- Construct from pathname, version and set stream status
+        masterOFstream
+        (
+            const fileName& pathname,
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion,
+            IOstreamOption::compressionType cmp = IOstreamOption::UNCOMPRESSED,
+            const bool append = false,
             const bool valid = true
         )
         :
             masterOFstream
             (
-                IOstreamOption::NON_ATOMIC,
                 pathname,
-                streamOpt,
+                IOstreamOption(fmt, ver, cmp),
                 append,
                 valid
             )

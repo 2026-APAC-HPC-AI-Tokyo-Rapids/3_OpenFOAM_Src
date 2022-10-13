@@ -54,12 +54,6 @@ inline bool Foam::fv::cellSetOption::inTimeLimits(const scalar timeValue) const
 }
 
 
-inline bool Foam::fv::cellSetOption::useSubMesh() const noexcept
-{
-    return selectionMode_ != selectionModeType::smAll;
-}
-
-
 inline Foam::fv::cellSetOption::selectionModeType
 Foam::fv::cellSetOption::selectionMode() const noexcept
 {
@@ -67,16 +61,9 @@ Foam::fv::cellSetOption::selectionMode() const noexcept
 }
 
 
-inline const Foam::wordRes&
-Foam::fv::cellSetOption::selectionNames() const noexcept
+inline bool Foam::fv::cellSetOption::useSubMesh() const noexcept
 {
-    return selectionNames_;
-}
-
-
-inline const Foam::wordRe& Foam::fv::cellSetOption::zoneName() const
-{
-    return (selectionNames_.empty() ? wordRe::null : selectionNames_.first());
+    return selectionMode_ != selectionModeType::smAll;
 }
 
 

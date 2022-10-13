@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -68,8 +68,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_thermalShellFvPatchScalarField_H
-#define Foam_thermalShellFvPatchScalarField_H
+#ifndef thermalShellFvPatchScalarField_H
+#define thermalShellFvPatchScalarField_H
 
 #include "autoPtr.H"
 #include "thermalShellModel.H"
@@ -90,16 +90,10 @@ class thermalShellFvPatchScalarField
 :
     public fixedValueFvPatchField<scalar>
 {
-    // Typedefs
-
-        //- The finite-area region model
-        typedef regionModels::thermalShellModel baffleType;
-
-
     // Private Data
 
-        //- The thermal baffle
-        autoPtr<baffleType> baffle_;
+        //- Thermal baffle
+        autoPtr<regionModels::thermalShellModel> baffle_;
 
         //- Dictionary
         dictionary dict_;

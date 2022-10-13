@@ -989,20 +989,23 @@ void Foam::faceCoupleInfo::findSlavesCoveringMaster
 )
 {
     // Construct octree from all mesh0 boundary faces
-
-    Random rndGen(123456);
+    labelList bndFaces
+    (
+        identity(mesh0.nBoundaryFaces(), mesh0.nInternalFaces())
+    );
 
     treeBoundBox overallBb(mesh0.points());
 
+    Random rndGen(123456);
+
     indexedOctree<treeDataFace> tree
     (
-        treeDataFace
+        treeDataFace    // all information needed to search faces
         (
+            false,                      // do not cache bb
             mesh0,
-            // boundary faces only
-            identity(mesh0.nBoundaryFaces(), mesh0.nInternalFaces())
+            bndFaces                    // boundary faces only
         ),
-
         overallBb.extend(rndGen, 1e-4), // overall search domain
         8,                              // maxLevel
         10,                             // leafsize
@@ -1036,7 +1039,7 @@ void Foam::faceCoupleInfo::findSlavesCoveringMaster
 
         if (nearInfo.hit())
         {
-            label mesh0Facei = tree.shapes().objectIndex(nearInfo.index());
+            label mesh0Facei = tree.shapes().faceLabels()[nearInfo.index()];
 
             // Check if points of f1 actually lie on top of mesh0 face
             // This is the bit that might fail since if f0 is severely warped

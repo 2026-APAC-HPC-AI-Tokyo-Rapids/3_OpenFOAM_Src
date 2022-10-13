@@ -74,7 +74,7 @@ public:
         fvSolution
         (
             const objectRegistry& obr,
-            IOobjectOption::readOption rOpt,
+            const IOobject::readOption rOpt,
             const word& dictName,
             const dictionary* fallback = nullptr
         )
@@ -100,7 +100,7 @@ public:
         fvSolution
         (
             const objectRegistry& obr,
-            IOobjectOption::readOption rOpt,
+            const IOobject::readOption rOpt,
             const dictionary* fallback = nullptr
         )
         :

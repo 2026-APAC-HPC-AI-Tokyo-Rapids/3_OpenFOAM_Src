@@ -34,8 +34,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_treeDataPrimitivePatch_H
-#define Foam_treeDataPrimitivePatch_H
+#ifndef treeDataPrimitivePatch_H
+#define treeDataPrimitivePatch_H
 
 #include "treeBoundBoxList.H"
 #include "volumeType.H"
@@ -45,7 +45,7 @@ SourceFiles
 namespace Foam
 {
 
-// Forward Declarations
+// Forward declaration of classes
 template<class Type> class indexedOctree;
 
 
@@ -65,7 +65,7 @@ class treeDataPrimitivePatch
 :
     public treeDataPrimitivePatchName
 {
-    // Private Data
+    // Private data
 
         //- Underlying geometry
         const PatchType& patch_;
@@ -81,9 +81,6 @@ class treeDataPrimitivePatch
 
 
     // Private Member Functions
-
-        //- Get face bounding box
-        inline treeBoundBox getBounds(const label patchFacei) const;
 
         //- Initialise all member data
         void update();
@@ -197,126 +194,71 @@ public:
     };
 
 
-
-    // Constructors (cachable versions)
+    // Constructors
 
         //- Construct from patch.
         treeDataPrimitivePatch
         (
             const bool cacheBb,
-            const PatchType& patch,
+            const PatchType&,
             const scalar planarTol
         );
 
 
-    // Constructors (non-caching)
-
-        //- Construct from patch.
-        treeDataPrimitivePatch(const PatchType& patch, const scalar planarTol)
-        :
-            treeDataPrimitivePatch(false, patch, planarTol)
-        {}
-
-
-    // Static Functions
-
-        //- Calculate and return bounding boxes for each patch face
-        static treeBoundBoxList boxes(const PatchType& patch);
-
-
     // Member Functions
 
-        //- Object dimension == 2 (face element)
-        int nDim() const noexcept { return 2; }
+        // Access
 
-        //- Return bounding box for the specified face indices
-        treeBoundBox bounds(const labelUList& indices) const;
+            label size() const
+            {
+                return patch_.size();
+            }
 
+            //- Representative point cloud for all shapes inside
+            //- (one point per shape)
+            pointField shapePoints() const;
 
-    // Access
-
-        //- The underlying patch
-        const PatchType& patch() const noexcept { return patch_; }
-
-        //TDB //- The subset of face ids to use
-        ///const labelList& faceLabels() const noexcept { labelList::null(); }
-
-        //- Use a subset of the patch
-        bool useSubset() const noexcept { return false; }
-
-        //- Is the patch empty (no faces)?
-        bool empty() const { return !patch_.size(); }
-
-        //- The patch size
-        label size() const { return patch_.size(); }
-
-        //- Map from shape index to original (non-subset) face label
-        label objectIndex(const label index) const noexcept { return index; }
-
-        //TBD //- Face at specified shape index
-        ///const typename PatchType::face_type&
-        ///operator[](label index) const { return patch_[index]; }
-
-        //- Representative point (face centre) at shape index
-        const point& centre(const label index) const
-        {
-            return patch_.faceCentres()[index];
-        }
-
-        //- Representative point cloud for contained shapes.
-        //- One point per shape, corresponding to the face centres.
-        tmp<pointField> centres() const
-        {
-            return patch_.faceCentres();
-        }
+            //- Return access to the underlying patch
+            const PatchType& patch() const
+            {
+                return patch_;
+            }
 
 
-    // Search
+        // Search
 
-        //- Get type (inside,outside,mixed,unknown) of point w.r.t. surface.
-        //  Only makes sense for closed surfaces.
-        volumeType getVolumeType
-        (
-            const indexedOctree<treeDataPrimitivePatch<PatchType>>&,
-            const point&
-        ) const;
+            //- Get type (inside,outside,mixed,unknown) of point w.r.t. surface.
+            //  Only makes sense for closed surfaces.
+            volumeType getVolumeType
+            (
+                const indexedOctree<treeDataPrimitivePatch<PatchType>>&,
+                const point&
+            ) const;
 
-        //- Does shape at index overlap searchBox
-        bool overlaps
-        (
-            const label index,
-            const treeBoundBox& searchBox
-        ) const;
+            //- Does shape at index overlap bb
+            bool overlaps
+            (
+                const label index,
+                const treeBoundBox& sampleBb
+            ) const;
 
-        //- Does shape at index overlap sphere
-        bool overlaps
-        (
-            const label index,
-            const point& centre,
-            const scalar radiusSqr
-        ) const;
+            //- Does shape at index overlap sphere
+            bool overlaps
+            (
+                const label index,
+                const point& centre,
+                const scalar radiusSqr
+            ) const;
 
-        //- Helper: find intersection of line with shapes
-        static bool findIntersection
-        (
-            const indexedOctree<treeDataPrimitivePatch<PatchType>>& tree,
-            const label index,
-            const point& start,
-            const point& end,
-            point& intersectionPoint
-        );
-
-        //- Calculates nearest (to sample) point in shape.
-        //  Returns actual point and distance (squared)
-        void findNearest
-        (
-            const labelUList& indices,
-            const point& sample,
-
-            scalar& nearestDistSqr,
-            label& nearestIndex,
-            point& nearestPoint
-        ) const;
+            //- Helper: find intersection of line with shapes
+            static bool findIntersection
+            (
+                const indexedOctree<treeDataPrimitivePatch<PatchType>>& tree,
+                const label index,
+                const point& start,
+                const point& end,
+                point& intersectionPoint
+            );
 };
 
 

@@ -3,9 +3,8 @@
 SUFFIXES += .Cver
 
 # Update strings in C++ file and in META-INFO files
-# place intermediate generated file into the build directory
 Cvertoo = \
-    $(WM_SCRIPTS)/wmake-build-info -update -filter $< > $(@D)/$(<F).cc; \
-    $(CC) $(c++FLAGS) -c $(@D)/$(<F).cc -o $@
+    $(WM_SCRIPTS)/wmake-build-info -update -filter $< > $(@D)/$(<F).C; \
+    $(CC) $(c++FLAGS) -c $(@D)/$(<F).C -o $@
 
 #------------------------------------------------------------------------------

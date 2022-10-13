@@ -5,5 +5,3 @@
 
     const bool momentumPredictor =
         simple.getOrDefault("momentumPredictor", true);
-
-    simple.readIfPresent("frozenFlow", frozenFlowFluid[i]);

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,11 +37,10 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_zeroFieldField_H
-#define Foam_zeroFieldField_H
+#ifndef zeroFieldField_H
+#define zeroFieldField_H
 
 #include "zeroField.H"
-#include "Pair.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -66,16 +65,9 @@ public:
 
     // Member Operators
 
-        //- Return the field
         zeroField operator[](const label) const noexcept
         {
             return zeroField{};
-        }
-
-        //- Return the field element
-        zero operator[](const labelPair&) const noexcept
-        {
-            return zero{};
         }
 };
 

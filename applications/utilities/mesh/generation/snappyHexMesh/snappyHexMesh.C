@@ -416,12 +416,10 @@ void extractSurface
 
     // Allocate zone/patch for all patches
     HashTable<label> compactZoneID(1024);
-    if (Pstream::master())
+    forAllConstIters(patchSize, iter)
     {
-        forAllConstIters(patchSize, iter)
-        {
-            compactZoneID.insert(iter.key(), compactZoneID.size());
-        }
+        label sz = compactZoneID.size();
+        compactZoneID.insert(iter.key(), sz);
     }
     Pstream::broadcast(compactZoneID);
 
@@ -433,7 +431,7 @@ void extractSurface
         label patchi = bMesh.findPatchID(iter.key());
         if (patchi != -1)
         {
-            patchToCompactZone[patchi] = iter.val();
+            patchToCompactZone[patchi] = iter();
         }
     }
 
@@ -618,7 +616,7 @@ scalar getMergeDistance
         << endl;
 
     // check writing tolerance
-    if (mesh.time().writeFormat() == IOstreamOption::ASCII && !dryRun)
+    if (mesh.time().writeFormat() == IOstream::ASCII && !dryRun)
     {
         const scalar writeTol = std::pow
         (
@@ -665,7 +663,7 @@ void removeZeroSizedPatches(fvMesh& mesh)
             if
             (
                 isA<coupledPolyPatch>(pp)
-             || returnReduceOr(pp.size())
+             || returnReduce(pp.size(), sumOp<label>())
             )
             {
                 // Coupled (and unknown size) or uncoupled and used
@@ -1344,17 +1342,6 @@ int main(int argc, char *argv[])
     const snapParameters snapParams(snapDict, dryRun);
 
 
-    Info<< "Setting refinement level of surface to be consistent"
-        << " with curvature." << endl;
-    surfaces.setCurvatureMinLevelFields
-    (
-        refineParams.curvature(),
-        meshRefiner.meshCutter().level0EdgeLength()
-    );
-    Info<< "Checked curvature refinement in = "
-        << mesh.time().cpuTimeIncrement() << " s" << nl << endl;
-
-
 
     // Add all the cellZones and faceZones
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1891,8 +1878,11 @@ int main(int argc, char *argv[])
         );
 
         // Use the maxLocalCells from the refinement parameters
-        const bool preBalance =
-            returnReduceOr(mesh.nCells() >= refineParams.maxLocalCells());
+        bool preBalance = returnReduce
+        (
+            (mesh.nCells() >= refineParams.maxLocalCells()),
+            orOp<bool>()
+        );
 
 
         if (!overwrite && !debugLevel)

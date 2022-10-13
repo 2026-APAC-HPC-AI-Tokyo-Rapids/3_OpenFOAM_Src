@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2010-2018 Bernhard Gschaider
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -47,7 +47,7 @@ Foam::exprValuePointPatchField<Type>::exprValuePointPatchField
     (
         fvPatch::lookupPatch
         (
-            refCast<const facePointPatch>(this->patch()).patch()
+            dynamicCast<const facePointPatch>(this->patch()).patch()
         )
     )
 {}
@@ -69,7 +69,7 @@ Foam::exprValuePointPatchField<Type>::exprValuePointPatchField
     (
         fvPatch::lookupPatch
         (
-            refCast<const facePointPatch>(this->patch()).patch()
+            dynamicCast<const facePointPatch>(this->patch()).patch()
         ),
         rhs.driver_,
         dict_
@@ -85,7 +85,7 @@ Foam::exprValuePointPatchField<Type>::exprValuePointPatchField
     const dictionary& dict
 )
 :
-    parent_bctype(p, iF),  // bypass dictionary constructor
+    parent_bctype(p, iF),
     expressions::patchExprFieldBase
     (
         dict,
@@ -110,7 +110,7 @@ Foam::exprValuePointPatchField<Type>::exprValuePointPatchField
     (
         fvPatch::lookupPatch
         (
-            refCast<const facePointPatch>(this->patch()).patch()
+            dynamicCast<const facePointPatch>(this->patch()).patch()
         ),
         dict_
     )
@@ -123,20 +123,23 @@ Foam::exprValuePointPatchField<Type>::exprValuePointPatchField
             << exit(FatalIOError);
     }
 
+
     driver_.readDict(dict_);
 
-    const auto* hasValue = dict.findEntry("value", keyType::LITERAL);
-
-    if (hasValue)
+    if (dict.found("value"))
     {
-        Field<Type>::assign(*hasValue, p.size());
+        Field<Type>::operator=
+        (
+            Field<Type>("value", dict, p.size())
+        );
     }
     else
     {
-        // Note: valuePointPatchField defaults to Zero
-        // but internalField might be better
-
-        Field<Type>::operator=(Zero);
+        WarningInFunction
+            << "No value defined for "
+            << this->internalField().name()
+            << " on " << this->patch().name()
+            << endl;
     }
 
     if (this->evalOnConstruct_)
@@ -161,7 +164,7 @@ Foam::exprValuePointPatchField<Type>::exprValuePointPatchField
     (
         fvPatch::lookupPatch
         (
-            refCast<const facePointPatch>(this->patch()).patch()
+            dynamicCast<const facePointPatch>(this->patch()).patch()
         ),
         rhs.driver_,
         dict_
@@ -182,7 +185,7 @@ Foam::exprValuePointPatchField<Type>::exprValuePointPatchField
     (
         fvPatch::lookupPatch
         (
-            refCast<const facePointPatch>(this->patch()).patch()
+            dynamicCast<const facePointPatch>(this->patch()).patch()
         ),
         rhs.driver_,
         dict_

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -88,7 +88,7 @@ Foam::functionObjects::wallBoundedStreamLine::findNearestTet
                 const scalar d2 = nearInfo.distance();
                 if (d2 < minDistSqr)
                 {
-                    nearestPt = nearInfo.point();
+                    nearestPt = nearInfo.rawPoint();
                     minDistSqr = d2;
                     minFacei = facei;
                     minTetPti = i-1;
@@ -231,13 +231,23 @@ void Foam::functionObjects::wallBoundedStreamLine::track()
     Log << type() << " : seeded " << nSeeds << " particles." << endl;
 
 
-    // Field interpolators
+
+    // Read or lookup fields
+    PtrList<volScalarField> vsFlds;
     PtrList<interpolation<scalar>> vsInterp;
+    PtrList<volVectorField> vvFlds;
     PtrList<interpolation<vector>> vvInterp;
 
-    refPtr<interpolation<vector>> UInterp
+    label UIndex = -1;
+
+    initInterpolations
     (
-        initInterpolations(nSeeds, vsInterp, vvInterp)
+        nSeeds,
+        UIndex,
+        vsFlds,
+        vsInterp,
+        vvFlds,
+        vvInterp
     );
 
     // Additional particle info
@@ -246,7 +256,7 @@ void Foam::functionObjects::wallBoundedStreamLine::track()
         particles,
         vsInterp,
         vvInterp,
-        UInterp.cref(), // velocity interpolator (possibly within vvInterp)
+        UIndex,         // index of U in vvInterp
         trackLength_,   // fixed track length
         isWallPatch,    // which faces are to follow
 

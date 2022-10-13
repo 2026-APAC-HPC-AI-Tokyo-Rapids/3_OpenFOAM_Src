@@ -82,34 +82,16 @@ private:
 
 public:
 
-    // Generated Methods
-
-        //- Copy construct
-        orientedType(const orientedType&) noexcept = default;
-
-        //- Copy assignment
-        orientedType& operator=(const orientedType&) noexcept = default;
-
-
     // Constructors
 
         //- Default construct as \c UNKNOWN
-        constexpr orientedType() noexcept
-        :
-            oriented_(UNKNOWN)
-        {}
+        orientedType() noexcept;
 
-        //- Implicit construct from enumeration
-        orientedType(orientedOption opt) noexcept
-        :
-            oriented_(opt)
-        {}
+        //- Copy construct
+        orientedType(const orientedType& ot) noexcept;
 
         //- Construct from bool
-        explicit constexpr orientedType(const bool isOriented) noexcept
-        :
-            oriented_(isOriented ? ORIENTED : UNORIENTED)
-        {}
+        explicit orientedType(const bool isOriented) noexcept;
 
         //- Construct from Istream
         explicit orientedType(Istream& is);
@@ -122,22 +104,16 @@ public:
         (
             const orientedType& ot1,
             const orientedType& ot2
-        ) noexcept;
-
-        //- Return the oriented flag
-        orientedOption oriented() const noexcept { return oriented_; }
+        );
 
         //- Return non-const reference to the oriented flag
-        orientedOption& oriented() noexcept { return oriented_; }
+        orientedOption& oriented() noexcept;
 
-        //- True if \c ORIENTED
-        bool is_oriented() const noexcept { return (oriented_ == ORIENTED); }
+        //- Return the oriented flag
+        orientedOption oriented() const noexcept;
 
         //- Set the oriented flag: on/off
-        void setOriented(bool on = true) noexcept
-        {
-            oriented_ = on ? ORIENTED : UNORIENTED;
-        }
+        void setOriented(const bool on = true) noexcept;
 
         //- Read the "oriented" state from dictionary
         void read(const dictionary& dict);
@@ -149,6 +125,14 @@ public:
 
     // Member Operators
 
+        //- True if type is \c ORIENTED
+        explicit operator bool() const noexcept
+        {
+            return (oriented_ == orientedOption::ORIENTED);
+        }
+
+        void operator=(const orientedType& ot);
+
         void operator+=(const orientedType& ot);
         void operator-=(const orientedType& ot);
         void operator*=(const orientedType& ot);
@@ -156,8 +140,8 @@ public:
         void operator*=(const scalar s);
         void operator/=(const scalar s);
 
-        //- Convert to bool. Same as is_oriented()
-        bool operator()() const noexcept { return is_oriented(); }
+        //- True if type is \c ORIENTED. Same as bool operator
+        bool operator()() const noexcept;
 
 
     // IOstream Operators

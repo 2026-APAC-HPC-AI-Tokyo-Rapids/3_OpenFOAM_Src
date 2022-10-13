@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -205,43 +205,34 @@ label addPatch(polyMesh& mesh, const word& patchName)
     {
         const polyBoundaryMesh& patches = mesh.boundaryMesh();
 
-        polyPatchList newPatches(patches.size() + 1);
-
-        label nPatches = 0;
+        List<polyPatch*> newPatches(patches.size() + 1);
 
         // Add empty patch as 0th entry (Note: only since subsetMesh wants this)
         patchi = 0;
-        {
-            newPatches.set
-            (
-                nPatches,
-                new emptyPolyPatch
-                (
-                    patchName,
-                    0,
-                    mesh.nInternalFaces(),
-                    nPatches,
-                    patches,
-                    emptyPolyPatch::typeName
-                )
-            );
-            ++nPatches;
-        }
 
-        for (const polyPatch& pp : patches)
-        {
-            newPatches.set
+        newPatches[patchi] =
+            new emptyPolyPatch
             (
-                nPatches,
+                Foam::word(patchName),
+                0,
+                mesh.nInternalFaces(),
+                patchi,
+                patches,
+                emptyPolyPatch::typeName
+            );
+
+        forAll(patches, i)
+        {
+            const polyPatch& pp = patches[i];
+
+            newPatches[i+1] =
                 pp.clone
                 (
                     patches,
-                    nPatches,
+                    i+1,
                     pp.size(),
                     pp.start()
-                )
-            );
-            ++nPatches;
+                ).ptr();
         }
 
         mesh.removeBoundary();

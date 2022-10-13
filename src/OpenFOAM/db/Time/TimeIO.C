@@ -579,8 +579,7 @@ bool Foam::Time::writeObject
                     (
                         fileHandler().filePath
                         (
-                            objectRegistry::path(previousWriteTimes_.pop()),
-                            false  // No .gz check (is directory)
+                            objectRegistry::path(previousWriteTimes_.pop())
                         )
                     );
                 }

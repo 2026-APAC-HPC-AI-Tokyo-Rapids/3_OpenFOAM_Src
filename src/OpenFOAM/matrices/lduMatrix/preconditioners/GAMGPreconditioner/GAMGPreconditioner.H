@@ -61,8 +61,7 @@ class GAMGPreconditioner
     public lduMatrix::preconditioner
 {
 protected:
-
-    // Protected Data
+    // Protected data
 
         //- Number of V-cycles to perform
         label nVcycles_;
@@ -87,7 +86,7 @@ public:
 
 
     //- Destructor
-    virtual ~GAMGPreconditioner() = default;
+    virtual ~GAMGPreconditioner();
 
 
     // Member Functions

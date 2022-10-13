@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -180,7 +180,7 @@ Foam::pointIndexHit Foam::searchableCylinder::findNearest
         }
     }
 
-    if (info.point().distSqr(sample) < nearestDistSqr)
+    if (magSqr(sample - info.rawPoint()) < nearestDistSqr)
     {
         info.setHit();
         info.setIndex(0);
@@ -417,18 +417,21 @@ void Foam::searchableCylinder::findLineAll
     // Check tNear, tFar
     if (tNear >= 0 && tNear <= magV)
     {
-        near.hitPoint(start+tNear*V);
+        near.setPoint(start+tNear*V);
+        near.setHit();
         near.setIndex(0);
 
         if (tFar <= magV)
         {
-            far.hitPoint(start+tFar*V);
+            far.setPoint(start+tFar*V);
+            far.setHit();
             far.setIndex(0);
         }
     }
     else if (tFar >= 0 && tFar <= magV)
     {
-        near.hitPoint(start+tFar*V);
+        near.setPoint(start+tFar*V);
+        near.setHit();
         near.setIndex(0);
     }
 }
@@ -661,7 +664,7 @@ void Foam::searchableCylinder::getNormal
     {
         if (info[i].hit())
         {
-            vector v(info[i].point() - point1_);
+            vector v(info[i].hitPoint() - point1_);
 
             // Decompose sample-point1 into normal and parallel component
             const scalar parallel = (v & unitDir_);

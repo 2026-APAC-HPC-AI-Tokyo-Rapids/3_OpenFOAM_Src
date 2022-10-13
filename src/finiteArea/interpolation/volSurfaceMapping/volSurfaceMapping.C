@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 Wikki Ltd
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -24,391 +24,141 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
-\*---------------------------------------------------------------------------*/
+\*----------------------------------------------------------------------------*/
 
 #include "volSurfaceMapping.H"
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template<class Type>
-void Foam::volSurfaceMapping::mapToSurface
+Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapToSurface
 (
-    const GeometricBoundaryField<Type, fvPatchField, volMesh>& bfld,
-    Field<Type>& result
+    const GeometricBoundaryField<Type, fvPatchField, volMesh>& df
 ) const
 {
-    // The polyPatch/local-face for each of the faceLabels
-    const List<labelPair>& patchFaces = mesh_.whichPatchFaces();
+    // Grab labels for all faces in faMesh
+    const labelList& faceLabels = mesh_.faceLabels();
 
-    // FULLDEBUG: checkSize ?
-    // or simply result.resize(mesh_.nFaces());
+    auto tresult = tmp<Field<Type>>::New(faceLabels.size(), Zero);
+    auto& result = tresult.ref();
 
-    forAll(patchFaces, i)
+    // Get reference to volume mesh
+    const polyMesh& pMesh = mesh_();
+    const polyBoundaryMesh& bm = pMesh.boundaryMesh();
+
+    label patchID, faceID;
+
+    // Grab droplet cloud source by identifying patch and face
+    forAll(faceLabels, i)
     {
-        const labelPair& patchAndFace = patchFaces[i];
-
-        if (patchAndFace.first() >= 0)
+        // Escape if face is beyond active faces, eg belongs to a face zone
+        if (faceLabels[i] < pMesh.nFaces())
         {
-            result[i] = bfld[patchAndFace];
+            patchID = bm.whichPatch(faceLabels[i]);
+            faceID = bm[patchID].whichFace(faceLabels[i]);
+
+            result[i] = df[patchID][faceID];
         }
     }
-}
 
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapToSurface
-(
-    const GeometricBoundaryField<Type, fvPatchField, volMesh>& bfld
-) const
-{
-    auto tresult = tmp<Field<Type>>::New(mesh_.nFaces(), Zero);
-    mapToSurface(bfld, tresult.ref());
     return tresult;
 }
 
 
 template<class Type>
-void Foam::volSurfaceMapping::mapToSurface
-(
-    const GeometricField<Type, fvPatchField, volMesh>& vfld,
-    Field<Type>& result
-) const
-{
-    mapToSurface(vfld.boundaryField(), result);
-}
-
-
-template<class Type>
-void Foam::volSurfaceMapping::mapToSurface
-(
-    const tmp<GeometricField<Type, fvPatchField, volMesh>>& tvf,
-    Field<Type>& result
-) const
-{
-    mapToSurface(tvf().boundaryField(), result);
-    tvf.clear();
-}
-
-
-template<class Type>
 Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapToSurface
 (
-    const GeometricField<Type, fvPatchField, volMesh>& vfld
+    const Field<Type>& f
 ) const
 {
-    return mapToSurface(vfld.boundaryField());
-}
+    const labelList& faceLabels = mesh_.faceLabels();
 
+    auto tresult = tmp<Field<Type>>::New(faceLabels.size(), Zero);
+    auto& result = tresult.ref();
 
-template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapToSurface
-(
-    const tmp<GeometricField<Type, fvPatchField, volMesh>>& tvf
-) const
-{
-    tmp<Field<Type>> tresult(mapToSurface(tvf().boundaryField()));
-    tvf.clear();
-    return tresult;
-}
+    const polyMesh& pMesh = mesh_();
+    const polyBoundaryMesh& bm = pMesh.boundaryMesh();
+    label patchID, faceID;
 
-
-template<class Type>
-void Foam::volSurfaceMapping::mapToSurface
-(
-    const GeometricField<Type, fvsPatchField, surfaceMesh>& fld,
-    Field<Type>& result
-) const
-{
-    const auto& bfld = fld.boundaryField();
-
-    // The polyPatch/local-face for each of the faceLabels
-    const List<labelPair>& patchFaces = mesh_.whichPatchFaces();
-
-    // FULLDEBUG: checkSize ?
-    // or simply result.resize(mesh_.nFaces());
-
-    forAll(patchFaces, i)
+    forAll(faceLabels, i)
     {
-        const labelPair& patchAndFace = patchFaces[i];
+        if (faceLabels[i] < pMesh.nFaces())
+        {
+            patchID = bm.whichPatch(faceLabels[i]);
+            faceID = bm[patchID].whichFace(faceLabels[i]);
 
-        if (patchAndFace.first() >= 0)
-        {
-            // Value from boundary
-            result[i] = bfld[patchAndFace];
-        }
-        else if (patchAndFace.second() >= 0)
-        {
-            // Value from internal
-            result[i] = fld[patchAndFace.second()];
+            result[i] = f[faceID];
         }
     }
-}
 
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapToSurface
-(
-    const GeometricField<Type, fvsPatchField, surfaceMesh>& fld
-) const
-{
-    auto tresult = tmp<Field<Type>>::New(mesh_.nFaces(), Zero);
-    mapToSurface(fld, tresult.ref());
     return tresult;
-}
-
-
-template<class Type>
-void Foam::volSurfaceMapping::mapToSurface
-(
-    const tmp<GeometricField<Type, fvsPatchField, surfaceMesh>>& tsf,
-    Field<Type>& result
-) const
-{
-    mapToSurface(tsf(), result);
-    tsf.clear();
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapToSurface
-(
-    const tmp<GeometricField<Type, fvsPatchField, surfaceMesh>>& tsf
-) const
-{
-    tmp<Field<Type>> tresult(mapToSurface(tsf()));
-    tsf.clear();
-    return tresult;
-}
-
-
-template<class Type>
-void Foam::volSurfaceMapping::mapToSurface
-(
-    const UPtrList<Field<Type>>& patchFields,
-    Field<Type>& result
-) const
-{
-    // The polyPatch/local-face for each of the faceLabels
-    const List<labelPair>& patchFaces = mesh_.whichPatchFaces();
-
-    // FULLDEBUG: checkSize ?
-    // or simply result.resize(mesh_.nFaces());
-
-    forAll(patchFaces, i)
-    {
-        const label patchi = patchFaces[i].first();
-        const label facei = patchFaces[i].second();
-
-        const auto* pfld = patchFields.get(patchi);
-
-        if (pfld)
-        {
-            result[i] = (*pfld)[facei];
-        }
-    }
-}
-
-
-template<class Type>
-void Foam::volSurfaceMapping::mapToSurface
-(
-    const PtrMap<Field<Type>>& patchFields,
-    Field<Type>& result
-) const
-{
-    // The polyPatch/local-face for each of the faceLabels
-    const List<labelPair>& patchFaces = mesh_.whichPatchFaces();
-
-    // FULLDEBUG: checkSize ?
-    // or simply result.resize(mesh_.nFaces());
-
-    forAll(patchFaces, i)
-    {
-        const label patchi = patchFaces[i].first();
-        const label facei = patchFaces[i].second();
-
-        const auto* pfld = patchFields.get(patchi);
-
-        if (pfld)
-        {
-            result[i] = (*pfld)[facei];
-        }
-    }
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapToSurface
-(
-    const UPtrList<Field<Type>>& patchFields
-) const
-{
-    auto tresult = tmp<Field<Type>>::New(mesh_.nFaces(), Zero);
-    mapToSurface(patchFields, tresult.ref());
-    return tresult;
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapToSurface
-(
-    const PtrMap<Field<Type>>& patchFields
-) const
-{
-    auto tresult = tmp<Field<Type>>::New(mesh_.nFaces(), Zero);
-    mapToSurface(patchFields, tresult.ref());
-    return tresult;
-}
-
-
-template<class Type>
-void Foam::volSurfaceMapping::mapInternalToSurface
-(
-    const GeometricBoundaryField<Type, fvPatchField, volMesh>& bfld,
-    Field<Type>& result
-) const
-{
-    PtrList<Field<Type>> patchFields;
-
-    // All referenced polyPatches (sorted order)
-    const labelList& patches = mesh_.whichPolyPatches();
-
-    if (!patches.empty())
-    {
-        // maxPolyPatch+1
-        patchFields.resize(patches.last()+1);
-    }
-
-    // Populate patchInternalField
-    for (const label patchi : patches)
-    {
-        patchFields.set(patchi, bfld[patchi].patchInternalField());
-    }
-
-    mapToSurface(patchFields, result);
 }
 
 
 template<class Type>
 Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapInternalToSurface
 (
-    const GeometricBoundaryField<Type, fvPatchField, volMesh>& bfld
+    const GeometricBoundaryField<Type, fvPatchField, volMesh>& df
 ) const
 {
-    auto tresult = tmp<Field<Type>>::New(mesh_.nFaces(), Zero);
+    // Grab labels for all faces in faMesh
+    const labelList& faceLabels = mesh_.faceLabels();
 
-    mapInternalToSurface(bfld, tresult.ref());
+    auto tresult = tmp<Field<Type>>::New(faceLabels.size(), Zero);
+    auto& result = tresult.ref();
 
-    return tresult;
-}
+    // Get reference to volume mesh
+    const polyMesh& pMesh = mesh_();
+    const polyBoundaryMesh& bm = pMesh.boundaryMesh();
 
+    label patchID, faceID;
 
-template<class Type>
-void Foam::volSurfaceMapping::mapInternalToSurface
-(
-    const GeometricField<Type, fvPatchField, volMesh>& vf,
-    Field<Type>& result
-) const
-{
-    mapInternalToSurface(vf.boundaryField(), result);
-}
-
-
-template<class Type>
-void Foam::volSurfaceMapping::mapInternalToSurface
-(
-    const tmp<GeometricField<Type, fvPatchField, volMesh>>& tvf,
-    Field<Type>& result
-) const
-{
-    mapInternalToSurface(tvf().boundaryField(), result);
-    tvf.clear();
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapInternalToSurface
-(
-    const GeometricField<Type, fvPatchField, volMesh>& vfld
-) const
-{
-    return mapInternalToSurface(vfld.boundaryField());
-}
-
-
-template<class Type>
-Foam::tmp<Foam::Field<Type>> Foam::volSurfaceMapping::mapInternalToSurface
-(
-    const tmp<GeometricField<Type, fvPatchField, volMesh>>& tvf
-) const
-{
-    tmp<Field<Type>> tresult(mapInternalToSurface(tvf().boundaryField()));
-    tvf.clear();
-    return tresult;
-}
-
-
-template<class Type>
-void Foam::volSurfaceMapping::mapToVolume
-(
-    const DimensionedField<Type, areaMesh>& af,
-    GeometricBoundaryField<Type, fvPatchField, volMesh>& dest,
-    const label destPatchi
-) const
-{
-    // The polyPatch/local-face for each of the faceLabels
-    const List<labelPair>& patchFaces = mesh_.whichPatchFaces();
-
-    forAll(patchFaces, i)
+    // Grab droplet cloud source by identifying patch and face
+    forAll(faceLabels, i)
     {
-        const labelPair& patchAndFace = patchFaces[i];
-
-        if
-        (
-            patchAndFace.first() >= 0
-         && (patchAndFace.first() == destPatchi || destPatchi < 0)
-        )
+        // Escape if face is beyond active faces, eg belongs to a face zone
+        if (faceLabels[i] < pMesh.nFaces())
         {
-            dest[patchAndFace] = af[i];
+            patchID = bm.whichPatch(faceLabels[i]);
+            faceID = bm[patchID].whichFace(faceLabels[i]);
+
+            result[i] = df[patchID].patchInternalField()()[faceID];
         }
     }
+
+    return tresult;
 }
 
 
 template<class Type>
 void Foam::volSurfaceMapping::mapToVolume
 (
-    const tmp<DimensionedField<Type, areaMesh>>& taf,
-    GeometricBoundaryField<Type, fvPatchField, volMesh>& dest,
-    const label destPatchi
+    const GeometricField<Type, faPatchField, areaMesh>& af,
+    GeometricBoundaryField<Type, fvPatchField, volMesh>& bf
 ) const
 {
-    mapToVolume(taf(), dest, destPatchi);
-    taf.clear();
-}
+    // Grab labels for all faces in faMesh
+    const labelList& faceLabels = mesh_.faceLabels();
 
+    // Get reference to volume mesh
+    const polyMesh& pMesh = mesh_();
+    const polyBoundaryMesh& bm = pMesh.boundaryMesh();
 
-template<class Type>
-void Foam::volSurfaceMapping::mapToVolume
-(
-    const DimensionedField<Type, areaMesh>& af,
-    GeometricField<Type, fvPatchField, volMesh>& dest,
-    const label destPatchi
-) const
-{
-    mapToVolume(af, dest.boundaryFieldRef(), destPatchi);
-}
+    label patchID, faceID;
 
+    const Field<Type>& afi = af.internalField();
 
-template<class Type>
-void Foam::volSurfaceMapping::mapToVolume
-(
-    const tmp<DimensionedField<Type, areaMesh>>& taf,
-    GeometricField<Type, fvPatchField, volMesh>& dest,
-    const label destPatchi
-) const
-{
-    mapToVolume(taf, dest.boundaryFieldRef(), destPatchi);
+    forAll(faceLabels, i)
+    {
+        // Escape if face is beyond active faces, eg belongs to a face zone
+        if (faceLabels[i] < pMesh.nFaces())
+        {
+            patchID = bm.whichPatch(faceLabels[i]);
+            faceID = bm[patchID].whichFace(faceLabels[i]);
+
+            bf[patchID][faceID] = afi[i];
+        }
+    }
 }
 
 
@@ -416,75 +166,50 @@ template<class Type>
 void Foam::volSurfaceMapping::mapToVolume
 (
     const tmp<GeometricField<Type, faPatchField, areaMesh>>& taf,
-    GeometricBoundaryField<Type, fvPatchField, volMesh>& dest,
-    const label destPatchi
+    GeometricBoundaryField<Type, fvPatchField, volMesh>& bf
 ) const
 {
-    mapToVolume(taf().internalField(), dest, destPatchi);
+    mapToVolume(taf(), bf);
+
     taf.clear();
 }
 
 
 template<class Type>
-void Foam::volSurfaceMapping::mapToVolume
+void Foam::volSurfaceMapping::mapToField
 (
-    const tmp<GeometricField<Type, faPatchField, areaMesh>>& taf,
-    GeometricField<Type, fvPatchField, volMesh>& dest,
-    const label destPatchi
+    const GeometricField<Type, faPatchField, areaMesh>& af,
+    Field<Type>& f
 ) const
 {
-    mapToVolume(taf().internalField(), dest.boundaryFieldRef(), destPatchi);
-    taf.clear();
+    const Field<Type>& afi = af.internalField();
+
+    mapToField(afi, f);
 }
 
 
 template<class Type>
-void Foam::volSurfaceMapping::mapToVolumePatch
+void Foam::volSurfaceMapping::mapToField
 (
-    const DimensionedField<Type, areaMesh>& af,
-    Field<Type>& dest,
-    const label destPatchi
+    const Field<Type>& af,
+    Field<Type>& f
 ) const
 {
-    // The polyPatch/local-face for each of the faceLabels
-    const List<labelPair>& patchFaces = mesh_.whichPatchFaces();
+    const labelList& faceLabels = mesh_.faceLabels();
 
-    forAll(patchFaces, i)
+    const polyMesh& pMesh = mesh_();
+    const polyBoundaryMesh& bm = pMesh.boundaryMesh();
+    label patchID, faceID;
+
+    forAll(faceLabels, i)
     {
-        const label patchi = patchFaces[i].first();
-        const label facei = patchFaces[i].second();
-
-        if (patchi >= 0 && patchi == destPatchi)
+        if (faceLabels[i] < pMesh.nFaces())
         {
-            dest[facei] = af[i];
+            patchID = bm.whichPatch(faceLabels[i]);
+            faceID = bm[patchID].whichFace(faceLabels[i]);
+            f[faceID] = af[i];
         }
     }
-}
-
-
-template<class Type>
-void Foam::volSurfaceMapping::mapToVolumePatch
-(
-    const tmp<DimensionedField<Type, areaMesh>>& taf,
-    Field<Type>& dest,
-    const label destPatchi
-) const
-{
-    mapToVolumePatch(taf(), dest, destPatchi);
-    taf.clear();
-}
-
-
-template<class Type>
-void Foam::volSurfaceMapping::mapToVolumePatch
-(
-    const tmp<GeometricField<Type, faPatchField, areaMesh>>& taf,
-    Field<Type>& dest,
-    const label destPatchi
-) const
-{
-    mapToVolumePatch(taf().internalField(), dest, destPatchi);
-    taf.clear();
 }
 
 

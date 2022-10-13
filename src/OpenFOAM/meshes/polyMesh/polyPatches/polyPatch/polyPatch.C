@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -100,7 +100,7 @@ Foam::polyPatch::polyPatch
     faceCellsPtr_(nullptr),
     mePtr_(nullptr)
 {
-    if (constraintType(patchType))
+    if (!patchType.empty() && constraintType(patchType))
     {
         inGroups().appendUniq(patchType);
     }
@@ -156,7 +156,7 @@ Foam::polyPatch::polyPatch
     faceCellsPtr_(nullptr),
     mePtr_(nullptr)
 {
-    if (constraintType(patchType))
+    if (!patchType.empty() && constraintType(patchType))
     {
         inGroups().appendUniq(patchType);
     }
@@ -274,13 +274,12 @@ Foam::polyPatch::~polyPatch()
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-bool Foam::polyPatch::constraintType(const word& patchType)
+bool Foam::polyPatch::constraintType(const word& pt)
 {
     return
     (
-        !patchType.empty()
-     && pointPatchField<scalar>::patchConstructorTablePtr_
-     && pointPatchField<scalar>::patchConstructorTablePtr_->found(patchType)
+        pointPatchField<scalar>::pointPatchConstructorTablePtr_
+     && pointPatchField<scalar>::pointPatchConstructorTablePtr_->found(pt)
     );
 }
 
@@ -301,7 +300,7 @@ Foam::wordList Foam::polyPatch::constraintTypes()
         }
     }
 
-    cTypes.resize(i);
+    cTypes.setSize(i);
 
     return cTypes;
 }

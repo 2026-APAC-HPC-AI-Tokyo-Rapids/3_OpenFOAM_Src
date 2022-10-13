@@ -9,5 +9,3 @@
     (
         pimpleDict.getOrDefault<int>("nEnergyCorrectors", 1)
     );
-
-    pimpleDict.readIfPresent("frozenFlow", frozenFlowFluid[i]);

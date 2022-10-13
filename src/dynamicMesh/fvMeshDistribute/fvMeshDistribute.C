@@ -216,7 +216,7 @@ Foam::wordList Foam::fvMeshDistribute::mergeWordList(const wordList& procNames)
             }
         }
     }
-    Pstream::broadcast(mergedNames);
+    Pstream::scatter(mergedNames);
 
     return mergedNames;
 }
@@ -360,7 +360,7 @@ Foam::label Foam::fvMeshDistribute::findNonEmptyPatch() const
     if (nonEmptyPatchi == -1)
     {
         FatalErrorInFunction
-            << "Cannot find a patch which is not of type empty, mapped or"
+            << "Cannot find a patch which is neither of type empty nor"
             << " coupled in patches " << patches.names() << endl
             << "There has to be at least one such patch for"
             << " distribution to work" << abort(FatalError);
@@ -1796,21 +1796,17 @@ Foam::autoPtr<Foam::fvMesh> Foam::fvMeshDistribute::receiveMesh
     );
     fvMesh& domainMesh = *domainMeshPtr;
 
-    polyPatchList patches(patchEntries.size());
+    List<polyPatch*> patches(patchEntries.size());
 
     forAll(patchEntries, patchi)
     {
-        patches.set
+        patches[patchi] = polyPatch::New
         (
+            patchEntries[patchi].keyword(),
+            patchEntries[patchi].dict(),
             patchi,
-            polyPatch::New
-            (
-                patchEntries[patchi].keyword(),
-                patchEntries[patchi].dict(),
-                patchi,
-                domainMesh.boundaryMesh()
-            )
-        );
+            domainMesh.boundaryMesh()
+        ).ptr();
     }
     // Add patches; no parallel comms
     domainMesh.addFvPatches(patches, false);

@@ -114,6 +114,12 @@ public:
                 parcelType& p,
                 const label filmCelli
             ) const;
+
+
+        // I-O
+
+            //- Write surface film info to stream
+            virtual void info(Ostream& os);
 };
 
 

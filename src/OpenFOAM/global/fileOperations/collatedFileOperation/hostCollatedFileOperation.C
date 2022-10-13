@@ -123,17 +123,6 @@ Foam::labelList Foam::fileOperations::hostCollatedFileOperation::subRanks
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-void Foam::fileOperations::hostCollatedFileOperation::init(bool verbose)
-{
-    verbose = (verbose && Foam::infoDetailLevel > 0);
-
-    if (verbose)
-    {
-        this->printBanner(ioRanks_.size());
-    }
-}
-
-
 Foam::fileOperations::hostCollatedFileOperation::hostCollatedFileOperation
 (
     bool verbose
@@ -149,10 +138,12 @@ Foam::fileOperations::hostCollatedFileOperation::hostCollatedFileOperation
         (Pstream::parRun() ? labelList() : ioRanks()), // processor dirs
         typeName,
         false // verbose
-    ),
-    managedComm_(comm_)
+    )
 {
-    init(verbose);
+    if (verbose && Foam::infoDetailLevel > 0)
+    {
+        this->printBanner(ioRanks_.size());
+    }
 }
 
 
@@ -160,9 +151,9 @@ Foam::fileOperations::hostCollatedFileOperation::hostCollatedFileOperation
 
 Foam::fileOperations::hostCollatedFileOperation::~hostCollatedFileOperation()
 {
-    if (UPstream::isUserComm(managedComm_))
+    if (comm_ != -1 && comm_ != UPstream::worldComm)
     {
-        UPstream::freeCommunicator(managedComm_);
+        UPstream::freeCommunicator(comm_);
     }
 }
 

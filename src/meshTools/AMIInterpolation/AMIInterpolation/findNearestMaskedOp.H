@@ -52,7 +52,7 @@ public:
                 {
                     nearestDistSqr = distSqr;
                     minIndex = index;
-                    nearestPoint = nearHit.point();
+                    nearestPoint = nearHit.rawPoint();
                 }
             }
         }

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -37,8 +37,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_Switch_H
-#define Foam_Switch_H
+#ifndef Switch_H
+#define Switch_H
 
 #include "bool.H"
 #include "stdFoam.H"
@@ -69,7 +69,7 @@ class Switch;
 Istream& operator>>(Istream& is, Switch& sw);
 
 //- Write Switch to stream as its text value (eg, "true", "false")
-Ostream& operator<<(Ostream& is, const Switch sw);
+Ostream& operator<<(Ostream& is, const Switch& sw);
 
 /*---------------------------------------------------------------------------*\
                            Class Switch Declaration
@@ -130,19 +130,19 @@ public:
             value_(switchType::FALSE)
         {}
 
-        //- Implicit construct from enumerated value
+        //- Construct from enumerated value
         constexpr Switch(const switchType sw) noexcept
         :
             value_(sw)
         {}
 
-        //- Implicit construct from bool
+        //- Construct from bool
         constexpr Switch(const bool b) noexcept
         :
             value_(b ? switchType::TRUE : switchType::FALSE)
         {}
 
-        //- Implicit construct from int (treat integer as bool value)
+        //- Construct from int (treat integer as bool value)
         constexpr Switch(const int i) noexcept
         :
             value_(i ? switchType::TRUE : switchType::FALSE)

@@ -29,12 +29,9 @@ Class
 
 Description
     List of IOobjects with searching and retrieving facilities.
-    Implemented as a HashTable, so the various sorted methods should
-    be used if traversing in parallel.
 
 SourceFiles
     IOobjectList.C
-    IOobjectListI.H
     IOobjectListTemplates.C
 
 \*---------------------------------------------------------------------------*/
@@ -44,8 +41,8 @@ SourceFiles
 
 #include "HashPtrTable.H"
 #include "HashSet.H"
-#include "IOobject.H"
 #include "UPtrList.H"
+#include "IOobject.H"
 #include "wordRes.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -167,52 +164,27 @@ public:
 
     // Constructors
 
-        //- Default construct (empty) with default (128) table capacity
-        inline IOobjectList();
+        //- Construct null with default (128) table capacity
+        IOobjectList();
 
         //- Construct given initial table capacity
-        inline explicit IOobjectList(const label nObjects);
+        explicit IOobjectList(const label nObjects);
 
         //- Copy construct
-        inline IOobjectList(const IOobjectList& list);
+        IOobjectList(const IOobjectList& list);
 
         //- Move construct
-        inline IOobjectList(IOobjectList&& list);
+        IOobjectList(IOobjectList&& list);
 
-        //- Construct from registry, instance, io options
-        inline IOobjectList
-        (
-            const objectRegistry& db,
-            const fileName& instance,
-            IOobjectOption ioOpt
-        );
-
-        //- Construct from registry, instance, local, io options
+        //- Construct from objectRegistry and instance path
         IOobjectList
         (
             const objectRegistry& db,
             const fileName& instance,
-            const fileName& local,
-            IOobjectOption ioOpt
-        );
-
-        //- Construct from registry, instance, registration option
-        //- with MUST_READ, NO_WRITE
-        inline IOobjectList
-        (
-            const objectRegistry& db,
-            const fileName& instance,
-            IOobjectOption::registerOption = IOobjectOption::REGISTER
-        );
-
-        //- Construct from registry, instance, local, registration option
-        //- with MUST_READ, NO_WRITE
-        inline IOobjectList
-        (
-            const objectRegistry& db,
-            const fileName& instance,
-            const fileName& local,
-            IOobjectOption::registerOption = IOobjectOption::REGISTER
+            const fileName& local = "",
+            IOobject::readOption rOpt = IOobject::MUST_READ,
+            IOobject::writeOption wOpt = IOobject::NO_WRITE,
+            bool registerObject = true
         );
 
 
@@ -224,32 +196,35 @@ public:
 
     // Basic methods
 
-        //- Move insert IOobject into the list
-        inline bool add(autoPtr<IOobject>&& objectPtr);
+        //- Add IOobject to the list
+        bool add(autoPtr<IOobject>& objectPtr);
 
-        //- Move insert IOobject into the list
-        inline bool add(autoPtr<IOobject>& objectPtr);
+        //- Add IOobject to the list
+        bool add(autoPtr<IOobject>&& objectPtr);
 
-        //- Add objects from other to this list without overwriting
+        //- Copy append objects from other to this list, but do not overwrite
+        //- existing keys.
+        //
+        //  \return number of items added
+        label append(const IOobjectList& other);
+
+        //- Move append objects from other to this list, but do not overwrite
         //- existing keys.
         //  After calling this, the other parameter will contains any items
-        //  that could not be merged.
+        //  that could not be moved.
         //
-        //  \return number of items merged
-        label merge(IOobjectList&& other);
+        //  \return number of items added
+        label append(IOobjectList&& other);
 
-        //- Remove object from the list, by name or by iterator.
+        //- Remove IOobject from the list, by name or by iterator.
         //
         //  \return autoPtr<IOobject>
         using HashPtrTable<IOobject>::remove;
 
-        //- Remove object from the list by its IOobject::name().
+        //- Remove IOobject from the list.
         //
-        //  \return autoPtr<IOobject>
-        autoPtr<IOobject> remove(const IOobject& io)
-        {
-            return remove(io.name());
-        }
+        //  \return True if object was removed
+        bool remove(const IOobject& io);
 
 
     // Lookup single item
@@ -733,31 +708,10 @@ public:
         void operator=(const IOobjectList&) = delete;
 
         //- Move assignment
-        inline void operator=(IOobjectList&& list);
+        void operator=(IOobjectList&& list);
 
 
     // Housekeeping
-
-        //- Construct from registry, instance, local, io options
-        //  \deprecated(2022-11) prefer IOobjectOption or registerOption
-        IOobjectList
-        (
-            const objectRegistry& db,
-            const fileName& instance,
-            const fileName& local,
-            IOobjectOption::readOption rOpt,
-            IOobjectOption::writeOption wOpt = IOobjectOption::NO_WRITE,
-            bool registerObject = true
-        )
-        :
-            IOobjectList
-            (
-                db,
-                instance,
-                local,
-                IOobjectOption(rOpt, wOpt, registerObject)
-            )
-        {}
 
         //- Deprecated(2018-11) Locate an object by name (c-string).
         //- Disambiguated from multiple-lookup version by calling parameter.
@@ -784,10 +738,6 @@ Ostream& operator<<(Ostream& os, const IOobjectList& list);
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#include "IOobjectListI.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

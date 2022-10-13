@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2018 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,9 +31,9 @@ Description
 #include "argList.H"
 #include "Time.H"
 #include "polyMesh.H"
-#include "line.H"
-#include "Random.H"
+#include "boundBox.H"
 #include "treeBoundBox.H"
+#include "cellModel.H"
 #include "bitSet.H"
 #include "HashSet.H"
 #include "ListOps.H"
@@ -58,7 +58,8 @@ int main(int argc, char *argv[])
 {
     #include "setRootCase.H"
 
-    Info<<"boundBox faces: " << boundBox::hexFaces() << nl
+    Info<<"boundBox faces: " << boundBox::faces << nl
+        <<"hex faces: " << cellModel::ref(cellModel::HEX).modelFaces() << nl
         <<"tree-bb faces: " << treeBoundBox::faces << nl
         <<"tree-bb edges: " << treeBoundBox::edges << endl;
 
@@ -83,20 +84,7 @@ int main(int argc, char *argv[])
     else
     {
         bb = cube(0, 1);
-        Info<< "starting box: " << bb << endl;
-
-        Info<< "corner: " << bb.hexCorner<0>() << nl
-            << "corner: " << bb.hexCorner<7>() << nl
-            << "corner: " << bb.hexCorner<6>() << endl;
-
-        linePoints ln1(bb.max(), bb.centre());
-        Info<< "line: " << ln1 << " box: " << ln1.box() << endl;
-
-        Info<< "box: " << boundBox(ln1.box()) << endl;
-
-        Info<< "corner: " << bb.hexCorner<0>() << nl
-            << "corner: " << bb.hexCorner<7>() << nl
-            << "corner: " << bb.hexCorner<6>() << endl;
+        Info<<"starting box: " << bb << endl;
 
         point pt(Zero);
         bb.add(pt);
@@ -111,8 +99,10 @@ int main(int argc, char *argv[])
         Info<<"enclose point " << pt << " -> " << bb << endl;
 
         // restart with same points
-        bb.reset(point::zero);
-        bb.add(point(1,1,1), point(0,1.5,0.5));
+        bb = boundBox::invertedBox;
+        bb.add(point(1,1,1));
+        bb.add(point::zero);
+        bb.add(point(0,1.5,0.5));
         bb.add(point(5,2,-2));
 
         Info<<"repeated " << bb << endl;
@@ -155,25 +145,6 @@ int main(int argc, char *argv[])
 
         box1.add(variousPoints, select2);
         Info<< "box is now => " << box1 << endl;
-    }
-
-    List<boundBox> boxes(12);
-    {
-        Random rndGen(12345);
-        for (auto& bb : boxes)
-        {
-            bb = cube
-            (
-                rndGen.position<scalar>(-10, 10),
-                rndGen.position<scalar>(0, 5)
-            );
-        }
-
-        Info<< "boxes: " << boxes << endl;
-
-        Foam::sort(boxes);
-
-        Info<< "sorted: " << boxes << endl;
     }
 
     return 0;

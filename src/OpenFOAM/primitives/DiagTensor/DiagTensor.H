@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -106,15 +106,15 @@ public:
 
     // Member Functions
 
-    // Component Access
+    // Access
 
-        const Cmpt& xx() const noexcept { return this->v_[XX]; }
-        const Cmpt& yy() const noexcept { return this->v_[YY]; }
-        const Cmpt& zz() const noexcept { return this->v_[ZZ]; }
+        inline const Cmpt& xx() const;
+        inline const Cmpt& yy() const;
+        inline const Cmpt& zz() const;
 
-        Cmpt& xx() noexcept { return this->v_[XX]; }
-        Cmpt& yy() noexcept { return this->v_[YY]; }
-        Cmpt& zz() noexcept { return this->v_[ZZ]; }
+        inline Cmpt& xx();
+        inline Cmpt& yy();
+        inline Cmpt& zz();
 };
 
 

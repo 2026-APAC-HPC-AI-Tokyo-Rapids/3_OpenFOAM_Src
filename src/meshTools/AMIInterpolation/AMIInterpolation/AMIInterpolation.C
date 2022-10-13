@@ -31,7 +31,7 @@ License
 #include "mapDistribute.H"
 #include "flipOp.H"
 #include "profiling.H"
-#include "triangle.H"
+#include "triPointRef.H"
 #include "OFstream.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -135,7 +135,7 @@ void Foam::AMIInterpolation::projectPointsToSurface
 
         if (pi.hit())
         {
-            pts[i] = pi.point();
+            pts[i] = pi.hitPoint();
         }
         else
         {
@@ -206,7 +206,9 @@ void Foam::AMIInterpolation::normaliseWeights
 
     if (output)
     {
-        if (returnReduceOr(wght.size()))
+        const label nFace = returnReduce(wght.size(), sumOp<label>());
+
+        if (nFace)
         {
             Info<< indent
                 << "AMI: Patch " << patchName
@@ -1062,7 +1064,7 @@ const
 
         if (ray.hit())
         {
-            tgtPoint = ray.point();
+            tgtPoint = ray.rawPoint();
             return srcFacei;
         }
         else if (ray.distance() < nearest.distance())
@@ -1075,7 +1077,7 @@ const
 
     if (nearest.hit() || nearest.eligibleMiss())
     {
-        tgtPoint = nearest.point();
+        tgtPoint = nearest.rawPoint();
         return nearestFacei;
     }
 
@@ -1111,7 +1113,7 @@ const
 
         if (ray.hit())
         {
-            srcPoint = ray.point();
+            srcPoint = ray.rawPoint();
             return tgtFacei;
         }
         const pointHit near = f.nearestPoint(srcPoint, tgtPoints);
@@ -1124,7 +1126,8 @@ const
     }
     if (nearest.hit() || nearest.eligibleMiss())
     {
-        srcPoint = nearest.point();
+
+        srcPoint = nearest.rawPoint();
         return nearestFacei;
     }
 

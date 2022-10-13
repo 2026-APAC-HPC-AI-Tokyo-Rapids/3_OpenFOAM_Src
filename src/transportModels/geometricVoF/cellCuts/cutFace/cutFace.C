@@ -28,7 +28,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "cutFace.H"
-#include "triangle.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -275,19 +274,11 @@ void Foam::cutFace::calcSubFaceCentreAndArea
     // and to avoid round-off error-related problems
     if (nPoints == 3)
     {
-        subFaceCentre = triPointRef::centre
-        (
-            subFacePoints[0],
-            subFacePoints[1],
-            subFacePoints[2]
-        );
+        subFaceCentre =
+            (1.0/3.0)*(subFacePoints[0] + subFacePoints[1] + subFacePoints[2]);
 
-        subFaceArea = triPointRef::areaNormal
-        (
-            subFacePoints[0],
-            subFacePoints[1],
-            subFacePoints[2]
-        );
+        subFaceArea = 0.5*((subFacePoints[1] - subFacePoints[0]) ^
+            (subFacePoints[2] - subFacePoints[0]));
     }
     else if (nPoints > 0)
     {

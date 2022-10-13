@@ -77,7 +77,7 @@ void Foam::functionObjects::timeActivatedFileUpdate::updateFile()
 
         if (Pstream::master() || time_.distributed())
         {
-            // Copy on master only for non-distributed
+            // Slaves do not copy if running non-distributed
             fileName tmpFile(fileToUpdate_ + Foam::name(pid()));
             Foam::cp(srcFile, tmpFile);
             Foam::mv(tmpFile, fileToUpdate_);
@@ -98,7 +98,7 @@ Foam::functionObjects::timeActivatedFileUpdate::timeActivatedFileUpdate
 )
 :
     timeFunctionObject(name, runTime),
-    fileToUpdate_(),
+    fileToUpdate_("unknown-fileToUpdate"),
     timeVsFile_(),
     lastIndex_(-1),
     modified_(false)
@@ -122,33 +122,26 @@ bool Foam::functionObjects::timeActivatedFileUpdate::read
     lastIndex_ = -1;
     fileToUpdate_.expand();
 
-    if (fileToUpdate_.empty() || timeVsFile_.empty())
-    {
-        FatalIOErrorInFunction(dict)
-            << "Bad entries for fileToUpdate and/or timeVsFile" << endl
-            << exit(FatalIOError);
-    }
-
     Info<< type() << " " << name() << " output:" << nl
-        << "    time vs file list:" << nl;
+        << "    time vs file list:" << endl;
 
-    for (auto& tuple : timeVsFile_)
+    forAll(timeVsFile_, i)
     {
-        fileName& srcFile = tuple.second();
-        srcFile.expand();
+        timeVsFile_[i].second().expand();
+        const fileName& srcFile = timeVsFile_[i].second();
 
         // Report case-relative path for information
-        Info<< "    " << tuple.first() << tab
-            << time_.relativePath(srcFile, true) << nl;
+        Info<< "    " << timeVsFile_[i].first() << tab
+            << time_.relativePath(srcFile, true) << endl;
 
         if (Pstream::master() || time_.distributed())
         {
             if (!Foam::isFile(srcFile))
             {
                 // Report full path on error
-                FatalIOErrorInFunction(dict)
+                FatalErrorInFunction
                     << "File not found: " << srcFile << endl
-                    << exit(FatalIOError);
+                    << exit(FatalError);
             }
         }
     }

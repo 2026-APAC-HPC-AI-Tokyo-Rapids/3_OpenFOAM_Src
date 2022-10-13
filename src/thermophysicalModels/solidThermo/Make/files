@@ -4,7 +4,4 @@ solidThermo/solidThermos.C
 solidReactionThermo/solidReactionThermo.C
 solidReactionThermo/solidReactionThermos.C
 
-solidThermo/heZoneSolidThermos.C
-
-
 LIB = $(FOAM_LIBBIN)/libsolidThermo

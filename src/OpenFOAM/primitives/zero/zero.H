@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,8 +41,8 @@ SeeAlso
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_zero_H
-#define Foam_zero_H
+#ifndef zero_H
+#define zero_H
 
 #include "labelFwd.H"
 
@@ -98,12 +98,6 @@ public:
     constexpr operator double() const noexcept
     {
         return 0;
-    }
-
-    //- Component-wise or element-wise access returns zero
-    zero operator[](const label) const noexcept
-    {
-        return zero{};
     }
 };
 

@@ -52,10 +52,10 @@ Foam::fa::limitVelocity::limitVelocity
     const word& name,
     const word& modelType,
     const dictionary& dict,
-    const fvMesh& mesh
+    const fvPatch& patch
 )
 :
-    faceSetOption(name, modelType, dict, mesh),
+    faceSetOption(name, modelType, dict, patch),
     UName_(coeffs_.getOrDefault<word>("U", "U")),
     max_(coeffs_.get<scalar>("max"))
 {

@@ -11,7 +11,6 @@ faMesh/faBoundaryMesh/faBoundaryMeshEntries.C
 
 faMesh/faMeshSubset/faMeshSubset.C
 faMesh/faMeshTools/faMeshTools.C
-faMesh/faMeshTools/faMeshToolsChecks.C
 faMesh/faMeshTools/faMeshToolsProcAddr.C
 
 faPatches = faMesh/faPatches
@@ -38,7 +37,6 @@ $(faMeshMapper)/faEdgeMapper.C
 $(faMeshMapper)/faPatchMapper.C
 
 faPatchFields = fields/faPatchFields
-$(faPatchFields)/faPatchField/faPatchFieldBase.C
 $(faPatchFields)/faPatchField/faPatchFields.C
 
 basicFaPatchFields = $(faPatchFields)/basic
@@ -70,7 +68,6 @@ $(derivedFaPatchFields)/timeVaryingUniformFixedValue/timeVaryingUniformFixedValu
 $(derivedFaPatchFields)/clampedPlate/clampedPlateFaPatchFields.C
 
 faePatchFields = fields/faePatchFields
-$(faePatchFields)/faePatchField/faePatchFieldBase.C
 $(faePatchFields)/faePatchField/faePatchFields.C
 
 basicFaePatchFields = $(faePatchFields)/basic
@@ -102,7 +99,6 @@ $(schemes)/linearUpwind/linearUpwindEdgeInterpolationMake.C
 $(schemes)/Gamma/GammaEdgeInterpolationMake.C
 $(schemes)/blended/blendedEdgeInterpolationMake.C
 $(schemes)/skewCorrected/skewCorrectedEdgeInterpolationMake.C
-$(schemes)/leastSquares/leastSquaresEdgeInterpolationMake.C
 
 finiteArea/fa/fa.C
 
@@ -134,7 +130,6 @@ $(limitedGradSchemes)/edgeLimitedFaGrad/edgeLimitedFaGrads.C
 
 lnGradSchemes = finiteArea/lnGradSchemes
 $(lnGradSchemes)/lnGradScheme/lnGradSchemes.C
-$(lnGradSchemes)/uncorrectedLnGrad/uncorrectedLnGrads.C
 $(lnGradSchemes)/correctedLnGrad/correctedLnGrads.C
 $(lnGradSchemes)/limitedLnGrad/limitedLnGrads.C
 $(lnGradSchemes)/fourthLnGrad/fourthLnGrads.C

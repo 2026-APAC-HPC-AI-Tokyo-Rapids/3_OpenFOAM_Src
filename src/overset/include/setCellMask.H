@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,19 +35,12 @@ Description
     cellMask.primitiveFieldRef() = 1.0;
     forAll(cellMask, cellI)
     {
-        if
-        (
-            cellTypes[cellI] == cellCellStencil::HOLE
-         || cellTypes[cellI] == cellCellStencil::SPECIAL
-        )
+        if (cellTypes[cellI] == cellCellStencil::HOLE)
         {
             cellMask[cellI] = 0.0;
         }
     }
     cellMask.correctBoundaryConditions();
-
-    faceMask = localMin<scalar>(mesh).interpolate(cellMask);
 }
-
 
 // ************************************************************************* //

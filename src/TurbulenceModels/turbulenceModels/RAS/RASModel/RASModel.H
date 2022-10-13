@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2017 OpenFOAM Foundation
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_RASModel_H
-#define Foam_RASModel_H
+#ifndef RASModel_H
+#define RASModel_H
 
 #include "TurbulenceModel.H"
 
@@ -46,41 +46,18 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class RASModelBase Declaration
-\*---------------------------------------------------------------------------*/
-
-class RASModelBase
-{
-public:
-
-    //- Runtime type information
-    ClassName("RASModelBase");
-
-
-    // Constructors
-
-        //- Constructor
-        RASModelBase() noexcept = default;
-
-
-    //- Destructor
-    virtual ~RASModelBase() = default;
-};
-
-
-/*---------------------------------------------------------------------------*\
                            Class RASModel Declaration
 \*---------------------------------------------------------------------------*/
 
 template<class BasicTurbulenceModel>
 class RASModel
 :
-    public RASModelBase,
     public BasicTurbulenceModel
 {
+
 protected:
 
-    // Protected Data
+    // Protected data
 
         //- RAS coefficients dictionary
         dictionary RASDict_;
@@ -191,37 +168,37 @@ public:
         // Access
 
             //- Return the lower allowable limit for k (default: SMALL)
-            const dimensionedScalar& kMin() const noexcept
+            const dimensionedScalar& kMin() const
             {
                 return kMin_;
             }
 
             //- Return the lower allowable limit for epsilon (default: SMALL)
-            const dimensionedScalar& epsilonMin() const noexcept
+            const dimensionedScalar& epsilonMin() const
             {
                 return epsilonMin_;
             }
 
             //- Return the lower allowable limit for omega (default: SMALL)
-            const dimensionedScalar& omegaMin() const noexcept
+            const dimensionedScalar& omegaMin() const
             {
                 return omegaMin_;
             }
 
             //- Allow kMin to be changed
-            dimensionedScalar& kMin() noexcept
+            dimensionedScalar& kMin()
             {
                 return kMin_;
             }
 
             //- Allow epsilonMin to be changed
-            dimensionedScalar& epsilonMin() noexcept
+            dimensionedScalar& epsilonMin()
             {
                 return epsilonMin_;
             }
 
             //- Allow omegaMin to be changed
-            dimensionedScalar& omegaMin() noexcept
+            dimensionedScalar& omegaMin()
             {
                 return omegaMin_;
             }

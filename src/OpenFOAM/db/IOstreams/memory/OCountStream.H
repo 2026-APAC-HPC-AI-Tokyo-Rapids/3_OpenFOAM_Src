@@ -31,8 +31,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_OScountStream_H
-#define Foam_OScountStream_H
+#ifndef OScountStream_H
+#define OScountStream_H
 
 #include "OSstream.H"
 #include <iostream>
@@ -271,7 +271,7 @@ public:
         OCountStream(const OCountStream& str)
         :
             allocator_type(str.size()),
-            OSstream(stream_, str.name(), static_cast<IOstreamOption>(str))
+            OSstream(stream_, str.name(), str.format(), str.version())
         {}
 
 
@@ -291,10 +291,14 @@ public:
     // Additional constructors and methods (as per v2012 and earlier)
     #ifdef Foam_IOstream_extras
 
-        //- Construct empty with format
-        explicit OCountStream(IOstreamOption::streamFormat fmt)
+        //- Default construct
+        explicit OCountStream
+        (
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion
+        )
         :
-            OCountStream(IOstreamOption(fmt))
+            OCountStream(IOstreamOption(fmt, ver))
         {}
 
 

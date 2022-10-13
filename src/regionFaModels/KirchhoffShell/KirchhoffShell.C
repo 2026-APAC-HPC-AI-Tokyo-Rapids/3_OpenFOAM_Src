@@ -121,7 +121,9 @@ void KirchhoffShell::solveDisplacement()
         }
     }
 
-    Info<< w_.name() << " min/max   = " << gMinMax(w_) << endl;
+    Info<< "ws_vibrationShell: "
+        << "min = " << min(w_).value() << ", "
+        << "max = " << max(w_).value() << endl;
 
     // Restore old time in main time
     w_.oldTime() = w0;
@@ -136,11 +138,11 @@ void KirchhoffShell::solveDisplacement()
 KirchhoffShell::KirchhoffShell
 (
     const word& modelType,
-    const fvMesh& mesh,
+    const fvPatch& patch,
     const dictionary& dict
 )
 :
-    vibrationShellModel(modelType, mesh, dict),
+    vibrationShellModel(modelType, patch, dict),
     f0_("f0", dimless, dict),
     f1_("f1", inv(dimTime), dict),
     f2_("f2", dimTime, dict),
@@ -212,7 +214,7 @@ KirchhoffShell::KirchhoffShell
     ),
     w00_
     (
-        IOobject
+         IOobject
         (
             "w00_" + regionName_,
             primaryMesh().time().timeName(),
@@ -225,7 +227,7 @@ KirchhoffShell::KirchhoffShell
     ),
     laplaceW0_
     (
-        IOobject
+         IOobject
         (
             "laplaceW0_" + regionName_,
             primaryMesh().time().timeName(),
@@ -238,7 +240,7 @@ KirchhoffShell::KirchhoffShell
     ),
     laplace2W0_
     (
-        IOobject
+         IOobject
         (
             "laplace2W0_" + regionName_,
             primaryMesh().time().timeName(),

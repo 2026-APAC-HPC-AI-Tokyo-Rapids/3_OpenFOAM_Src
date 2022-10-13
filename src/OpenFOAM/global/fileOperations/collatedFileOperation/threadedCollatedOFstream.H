@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017-2018 OpenFOAM Foundation
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_threadedCollatedOFstream_H
-#define Foam_threadedCollatedOFstream_H
+#ifndef threadedCollatedOFstream_H
+#define threadedCollatedOFstream_H
 
 #include "dictionary.H"
 #include "StringStream.H"
@@ -62,16 +62,10 @@ class threadedCollatedOFstream
         //- The backend writer
         OFstreamCollator& writer_;
 
-        //- The backend file name
         const fileName pathName_;
 
-        //- Atomic file creation (ignored with append)
-        const IOstreamOption::atomicType atomic_;
-
-        //- Output file compression
         const IOstreamOption::compressionType compression_;
 
-        //- Use threading
         const bool useThread_;
 
         //- Additional FoamFile entries for decomposed data
@@ -81,16 +75,6 @@ class threadedCollatedOFstream
 public:
 
     // Constructors
-
-        //- Construct and set stream status
-        threadedCollatedOFstream
-        (
-            OFstreamCollator& writer,
-            IOstreamOption::atomicType atomic,
-            const fileName& pathname,
-            IOstreamOption streamOpt = IOstreamOption(),
-            const bool useThread = true
-        );
 
         //- Construct and set stream status
         threadedCollatedOFstream
@@ -110,6 +94,32 @@ public:
 
         //- Define the header entries for the data block(s)
         void setHeaderEntries(const dictionary& dict);
+
+
+    // Additional constructors and methods (as per v2012 and earlier)
+    #ifdef Foam_IOstream_extras
+
+        //- Construct and set stream status
+        threadedCollatedOFstream
+        (
+            OFstreamCollator& writer,
+            const fileName& pathname,
+            IOstreamOption::streamFormat fmt,
+            IOstreamOption::versionNumber ver = IOstreamOption::currentVersion,
+            IOstreamOption::compressionType cmp = IOstreamOption::UNCOMPRESSED,
+            const bool useThread = true
+        )
+        :
+            threadedCollatedOFstream
+            (
+                writer,
+                pathname,
+                IOstreamOption(fmt, ver, cmp),
+                useThread
+            )
+        {}
+
+    #endif /* Foam_IOstream_extras */
 };
 
 

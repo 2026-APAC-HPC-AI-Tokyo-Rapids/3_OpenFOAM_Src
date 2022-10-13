@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -69,6 +69,7 @@ Foam::GAMGSolver::GAMGSolver
 
     // Default values for all controls
     // which may be overridden by those in controlDict
+    cacheAgglomeration_(true),
     nPreSweeps_(0),
     preSweepsLevelMultiplier_(1),
     maxPreSweeps_(4),
@@ -76,12 +77,9 @@ Foam::GAMGSolver::GAMGSolver
     postSweepsLevelMultiplier_(1),
     maxPostSweeps_(4),
     nFinestSweeps_(2),
-
-    cacheAgglomeration_(true),
     interpolateCorrection_(false),
     scaleCorrection_(matrix.symmetric()),
     directSolveCoarsest_(false),
-
     agglomeration_(GAMGAgglomeration::New(matrix_, controlDict_)),
 
     matrixLevels_(agglomeration_.size()),
@@ -391,7 +389,14 @@ void Foam::GAMGSolver::readControls()
 
 const Foam::lduMatrix& Foam::GAMGSolver::matrixLevel(const label i) const
 {
-    return i ? matrixLevels_[i-1] : matrix_;
+    if (i == 0)
+    {
+        return matrix_;
+    }
+    else
+    {
+        return matrixLevels_[i - 1];
+    }
 }
 
 
@@ -400,7 +405,14 @@ const Foam::lduInterfaceFieldPtrsList& Foam::GAMGSolver::interfaceLevel
     const label i
 ) const
 {
-    return i ? interfaceLevels_[i-1] : interfaces_;
+    if (i == 0)
+    {
+        return interfaces_;
+    }
+    else
+    {
+        return interfaceLevels_[i - 1];
+    }
 }
 
 
@@ -410,7 +422,14 @@ Foam::GAMGSolver::interfaceBouCoeffsLevel
     const label i
 ) const
 {
-    return i ? interfaceLevelsBouCoeffs_[i-1] : interfaceBouCoeffs_;
+    if (i == 0)
+    {
+        return interfaceBouCoeffs_;
+    }
+    else
+    {
+        return interfaceLevelsBouCoeffs_[i - 1];
+    }
 }
 
 
@@ -420,7 +439,14 @@ Foam::GAMGSolver::interfaceIntCoeffsLevel
     const label i
 ) const
 {
-    return i ? interfaceLevelsIntCoeffs_[i-1] : interfaceIntCoeffs_;
+    if (i == 0)
+    {
+        return interfaceIntCoeffs_;
+    }
+    else
+    {
+        return interfaceLevelsIntCoeffs_[i - 1];
+    }
 }
 
 

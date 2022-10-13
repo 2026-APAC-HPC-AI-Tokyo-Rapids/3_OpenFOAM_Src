@@ -184,6 +184,9 @@ class sampledSets
         //- Output format to use
         word writeFormat_;
 
+        //- Dictionary containing writer options
+        dictionary writeFormatOptions_;
+
 
     // Output control
 
@@ -218,9 +221,9 @@ class sampledSets
         //- A new coordSet writer, with per-set formatOptions
         static autoPtr<coordSetWriter> newWriter
         (
-            word writerType,
-            const dictionary& topDict,
-            const dictionary& setDict
+            word writeType,
+            const dictionary& formatOptions,
+            const dictionary& surfDict
         );
 
         //- Perform sampling action with store/write

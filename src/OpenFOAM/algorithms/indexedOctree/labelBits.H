@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,15 +27,17 @@ Class
     Foam::labelBits
 
 Description
-    A 29bits (or 61bits) integer label with 3bits direction
-    (eg, octant) packed into single label
+    A 29bits label and 3bits direction packed into single label
+
+SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_labelBits_H
-#define Foam_labelBits_H
+#ifndef labelBits_H
+#define labelBits_H
 
 #include "label.H"
+//#include "uLabel.H"
 #include "direction.H"
 #include "error.H"
 
@@ -45,33 +46,20 @@ Description
 namespace Foam
 {
 
-// Forward Declarations
-class labelBits;
 
 /*---------------------------------------------------------------------------*\
-                          Class labelBits Declaration
+                         Class labelBits Declaration
 \*---------------------------------------------------------------------------*/
 
 class labelBits
 {
-    // Private Data
+    // Private data
 
-        //- Integer value and (octant) direction
         label data_;
 
-public:
-
-    // Static Functions
-
-        #ifdef FULLDEBUG
-
-        //- Pack integer value and bits (octant) into a label
-        inline static label pack
-        (
-            const label val,
-            const direction bits
-        )
+        inline static label pack(const label val, const direction bits)
         {
+            #ifdef FULLDEBUG
             if (bits > 7 || (((val<<3)>>3) != val))
             {
                 FatalErrorInFunction
@@ -80,64 +68,51 @@ public:
                     << label(8*sizeof(label)-3) << " bit representation"
                     << abort(FatalError);
             }
+            #endif
+
             return (val<<3) | bits;
         }
 
-        #else
-
-        //- Pack integer value and bits (octant) into a label
-        static constexpr label pack
-        (
-            const label val,
-            const direction bits
-        ) noexcept
-        {
-            return (val<<3) | bits;
-        }
-
-        #endif
-
+public:
 
     // Constructors
 
-        //- Default construct as zero initialized
-        constexpr labelBits() noexcept
-        :
-             data_(0)
+        //- Construct null
+        inline labelBits()
         {}
 
         //- Construct from components
-        labelBits(const label val, const direction bits)
+        inline labelBits(const label val, const direction bits)
         :
              data_(pack(val, bits))
         {}
 
-        //- Read construct from Istream
-        explicit labelBits(Istream& is)
+        //- Construct from Istream
+        inline labelBits(Istream& is)
         {
             is >> data_;
         }
 
 
+
     // Member Functions
 
-        //- The raw data value
-        label data() const noexcept { return data_; }
+        inline label val() const
+        {
+            return data_ >> 3;
+        }
 
-        //- Return the integer value
-        label val() const noexcept { return (data_ >> 3); }
+        inline direction bits() const
+        {
+            return data_ & 7;
+        }
 
-        //- Return the octant direction
-        direction bits() const noexcept { return (data_ & 7); }
-
-        //- Set the integer value
-        void setVal(const label val)
+        inline void setVal(const label val)
         {
             data_ = pack(val, bits());
         }
 
-        //- Set the octant direction
-        void setBits(const direction bits)
+        inline void setBits(const direction bits)
         {
             data_ = pack(val(), bits);
         }
@@ -145,31 +120,26 @@ public:
 
     // Member Operators
 
-        inline friend
-        bool operator==(const labelBits& a, const labelBits& b)
+        inline friend bool operator==(const labelBits& a, const labelBits& b)
         {
             return a.data_ == b.data_;
         }
 
-        inline friend
-        bool operator!=(const labelBits& a, const labelBits& b)
+        inline friend bool operator!=(const labelBits& a, const labelBits& b)
         {
             return !(a == b);
         }
 
-
     // IOstream Operators
 
-        inline friend
-        Istream& operator>>(Istream& is, labelBits& rhs)
+        inline friend Istream& operator>>(Istream& is, labelBits& lb)
         {
-            return is >> rhs.data_;
+            return is >> lb.data_;
         }
 
-        inline friend
-        Ostream& operator<<(Ostream& os, const labelBits& rhs)
+        inline friend Ostream& operator<<(Ostream& os, const labelBits& lb)
         {
-            return os << rhs.data_;
+            return os << lb.data_;
         }
 };
 

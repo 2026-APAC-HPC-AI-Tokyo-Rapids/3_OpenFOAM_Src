@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -2420,7 +2420,7 @@ void Foam::ccm::reader::addPatches
 {
     // Create patches
     // use patch types to determine what Foam types to generate
-    polyPatchList newPatches(origBndId_.size());
+    List<polyPatch*> newPatches(origBndId_.size());
 
     label meshFaceI = nInternalFaces_;
     wordHashSet hashedNames(origBndId_.size());
@@ -2463,9 +2463,7 @@ void Foam::ccm::reader::addPatches
 
         if (patchType == "wall")
         {
-            newPatches.set
-            (
-                patchI,
+            newPatches[patchI] =
                 new wallPolyPatch
                 (
                     patchName,
@@ -2474,14 +2472,11 @@ void Foam::ccm::reader::addPatches
                     patchI,
                     mesh.boundaryMesh(),
                     patchType
-                )
-            );
+                );
         }
         else if (patchType == "symmetry")
         {
-            newPatches.set
-            (
-                patchI,
+            newPatches[patchI] =
                 new symmetryPolyPatch
                 (
                     patchName,
@@ -2490,15 +2485,12 @@ void Foam::ccm::reader::addPatches
                     patchI,
                     mesh.boundaryMesh(),
                     patchType
-                )
-            );
+                );
         }
         else if (patchType == "empty")
         {
             // Note: not ccm name, may have been introduced by us
-            newPatches.set
-            (
-                patchI,
+            newPatches[patchI] =
                 new emptyPolyPatch
                 (
                     patchName,
@@ -2507,16 +2499,13 @@ void Foam::ccm::reader::addPatches
                     patchI,
                     mesh.boundaryMesh(),
                     patchType
-                )
-            );
+                );
         }
         else
         {
             // All other ccm types become straight polyPatch:
             // 'inlet', 'outlet', 'pressure'.
-            newPatches.set
-            (
-                patchI,
+            newPatches[patchI] =
                 new polyPatch
                 (
                     patchName,
@@ -2525,8 +2514,7 @@ void Foam::ccm::reader::addPatches
                     patchI,
                     mesh.boundaryMesh(),
                     patchType
-                )
-            );
+                );
         }
 
         meshFaceI += patchSizes_[patchI];

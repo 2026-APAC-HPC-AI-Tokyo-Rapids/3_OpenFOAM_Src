@@ -85,7 +85,7 @@ Foam::exprFixedValueFvPatchField<Type>::exprFixedValueFvPatchField
     const bool valueRequired
 )
 :
-    parent_bctype(p, iF), // bypass dictionary constructor
+    parent_bctype(p, iF),
     expressions::patchExprFieldBase
     (
         dict,
@@ -121,15 +121,12 @@ Foam::exprFixedValueFvPatchField<Type>::exprFixedValueFvPatchField
 
     driver_.readDict(dict_);
 
-    // Similar to fvPatchField constructor, which we have bypassed
-    dict.readIfPresent("patchType", this->patchType(), keyType::LITERAL);
-
-
-    const auto* hasValue = dict.findEntry("value", keyType::LITERAL);
-
-    if (hasValue)
+    if (dict.found("value"))
     {
-        Field<Type>::assign(*hasValue, p.size());
+        fvPatchField<Type>::operator=
+        (
+            Field<Type>("value", dict, p.size())
+        );
     }
     else
     {

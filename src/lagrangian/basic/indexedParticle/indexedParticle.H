@@ -35,8 +35,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_indexedParticle_H
-#define Foam_indexedParticle_H
+#ifndef indexedParticle_H
+#define indexedParticle_H
 
 #include "particle.H"
 #include "IOstream.H"
@@ -55,7 +55,7 @@ class indexedParticle
 :
     public particle
 {
-    // Private Data
+    // Private data
 
         label index_;
 
@@ -121,9 +121,15 @@ public:
 
     // Member Functions
 
-        label index() const noexcept { return index_; }
+        label index() const
+        {
+            return index_;
+        }
 
-        label& index() noexcept { return index_; }
+        label& index()
+        {
+            return index_;
+        }
 };
 
 

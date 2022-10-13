@@ -156,7 +156,7 @@ void Foam::functionObjects::fieldValues::surfaceFieldValue::setFaceZoneFaces()
 
     // Could also check this
     #if 0
-    if (!returnReduceOr(numFaces))
+    if (!returnReduce(bool(numFaces), orOp<bool>()))
     {
         WarningInFunction
             << type() << ' ' << name() << ": "
@@ -168,9 +168,9 @@ void Foam::functionObjects::fieldValues::surfaceFieldValue::setFaceZoneFaces()
     }
     #endif
 
-    faceId_.resize_nocopy(numFaces);
-    facePatchId_.resize_nocopy(numFaces);
-    faceFlip_.resize_nocopy(numFaces);
+    faceId_.resize(numFaces);
+    facePatchId_.resize(numFaces);
+    faceFlip_.resize(numFaces);
 
     numFaces = 0;
 
@@ -192,20 +192,21 @@ void Foam::functionObjects::fieldValues::surfaceFieldValue::setFaceZoneFaces()
             {
                 facePatchId = mesh_.boundaryMesh().whichPatch(meshFacei);
                 const polyPatch& pp = mesh_.boundaryMesh()[facePatchId];
-
-                if (isA<emptyPolyPatch>(pp))
-                {
-                    continue;  // Ignore empty patch
-                }
-
                 const auto* cpp = isA<coupledPolyPatch>(pp);
 
-                if (cpp && !cpp->owner())
+                if (cpp)
                 {
-                    continue;  // Ignore neighbour side
+                    faceId = (cpp->owner() ? pp.whichFace(meshFacei) : -1);
                 }
-
-                faceId = pp.whichFace(meshFacei);
+                else if (!isA<emptyPolyPatch>(pp))
+                {
+                    faceId = pp.whichFace(meshFacei);
+                }
+                else
+                {
+                    faceId = -1;
+                    facePatchId = -1;
+                }
             }
 
             if (faceId >= 0)
@@ -313,7 +314,7 @@ void Foam::functionObjects::fieldValues::surfaceFieldValue::setPatchFaces()
 
     // Could also check this
     #if 0
-    if (!returnReduceOr(numFaces))
+    if (!returnReduce(bool(numFaces), orOp<bool>()))
     {
         WarningInFunction
             << type() << ' ' << name() << ": "
@@ -410,19 +411,22 @@ combineSurfaceGeometry
 {
     if (stObject == regionType_)
     {
-        const auto& s = refCast<const polySurface>(obr());
+        const polySurface& s = dynamicCast<const polySurface>(obr());
 
         if (Pstream::parRun())
         {
             // Dimension as fraction of surface
             const scalar mergeDim = 1e-10*boundBox(s.points(), true).mag();
 
-            Foam::PatchTools::gatherAndMerge
+            labelList pointsMap;
+
+            PatchTools::gatherAndMerge
             (
                 mergeDim,
                 primitivePatch(SubList<face>(s.faces()), s.points()),
                 points,
-                faces
+                faces,
+                pointsMap
             );
         }
         else
@@ -440,12 +444,15 @@ combineSurfaceGeometry
             // Dimension as fraction of mesh bounding box
             const scalar mergeDim = 1e-10*mesh_.bounds().mag();
 
-            Foam::PatchTools::gatherAndMerge
+            labelList pointsMap;
+
+            PatchTools::gatherAndMerge
             (
                 mergeDim,
                 primitivePatch(SubList<face>(s.faces()), s.points()),
                 points,
-                faces
+                faces,
+                pointsMap
             );
         }
         else
@@ -464,7 +471,7 @@ Foam::functionObjects::fieldValues::surfaceFieldValue::totalArea() const
 
     if (stObject == regionType_)
     {
-        const auto& s = refCast<const polySurface>(obr());
+        const polySurface& s = dynamicCast<const polySurface>(obr());
 
         totalArea = gSum(s.magSf());
     }
@@ -529,7 +536,7 @@ bool Foam::functionObjects::fieldValues::surfaceFieldValue::update()
         }
         case stObject:
         {
-            const auto& s = refCast<const polySurface>(obr());
+            const polySurface& s = dynamicCast<const polySurface>(obr());
             nFaces_ = returnReduce(s.size(), sumOp<label>());
             break;
         }
@@ -800,7 +807,7 @@ Foam::functionObjects::fieldValues::surfaceFieldValue::weightingFactor
     // scalar * unit-normal
 
     // Can skip this check - already used canWeight()
-    /// if (returnReduceAnd(weightField.empty()))
+    /// if (returnReduce(weightField.empty(), andOp<bool>()))
     /// {
     ///     // No weight field - revert to unweighted form?
     ///     return tmp<scalarField>::New(Sf.size(), scalar(1));
@@ -828,7 +835,7 @@ Foam::functionObjects::fieldValues::surfaceFieldValue::areaWeightingFactor
     // scalar * Area
 
     // Can skip this check - already used canWeight()
-    /// if (returnReduceAnd(weightField.empty()))
+    /// if (returnReduce(weightField.empty(), andOp<bool>()))
     /// {
     ///     // No weight field - revert to unweighted form
     ///     return mag(Sf);
@@ -855,7 +862,7 @@ Foam::functionObjects::fieldValues::surfaceFieldValue::weightingFactor
     // vector (dot) unit-normal
 
     // Can skip this check - already used canWeight()
-    /// if (returnReduceAnd(weightField.empty()))
+    /// if (returnReduce(weightField.empty(), andOp<bool>()))
     /// {
     ///     // No weight field - revert to unweighted form
     ///     return tmp<scalarField>::New(Sf.size(), scalar(1));
@@ -896,7 +903,7 @@ Foam::functionObjects::fieldValues::surfaceFieldValue::areaWeightingFactor
     // vector (dot) Area
 
     // Can skip this check - already used canWeight()
-    /// if (returnReduceAnd(weightField.empty()))
+    /// if (returnReduce(weightField.empty(), andOp<bool>()))
     /// {
     ///     // No weight field - revert to unweighted form
     ///     return mag(Sf);
@@ -1031,17 +1038,13 @@ bool Foam::functionObjects::fieldValues::surfaceFieldValue::read
             }
         }
 
-        // The "name" entry
-        // - mandatory if we didn't pick up a value from selectionNames_
+        // Mandatory if we didn't pick up a value from selectionNames_
         dict.readEntry
         (
             "name",
             regionName_,
             keyType::LITERAL,
-            (
-                regionName_.empty()
-              ? IOobjectOption::MUST_READ : IOobjectOption::READ_IF_PRESENT
-            )
+            regionName_.empty()
         );
 
         // Ensure there is always content for selectionNames_
@@ -1137,14 +1140,14 @@ bool Foam::functionObjects::fieldValues::surfaceFieldValue::read
 
     if (writeFields_)
     {
-        const word writerType = dict.get<word>("surfaceFormat");
+        const word formatName(dict.get<word>("surfaceFormat"));
 
         surfaceWriterPtr_.reset
         (
             surfaceWriter::New
             (
-                writerType,
-                surfaceWriter::formatOptions(dict, writerType)
+                formatName,
+                dict.subOrEmptyDict("formatOptions").subOrEmptyDict(formatName)
             )
         );
 
@@ -1158,7 +1161,7 @@ bool Foam::functionObjects::fieldValues::surfaceFieldValue::read
 
         if (surfaceWriterPtr_->enabled())
         {
-            Info<< "    surfaceFormat = " << writerType << nl;
+            Info<< "    surfaceFormat = " << formatName << nl;
         }
         else
         {
@@ -1203,7 +1206,7 @@ bool Foam::functionObjects::fieldValues::surfaceFieldValue::write()
     {
         if (stObject == regionType_)
         {
-            const auto& s = refCast<const polySurface>(obr());
+            const polySurface& s = dynamicCast<const polySurface>(obr());
             Sf = s.Sf();
         }
         else if (sampledPtr_)
@@ -1290,7 +1293,7 @@ bool Foam::functionObjects::fieldValues::surfaceFieldValue::write()
 
 
     // Process the fields
-    if (returnReduceOr(!vectorWeights.empty()))
+    if (returnReduce(!vectorWeights.empty(), orOp<bool>()))
     {
         if (scalarWeights.size())
         {

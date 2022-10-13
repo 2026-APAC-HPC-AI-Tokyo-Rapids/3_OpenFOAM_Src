@@ -98,7 +98,7 @@ public:
         //- The patch field type for the GeometricBoundaryField
         typedef PatchField<Type> Patch;
 
-        //- Component type of the field elements
+        //- The field component type
         typedef typename Field<Type>::cmptType cmptType;
 
 
@@ -379,7 +379,7 @@ public:
         tmp<GeometricField<Type, PatchField, GeoMesh>> clone() const;
 
 
-    // Factory Methods
+    // Static Constructors
 
         //- Return tmp field from name, mesh, dimensions and patch type.
         //  The field is NO_READ, NO_WRITE, unregistered and uses the
@@ -463,32 +463,6 @@ public:
             const wordList& actualPatchTypes = wordList()
         );
 
-        //- Construct tmp field based on mesh/registry information from
-        //- an existing field.
-        //  Created NO_READ, NO_WRITE, NO_REGISTER, using the instance
-        //  from the field
-        template<class AnyType>
-        static tmp<GeometricField<Type, PatchField, GeoMesh>> New
-        (
-            const GeometricField<AnyType, PatchField, GeoMesh>& fld,
-            const word& name,
-            const dimensionSet& dims,
-            const word& patchFieldType = PatchField<Type>::calculatedType()
-        );
-
-        //- Construct tmp field based on mesh/registry information from
-        //- an existing field and initialise with value.
-        //  Created NO_READ, NO_WRITE, NO_REGISTER, using the instance
-        //  from the field
-        template<class AnyType>
-        static tmp<GeometricField<Type, PatchField, GeoMesh>> New
-        (
-            const GeometricField<AnyType, PatchField, GeoMesh>& fld,
-            const word& name,
-            const dimensioned<Type>& dt,
-            const word& patchFieldType = PatchField<Type>::calculatedType()
-        );
-
 
     //- Destructor
     virtual ~GeometricField();
@@ -496,21 +470,15 @@ public:
 
     // Member Functions
 
-        //- Return a const-reference to the dimensioned internal field.
-        inline const Internal& internalField() const noexcept;
-
-        //- Return a reference to the dimensioned internal field.
+        //- Return a reference to the dimensioned internal field
         //  \param updateAccessTime update event counter and check
         //      old-time fields
         //
         //  \note Should avoid using updateAccessTime = true within loops.
-        Internal& internalFieldRef(const bool updateAccessTime = true);
+        Internal& ref(const bool updateAccessTime = true);
 
-        //- Same as internalFieldRef()
-        Internal& ref(const bool updateAccessTime = true)
-        {
-            return this->internalFieldRef(updateAccessTime);
-        }
+        //- Return a const-reference to the dimensioned internal field
+        inline const Internal& internalField() const;
 
         //- Return a const-reference to the dimensioned internal field
         //- of a "vol" field.
@@ -519,11 +487,7 @@ public:
         //  \note definition in finiteVolume/fields/volFields/volFieldsI.H
         inline const Internal& v() const;
 
-        //- Return a const-reference to the internal field values.
-        inline const typename Internal::FieldType& primitiveField()
-        const noexcept;
-
-        //- Return a reference to the internal field values.
+        //- Return a reference to the internal field
         //  \param updateAccessTime update event counter and check
         //      old-time fields
         //
@@ -533,8 +497,8 @@ public:
             const bool updateAccessTime = true
         );
 
-        //- Return const-reference to the boundary field
-        inline const Boundary& boundaryField() const noexcept;
+        //- Return a const-reference to the  internal field
+        inline const typename Internal::FieldType& primitiveField() const;
 
         //- Return a reference to the boundary field
         //  \param updateAccessTime update event counter and check
@@ -543,11 +507,14 @@ public:
         //  \note Should avoid using updateAccessTime = true within loops.
         Boundary& boundaryFieldRef(const bool updateAccessTime = true);
 
-        //- Return the time index of the field
-        inline label timeIndex() const noexcept;
+        //- Return const-reference to the boundary field
+        inline const Boundary& boundaryField() const;
 
-        //- Write-access to the time index of the field
-        inline label& timeIndex() noexcept;
+        //- Return the time index of the field
+        inline label timeIndex() const;
+
+        //- Return the time index of the field
+        inline label& timeIndex();
 
         //- Store the old-time fields
         void storeOldTimes() const;
@@ -660,10 +627,9 @@ public:
 
     // Member Operators
 
-        //- Return a const-reference to the dimensioned internal field.
-        //- Same as internalField().
+        //- Return a const-reference to the dimensioned internal field
         //  Useful in the formulation of source-terms for FV equations
-        const Internal& operator()() const { return *this; }
+        inline const Internal& operator()() const;
 
         void operator=(const GeometricField<Type, PatchField, GeoMesh>&);
         void operator=(const tmp<GeometricField<Type, PatchField, GeoMesh>>&);

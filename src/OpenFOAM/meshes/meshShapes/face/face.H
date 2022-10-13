@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -43,8 +43,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_face_H
-#define Foam_face_H
+#ifndef face_H
+#define face_H
 
 #include "pointField.H"
 #include "labelList.H"
@@ -206,9 +206,6 @@ public:
 
         //- Magnitude of face area
         inline scalar mag(const UList<point>& p) const;
-
-        //- The enclosing (bounding) box for the face
-        inline Pair<point> box(const UList<point>& pts) const;
 
         //- Return face with reverse direction
         //  The starting points of the original and reverse face are identical.
@@ -427,14 +424,6 @@ public:
                 faceList& quadFaces
             ) const;
 
-
-        //- True if the face has at least one vertex in common with other
-        inline bool connected(const labelUList& other) const;
-
-        //- True if the face has at least one vertex in common with other
-        template<unsigned N>
-        inline bool connected(const FixedList<label, N>& other) const;
-
         //- Compare faces
         //  \return
         //  -  0: different
@@ -442,14 +431,8 @@ public:
         //  - -1: same face, but different orientation
         static int compare(const face& a, const face& b);
 
-        //- True if the faces have all the same vertices
+        //- Return true if the faces have the same vertices
         static bool sameVertices(const face& a, const face& b);
-
-
-    // Member Operators
-
-        //- Increment (offset) vertices by given amount
-        inline void operator+=(const label vertexOffset);
 
 
     // Hashing
@@ -511,11 +494,19 @@ template<> struct Hash<face> : face::hasher {};
 template<>
 struct offsetOp<face>
 {
-    face operator()(const face& x, const label offset) const
+    inline face operator()
+    (
+        const face& x,
+        const label offset
+    ) const
     {
-        face f(x);
-        f += offset;
-        return f;
+        face result(x.size());
+
+        forAll(x, i)
+        {
+            result[i] = x[i] + offset;
+        }
+        return result;
     }
 };
 

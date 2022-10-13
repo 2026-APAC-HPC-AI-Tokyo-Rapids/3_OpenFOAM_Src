@@ -6,8 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2015 OpenFOAM Foundation
-    Copyright (C) 2022 Upstream CFD GmbH
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -57,68 +56,16 @@ void kOmegaSSTDES<BasicTurbulenceModel>::correctNut()
 
 
 template<class BasicTurbulenceModel>
-tmp<volScalarField> kOmegaSSTDES<BasicTurbulenceModel>::r
-(
-    const volScalarField& nur,
-    const volScalarField& magGradU
-) const
-{
-    const dimensionedScalar eps(magGradU.dimensions(), SMALL);
-
-    tmp<volScalarField> tr =
-        min(nur/(max(magGradU, eps)*sqr(this->kappa_*this->y_)), scalar(10));
-
-    tr.ref().boundaryFieldRef() == 0;
-
-    return tr;
-}
-
-
-template<class BasicTurbulenceModel>
-tmp<volScalarField> kOmegaSSTDES<BasicTurbulenceModel>::S2
-(
-    const volTensorField& gradU
-) const
-{
-    tmp<volScalarField> tS2 =
-        kOmegaSSTBase<DESModel<BasicTurbulenceModel>>::S2(gradU);
-
-    if (this->useSigma_)
-    {
-        volScalarField& S2 = tS2.ref();
-
-        const volScalarField& k = this->k_;
-        const volScalarField& omega = this->omega_;
-
-        const volScalarField CDkOmega
-        (
-            (2*this->alphaOmega2_)*(fvc::grad(k) & fvc::grad(omega))/omega
-        );
-
-        const volScalarField F1(this->F1(CDkOmega));
-
-        const volScalarField CDES(this->CDES(F1));
-        const volScalarField dTilda(this->dTilda(mag(gradU), CDES));
-        const volScalarField lengthScaleRAS(this->lengthScaleRAS());
-        const volScalarField Ssigma(this->Ssigma(gradU));
-
-        S2 =
-            pos(dTilda - lengthScaleRAS)*S2
-          + (scalar(1) - pos(dTilda - lengthScaleRAS))*sqr(Ssigma);
-    }
-
-    return tS2;
-}
-
-
-template<class BasicTurbulenceModel>
 tmp<volScalarField> kOmegaSSTDES<BasicTurbulenceModel>::dTilda
 (
     const volScalarField& magGradU,
     const volScalarField& CDES
 ) const
 {
-    return min(lengthScaleLES(CDES), lengthScaleRAS());
+    const volScalarField& k = this->k_;
+    const volScalarField& omega = this->omega_;
+
+    return min(CDES*this->delta(), sqrt(k)/(this->betaStar_*omega));
 }
 
 
@@ -131,23 +78,6 @@ tmp<volScalarField::Internal> kOmegaSSTDES<BasicTurbulenceModel>::epsilonByk
 {
     volScalarField CDES(this->CDES(F1));
     return sqrt(this->k_())/dTilda(mag(gradU), CDES)()();
-}
-
-
-template<class BasicTurbulenceModel>
-tmp<volScalarField::Internal> kOmegaSSTDES<BasicTurbulenceModel>::GbyNu0
-(
-    const volTensorField& gradU,
-    const volScalarField& S2
-) const
-{
-    if (this->useSigma_)
-    {
-        return S2();
-    }
-
-    return
-        kOmegaSSTBase<DESModel<BasicTurbulenceModel>>::GbyNu0(gradU, S2);
 }
 
 
@@ -190,15 +120,6 @@ kOmegaSSTDES<BasicTurbulenceModel>::kOmegaSSTDES
         propertiesName
     ),
 
-    useSigma_
-    (
-        Switch::getOrAddToDict
-        (
-            "useSigma",
-            this->coeffDict_,
-            false
-        )
-    ),
     kappa_
     (
         dimensioned<scalar>::getOrAddToDict
@@ -227,17 +148,8 @@ kOmegaSSTDES<BasicTurbulenceModel>::kOmegaSSTDES
         )
     )
 {
-    // Note: Ctrans coeff is model specific; for k-w = 60
-    this->Ctrans_ =
-        dimensioned<scalar>::getOrAddToDict("Ctrans", this->coeffDict_, 60.0);
-
     if (type == typeName)
     {
-        WarningInFunction
-            << "This model is not recommended and will be deprecated in future "
-            << "releases. Please consider using the DDES/IDDES versions instead"
-            << endl;
-
         this->printCoeffs(type);
     }
 }
@@ -250,7 +162,6 @@ bool kOmegaSSTDES<BasicTurbulenceModel>::read()
 {
     if (kOmegaSSTBase<DESModel<BasicTurbulenceModel>>::read())
     {
-        useSigma_.readIfPresent("useSigma", this->coeffDict());
         kappa_.readIfPresent(this->coeffDict());
         CDESkom_.readIfPresent(this->coeffDict());
         CDESkeps_.readIfPresent(this->coeffDict());
@@ -259,28 +170,6 @@ bool kOmegaSSTDES<BasicTurbulenceModel>::read()
     }
 
     return false;
-}
-
-
-template<class BasicTurbulenceModel>
-Foam::tmp<Foam::volScalarField>
-kOmegaSSTDES<BasicTurbulenceModel>::lengthScaleRAS() const
-{
-    const volScalarField& k = this->k_;
-    const volScalarField& omega = this->omega_;
-
-    return sqrt(k)/(this->betaStar_*omega);
-}
-
-
-template<class BasicTurbulenceModel>
-Foam::tmp<Foam::volScalarField>
-kOmegaSSTDES<BasicTurbulenceModel>::lengthScaleLES
-(
-    const volScalarField& CDES
-) const
-{
-    return CDES*this->delta();
 }
 
 
@@ -298,11 +187,31 @@ tmp<volScalarField> kOmegaSSTDES<BasicTurbulenceModel>::LESRegion() const
 
     const volScalarField F1(this->F1(CDkOmega));
 
-    return tmp<volScalarField>::New
+    tmp<volScalarField> tLESRegion
     (
-        IOobject::scopedName("DES", "LESRegion"),
-        neg(dTilda(mag(fvc::grad(U)), CDES(F1)) - lengthScaleRAS())
+        new volScalarField
+        (
+            IOobject
+            (
+                "DES::LESRegion",
+                this->mesh_.time().timeName(),
+                this->mesh_,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            neg
+            (
+                dTilda
+                (
+                    mag(fvc::grad(U)),
+                    F1*CDESkom_ + (1 - F1)*CDESkeps_
+                )
+              - sqrt(k)/(this->betaStar_*omega)
+            )
+        )
     );
+
+    return tLESRegion;
 }
 
 

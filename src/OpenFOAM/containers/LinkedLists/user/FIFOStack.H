@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -66,25 +66,25 @@ public:
         //- Const reference to the top element
         const T& top() const
         {
-            return this->back();
+            return this->last();
         }
 
         //- Const reference to the bottom element
         const T& bottom() const
         {
-            return this->front();
+            return this->first();
         }
 
         //- Push an element onto the back of the stack
         void push(const T& elem)
         {
-            this->push_back(elem);
+            this->append(elem);
         }
 
         //- Move an element onto the back of the stack
         void push(T&& elem)
         {
-            this->push_back(std::move(elem));
+            this->append(std::move(elem));
         }
 
         //- Pop the bottom element off the stack

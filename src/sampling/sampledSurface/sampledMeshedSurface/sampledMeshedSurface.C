@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -159,8 +159,7 @@ bool Foam::sampledMeshedSurface::update(const meshSearch& meshSearcher)
     {
         // Search for nearest cell
 
-        const auto& cellTree = meshSearcher.cellTree();
-        const auto& treeData = cellTree.shapes();
+        const indexedOctree<treeDataCell>& cellTree = meshSearcher.cellTree();
 
         forAll(fc, facei)
         {
@@ -171,10 +170,8 @@ bool Foam::sampledMeshedSurface::update(const meshSearch& meshSearcher)
 
             if (info.hit())
             {
-                const label objectIndex = treeData.objectIndex(info.index());
-
-                near.first()  = info.point().distSqr(pt);
-                near.second() = globalCells.toGlobal(objectIndex);
+                near.first()  = magSqr(info.hitPoint()-pt);
+                near.second() = globalCells.toGlobal(info.index());
             }
         }
     }
@@ -183,7 +180,6 @@ bool Foam::sampledMeshedSurface::update(const meshSearch& meshSearcher)
         // Search for cell containing point
 
         const auto& cellTree = meshSearcher.cellTree();
-        const auto& treeData = cellTree.shapes();
 
         forAll(fc, facei)
         {
@@ -193,13 +189,10 @@ bool Foam::sampledMeshedSurface::update(const meshSearch& meshSearcher)
             if (cellTree.bb().contains(pt))
             {
                 const label index = cellTree.findInside(pt);
-
                 if (index != -1)
                 {
-                    const label objectIndex = treeData.objectIndex(index);
-
                     near.first()  = 0;
-                    near.second() = globalCells.toGlobal(objectIndex);
+                    near.second() = globalCells.toGlobal(index);
                 }
             }
         }
@@ -210,7 +203,6 @@ bool Foam::sampledMeshedSurface::update(const meshSearch& meshSearcher)
         // on all non-coupled boundary faces
 
         const auto& bndTree = meshSearcher.nonCoupledBoundaryTree();
-        const auto& treeData = bndTree.shapes();
 
         forAll(fc, facei)
         {
@@ -221,10 +213,12 @@ bool Foam::sampledMeshedSurface::update(const meshSearch& meshSearcher)
 
             if (info.hit())
             {
-                const label objectIndex = treeData.objectIndex(info.index());
-
-                near.first()  = info.point().distSqr(pt);
-                near.second() = globalCells.toGlobal(objectIndex);
+                near.first()  = magSqr(info.hitPoint()-pt);
+                near.second() =
+                    globalCells.toGlobal
+                    (
+                        bndTree.shapes().faceLabels()[info.index()]
+                    );
             }
         }
     }
@@ -233,7 +227,7 @@ bool Foam::sampledMeshedSurface::update(const meshSearch& meshSearcher)
     // See which processor has the nearest. Mark and subset
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Pstream::listCombineReduce(nearest, minFirstEqOp<scalar>{});
+    Pstream::listCombineAllGather(nearest, minFirstEqOp<scalar>{});
 
     labelList cellOrFaceLabels(fc.size(), -1);
 
@@ -352,7 +346,7 @@ bool Foam::sampledMeshedSurface::update(const meshSearch& meshSearcher)
                         if (info.distance() < minDistSqr)
                         {
                             minDistSqr = info.distance();
-                            samplePoints_[pointi] = info.point();
+                            samplePoints_[pointi] = info.rawPoint();
                         }
                     }
                 }
@@ -391,7 +385,7 @@ bool Foam::sampledMeshedSurface::update(const meshSearch& meshSearcher)
                         (
                             pt,
                             mesh().points()
-                        ).point();
+                        ).rawPoint();
                 }
             }
         }
@@ -638,16 +632,10 @@ bool Foam::sampledMeshedSurface::update()
     // Calculate surface and mesh overlap bounding box
     treeBoundBox bb(surface_.points(), surface_.meshPoints());
 
-    // Restrict surface to (global!) mesh bound box
-    bb &= mesh().bounds();
+    // Check for overlap with (global!) mesh bb
+    const bool intersect = bb.intersect(mesh().bounds());
 
-    if (bb.good())
-    {
-        // Extend a bit
-        bb.grow(0.5*bb.span());
-        bb.inflate(1e-6);
-    }
-    else
+    if (!intersect)
     {
         // Surface and mesh do not overlap at all. Guarantee a valid
         // bounding box so we don't get any 'invalid bounding box' errors.
@@ -657,8 +645,20 @@ bool Foam::sampledMeshedSurface::update()
             << " does not overlap bounding box of mesh " << mesh().bounds()
             << endl;
 
-        bb.reset(mesh().bounds().centre());
-        bb.grow(1e-6*mesh().bounds().span());
+        bb = treeBoundBox(mesh().bounds());
+        const vector span(bb.span());
+
+        bb.min() += (0.5-1e-6)*span;
+        bb.max() -= (0.5-1e-6)*span;
+    }
+    else
+    {
+        // Extend a bit
+        const vector span(bb.span());
+        bb.min() -= 0.5*span;
+        bb.max() += 0.5*span;
+
+        bb.inflate(1e-6);
     }
 
     // Mesh search engine, no triangulation of faces.

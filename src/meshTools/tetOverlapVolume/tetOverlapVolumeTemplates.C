@@ -197,8 +197,7 @@ void Foam::tetOverlapVolume::cellCellOverlapMinDecomp
                 meshA.points()[pt0I],
                 meshA.points()[pt1I]
             );
-
-            const treeBoundBox tetAbb(tetA.bounds());
+            const treeBoundBox tetABb(tetA.bounds());
 
             // Loop over tets of cellB
             forAll(cFacesB, cFB)
@@ -244,10 +243,7 @@ void Foam::tetOverlapVolume::cellCellOverlapMinDecomp
                         meshB.points()[pt0I],
                         meshB.points()[pt1I]
                     );
-
-                    const treeBoundBox tetBbb(tetB.bounds());
-
-                    if (!tetBbb.overlaps(tetAbb))
+                    if (!tetB.bounds().overlaps(tetABb))
                     {
                         continue;
                     }

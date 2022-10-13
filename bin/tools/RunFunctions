@@ -26,9 +26,9 @@
 [ -d "$FOAM_TUTORIALS" ] || echo "No OpenFOAM tutorials? : $FOAM_TUTORIALS" 1>&2
 
 # Darwin workaround - SIP clearing DYLD_LIBRARY_PATH variable
-if [ -n "$FOAM_LD_LIBRARY_PATH" ] && [ -z "$DYLD_LIBRARY_PATH" ]
+if [ -n "$FOAM_DYLD_LIBRARY_PATH" ] && [ -z "$DYLD_LIBRARY_PATH" ]
 then
-    export DYLD_LIBRARY_PATH="$FOAM_LD_LIBRARY_PATH"
+    export DYLD_LIBRARY_PATH="$FOAM_DYLD_LIBRARY_PATH"
 fi
 
 
@@ -157,7 +157,7 @@ getNumberOfPatchFaces()
         '/^ *'"$patch"' *$/,/}/{s/^ *nFaces  *\([0-9][0-9]*\) *;.*$/\1/p}' \
         "$file")
 
-    if [ -n "$nFaces" ]
+    if [ -n "nFaces" ]
     then
         echo "$nFaces"
     else

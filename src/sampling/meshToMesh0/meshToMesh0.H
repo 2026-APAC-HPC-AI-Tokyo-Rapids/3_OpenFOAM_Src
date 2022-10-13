@@ -91,13 +91,13 @@ class meshToMesh0
         labelListList boundaryAddressing_;
 
         //- Inverse-distance interpolation weights
-        mutable std::unique_ptr<scalarListList> inverseDistanceWeightsPtr_;
+        mutable unique_ptr<scalarListList> inverseDistanceWeightsPtr_;
 
         //- Inverse-volume interpolation weights
-        mutable std::unique_ptr<scalarListList> inverseVolumeWeightsPtr_;
+        mutable unique_ptr<scalarListList> inverseVolumeWeightsPtr_;
 
         //- Cell to cell overlap addressing
-        mutable std::unique_ptr<labelListList> cellToCellAddressingPtr_;
+        mutable unique_ptr<labelListList> cellToCellAddressingPtr_;
 
         //- Overlap volume
         mutable scalar V_;
@@ -116,7 +116,7 @@ class meshToMesh0
             const pointField& points,
             const fvMesh& fromMesh,
             const List<bool>& boundaryCell,
-            const indexedOctree<treeDataCell>& cellTree
+            const indexedOctree<treeDataCell>& oc
         ) const;
 
         void calculateInverseDistanceWeights() const;

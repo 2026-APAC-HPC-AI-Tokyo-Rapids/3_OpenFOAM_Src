@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2012-2017 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -45,9 +45,12 @@ void Foam::ParticleCollector<CloudType>::makeLogFile
 )
 {
     // Create the output file if not already created
-    if (logToFile_)
+    if (log_)
     {
-        DebugInfo<< "Creating output file" << endl;
+        if (debug)
+        {
+            Info<< "Creating output file" << endl;
+        }
 
         if (Pstream::master())
         {
@@ -416,7 +419,7 @@ void Foam::ParticleCollector<CloudType>::write()
         massTotal_[facei] += mass_[facei];
     }
 
-    Log_<< type() << " output:" << nl;
+    Info<< type() << " output:" << nl;
 
     Field<scalar> faceMassTotal(mass_.size(), Zero);
     this->getModelProperty("massTotal", faceMassTotal);
@@ -449,17 +452,18 @@ void Foam::ParticleCollector<CloudType>::write()
         }
     }
 
-    Log_<< "    sum(total mass) = " << sumTotalMass << nl
+    Info<< "    sum(total mass) = " << sumTotalMass << nl
         << "    sum(average mass flow rate) = " << sumAverageMFR << nl
         << endl;
 
 
-    if (Pstream::master() && surfaceFormat_ != "none")
+    if (surfaceFormat_ != "none" && Pstream::master())
     {
         auto writer = surfaceWriter::New
         (
             surfaceFormat_,
-            surfaceWriter::formatOptions(this->coeffDict(), surfaceFormat_)
+            this->coeffDict().subOrEmptyDict("formatOptions")
+                .subOrEmptyDict(surfaceFormat_)
         );
 
         if (debug)
@@ -520,7 +524,7 @@ Foam::ParticleCollector<CloudType>::ParticleCollector
     parcelType_(this->coeffDict().getOrDefault("parcelType", -1)),
     removeCollected_(this->coeffDict().getBool("removeCollected")),
     resetOnWrite_(this->coeffDict().getBool("resetOnWrite")),
-    logToFile_(this->coeffDict().getBool("log")),
+    log_(this->coeffDict().getBool("log")),
     points_(),
     faces_(),
     faceTris_(),
@@ -532,7 +536,7 @@ Foam::ParticleCollector<CloudType>::ParticleCollector
     (
         this->coeffDict().getBool("negateParcelsOppositeNormal")
     ),
-    surfaceFormat_(this->coeffDict().getWord("surfaceFormat")),
+    surfaceFormat_(this->coeffDict().lookup("surfaceFormat")),
     totalTime_(0.0),
     mass_(),
     massTotal_(),
@@ -605,7 +609,7 @@ Foam::ParticleCollector<CloudType>::ParticleCollector
     parcelType_(pc.parcelType_),
     removeCollected_(pc.removeCollected_),
     resetOnWrite_(pc.resetOnWrite_),
-    logToFile_(pc.logToFile_),
+    log_(pc.log_),
     points_(pc.points_),
     faces_(pc.faces_),
     faceTris_(pc.faceTris_),

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2018 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -165,7 +165,7 @@ public:
     // Access
 
             //- Return the polyPatch
-            const polyPatch& patch() const noexcept
+            const polyPatch& patch() const
             {
                 return polyPatch_;
             }
@@ -195,43 +195,28 @@ public:
             }
 
             //- Return true if the given type is a constraint type
-            static bool constraintType(const word& patchType);
+            static bool constraintType(const word& pt);
 
             //- Return a list of all the constraint patch types
             static wordList constraintTypes();
 
             //- Return the index of this patch in the fvBoundaryMesh
-            label index() const noexcept
+            label index() const
             {
                 return polyPatch_.index();
             }
 
             //- Return boundaryMesh reference
-            const fvBoundaryMesh& boundaryMesh() const noexcept
+            const fvBoundaryMesh& boundaryMesh() const
             {
                 return boundaryMesh_;
             }
 
-            //- Slice List to patch, using the virtual patch size
+            //- Slice list to patch
             template<class T>
             const typename List<T>::subList patchSlice(const List<T>& l) const
             {
                 return typename List<T>::subList(l, size(), start());
-            }
-
-            //- Slice List to patch, using the underlying polyPatch information
-            template<class T>
-            const typename List<T>::subList patchRawSlice
-            (
-                const List<T>& l
-            ) const
-            {
-                return typename List<T>::subList
-                (
-                    l,
-                    polyPatch_.size(),
-                    polyPatch_.start()
-                );
             }
 
             //- Return faceCells
@@ -272,27 +257,18 @@ public:
             const scalarField& deltaCoeffs() const;
 
 
-        // Evaluation Functions
-
-            //- Extract internal field next to patch using faceCells mapping
-            template<class Type>
-            inline void patchInternalField
-            (
-                const UList<Type>& f,
-                const labelUList& faceCells,
-                Field<Type>& pfld
-            ) const;
+        // Evaluation functions
 
             //- Return given internal field next to patch as patch field
             template<class Type>
             tmp<Field<Type>> patchInternalField(const UList<Type>&) const;
 
             //- Return given internal field next to patch as patch field
-            //- using provided addressing
+            //- using faceCells mapping
             template<class Type>
             tmp<Field<Type>> patchInternalField
             (
-                const UList<Type>& f,
+                const UList<Type>&,
                 const labelUList& faceCells
             ) const;
 
@@ -300,24 +276,24 @@ public:
             template<class Type>
             void patchInternalField(const UList<Type>&, Field<Type>&) const;
 
-            //- Return the patch field of the GeometricField
-            //- corresponding to this patch.
-            template<class GeometricField, class AnyType = bool>
+            //- Return the corresponding patchField of the named field
+            template<class GeometricField, class Type>
             const typename GeometricField::Patch& patchField
             (
-                const GeometricField& gf
+                const GeometricField&
             ) const;
 
-            //- Lookup the named field from the local registry and
-            //- return the patch field corresponding to this patch.
+            //- Lookup and return the patchField of the named field from the
+            //- local objectRegistry.
             //  N.B.  The dummy pointer arguments are used if this function is
             //  instantiated within a templated function to avoid a bug in gcc.
-            template<class GeometricField, class AnyType = bool>
+            //  See inletOutletFvPatchField.C and outletInletFvPatchField.C
+            template<class GeometricField, class Type>
             const typename GeometricField::Patch& lookupPatchField
             (
                 const word& name,
                 const GeometricField* = nullptr,
-                const AnyType* = nullptr
+                const Type* = nullptr
             ) const;
 };
 

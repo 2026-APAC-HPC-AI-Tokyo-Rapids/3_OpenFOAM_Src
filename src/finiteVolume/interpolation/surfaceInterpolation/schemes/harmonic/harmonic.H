@@ -114,7 +114,8 @@ public:
         ) const
         {
             NotImplemented;
-            return nullptr;
+
+            return tmp<surfaceScalarField>(nullptr);
         }
 
         //- Return the face-interpolate of the given cell field

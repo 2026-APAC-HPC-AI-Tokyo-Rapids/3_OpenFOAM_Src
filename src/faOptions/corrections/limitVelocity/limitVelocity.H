@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021-2022 OpenCFD Ltd.
+    Copyright (C) 2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -65,8 +65,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_fa_limitVelocity_H
-#define Foam_fa_limitVelocity_H
+#ifndef limitVelocity_H
+#define limitVelocity_H
 
 #include "faceSetOption.H"
 
@@ -83,7 +83,7 @@ namespace fa
 
 class limitVelocity
 :
-    public fa::faceSetOption
+    public faceSetOption
 {
 protected:
 
@@ -94,6 +94,17 @@ protected:
 
         //- Maximum velocity magnitude
         scalar max_;
+
+
+private:
+
+    // Private Member Functions
+
+        //- No copy construct
+        limitVelocity(const limitVelocity&) = delete;
+
+        //- No copy assignment
+        void operator=(const limitVelocity&) = delete;
 
 
 public:
@@ -110,14 +121,8 @@ public:
             const word& name,
             const word& modelType,
             const dictionary& dict,
-            const fvMesh& mesh
+            const fvPatch& patch
         );
-
-        //- No copy construct
-        limitVelocity(const limitVelocity&) = delete;
-
-        //- No copy assignment
-        void operator=(const limitVelocity&) = delete;
 
 
     //- Destructor

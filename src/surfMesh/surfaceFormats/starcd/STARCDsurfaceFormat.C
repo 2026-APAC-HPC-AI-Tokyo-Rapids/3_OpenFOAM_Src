@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -86,12 +86,12 @@ bool Foam::fileFormats::STARCDsurfaceFormat<Face>::read
     // Clear everything
     this->clear();
 
-    const fileName prefix(filename.lessExt());
+    fileName baseName = filename.lessExt();
 
     // Read cellTable names (if possible)
     Map<word> cellTableLookup = readInpCellTable
     (
-        IFstream(starFileName(prefix, STARCDCore::INP_FILE))()
+        IFstream(starFileName(baseName, STARCDCore::INP_FILE))()
     );
 
 
@@ -101,7 +101,7 @@ bool Foam::fileFormats::STARCDsurfaceFormat<Face>::read
     // read points from .vrt file
     readPoints
     (
-        IFstream(starFileName(prefix, STARCDCore::VRT_FILE))(),
+        IFstream(starFileName(baseName, STARCDCore::VRT_FILE))(),
         this->storedPoints(),
         pointId
     );
@@ -117,7 +117,7 @@ bool Foam::fileFormats::STARCDsurfaceFormat<Face>::read
 
     // Read .cel file
     // ~~~~~~~~~~~~~~
-    IFstream is(starFileName(prefix, STARCDCore::CEL_FILE));
+    IFstream is(starFileName(baseName, STARCDCore::CEL_FILE));
     if (!is.good())
     {
         FatalErrorInFunction
@@ -267,7 +267,7 @@ void Foam::fileFormats::STARCDsurfaceFormat<Face>::write
 )
 {
     // ASCII only, allow output compression
-    streamOpt.format(IOstreamOption::ASCII);
+    streamOpt.format(IOstream::ASCII);
 
     const UList<point>& pointLst = surf.points();
     const UList<Face>&  faceLst  = surf.surfFaces();
@@ -293,16 +293,16 @@ void Foam::fileFormats::STARCDsurfaceFormat<Face>::write
     );
 
 
-    const fileName prefix(filename.lessExt());
+    fileName baseName = filename.lessExt();
 
     // The .vrt file
     {
-        OFstream os(starFileName(prefix, STARCDCore::VRT_FILE), streamOpt);
+        OFstream os(starFileName(baseName, STARCDCore::VRT_FILE), streamOpt);
         writePoints(os, pointLst);
     }
 
     // The .cel file
-    OFstream os(starFileName(prefix, STARCDCore::CEL_FILE), streamOpt);
+    OFstream os(starFileName(baseName, STARCDCore::CEL_FILE), streamOpt);
     writeHeader(os, STARCDCore::HEADER_CEL);
 
     label faceIndex = 0;
@@ -331,7 +331,7 @@ void Foam::fileFormats::STARCDsurfaceFormat<Face>::write
 
     // Simple .inp file - always UNCOMPRESSED
     {
-        OFstream os(starFileName(prefix, STARCDCore::INP_FILE));
+        OFstream os(starFileName(baseName, STARCDCore::INP_FILE));
 
         writeCase
         (

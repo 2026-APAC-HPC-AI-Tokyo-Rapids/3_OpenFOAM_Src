@@ -80,7 +80,7 @@ class edgeMesh
         edgeList edges_;
 
         //- From point to edges
-        mutable std::unique_ptr<labelListList> pointEdgesPtr_;
+        mutable unique_ptr<labelListList> pointEdgesPtr_;
 
 
     // Private Member Functions

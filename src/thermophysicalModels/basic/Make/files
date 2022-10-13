@@ -3,12 +3,10 @@ fluidThermo/fluidThermo.C
 
 psiThermo/psiThermo.C
 psiThermo/psiThermos.C
-psiThermo/psiZoneThermos.C
 
 rhoThermo/rhoThermo.C
 rhoThermo/rhoThermos.C
 rhoThermo/liquidThermo.C
-rhoThermo/rhoZoneThermos.C
 
 derivedFvPatchFields/fixedEnergy/fixedEnergyFvPatchScalarField.C
 derivedFvPatchFields/gradientEnergy/gradientEnergyFvPatchScalarField.C

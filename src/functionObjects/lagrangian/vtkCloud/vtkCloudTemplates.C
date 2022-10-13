@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,8 +56,11 @@ Foam::wordList Foam::functionObjects::vtkCloud::writeFields
     // Thus need to resolve names between all processors.
 
     wordList fieldNames(obrTmp.names<IOField<Type>>());
-    Pstream::combineReduce(fieldNames, ListOps::uniqueEqOp<word>());
-    Foam::sort(fieldNames);  // Consistent order
+    Pstream::combineGather(fieldNames, ListOps::uniqueEqOp<word>());
+    Pstream::broadcast(fieldNames);
+
+    // Consistent order on all processors
+    Foam::sort(fieldNames);
 
     for (const word& fieldName : fieldNames)
     {

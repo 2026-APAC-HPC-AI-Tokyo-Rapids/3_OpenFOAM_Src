@@ -33,7 +33,14 @@ License
 template<class T>
 bool Foam::IOMap<T>::readContents()
 {
-    if (isReadRequired() || (isReadOptional() && headerOk()))
+    if
+    (
+        (
+            readOpt() == IOobject::MUST_READ
+         || readOpt() == IOobject::MUST_READ_IF_MODIFIED
+        )
+     || (readOpt() == IOobject::READ_IF_PRESENT && headerOk())
+    )
     {
         // For if MUST_READ_IF_MODIFIED
         addWatch();

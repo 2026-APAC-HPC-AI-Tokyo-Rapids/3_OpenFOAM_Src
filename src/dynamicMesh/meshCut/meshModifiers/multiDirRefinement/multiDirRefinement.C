@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -504,7 +504,11 @@ Foam::multiDirRefinement::multiDirRefinement
         refineHex8(mesh, hexCells, writeMesh);
     }
 
-    if (returnReduceOr(cellLabels_.size()))
+    label nRemainingCells = cellLabels_.size();
+
+    reduce(nRemainingCells, sumOp<label>());
+
+    if (nRemainingCells > 0)
     {
         // Any cells to refine using meshCutter
 
@@ -543,7 +547,11 @@ Foam::multiDirRefinement::multiDirRefinement
         refineHex8(mesh, hexCells, writeMesh);
     }
 
-    if (returnReduceOr(cellLabels_.size()))
+    label nRemainingCells = cellLabels_.size();
+
+    reduce(nRemainingCells, sumOp<label>());
+
+    if (nRemainingCells > 0)
     {
         // Any cells to refine using meshCutter
 

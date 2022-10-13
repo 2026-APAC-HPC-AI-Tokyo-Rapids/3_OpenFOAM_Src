@@ -75,10 +75,13 @@ void Foam::processorLODs::box::writeBoxes
 
             // Write the points
             const pointField pts(bb.points());
-            meshTools::writeOBJ(os, pts);
+            for (const point& p : pts)
+            {
+                meshTools::writeOBJ(os, p);
+            }
 
             // Write the box faces
-            for (const face& f : treeBoundBox::faces)
+            for (const face& f : bb.faces)
             {
                 os  << 'f';
                 for (const label fpi : f)
@@ -413,7 +416,7 @@ bool Foam::processorLODs::box::doRefineBoxes
         newToOld_[proci].transfer(newProcNewToOld);
     }
 
-    return returnReduceOr(refineBoxes);
+    return returnReduce(refineBoxes, orOp<bool>());
 }
 
 

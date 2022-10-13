@@ -111,7 +111,7 @@ Foam::faPatch::faPatch
     pointLabelsPtr_(nullptr),
     pointEdgesPtr_(nullptr)
 {
-    if (constraintType(patchType))
+    if (!patchType.empty() && constraintType(patchType))
     {
         inGroups().appendUniq(patchType);
     }
@@ -135,7 +135,7 @@ Foam::faPatch::faPatch
     pointLabelsPtr_(nullptr),
     pointEdgesPtr_(nullptr)
 {
-    if (constraintType(patchType))
+    if (!patchType.empty() && constraintType(patchType))
     {
         inGroups().appendUniq(patchType);
     }
@@ -462,7 +462,10 @@ Foam::tmp<Foam::vectorField> Foam::faPatch::edgeNormals() const
 {
     auto tedgeNorm = tmp<vectorField>::New(edgeLengths());
 
-    tedgeNorm.ref().normalise();
+    for (vector& n : tedgeNorm.ref())
+    {
+        n.normalise();
+    }
 
     return tedgeNorm;
 }
@@ -470,27 +473,27 @@ Foam::tmp<Foam::vectorField> Foam::faPatch::edgeNormals() const
 
 Foam::tmp<Foam::vectorField> Foam::faPatch::edgeFaceCentres() const
 {
-    return patchInternalField(boundaryMesh().mesh().areaCentres());
+    auto tfc = tmp<vectorField>::New(size());
+    auto& fc = tfc.ref();
+
+    // get reference to global face centres
+    const vectorField& gfc =
+        boundaryMesh().mesh().areaCentres().internalField();
+
+    const labelUList& faceLabels = edgeFaces();
+
+    forAll(faceLabels, edgeI)
+    {
+        fc[edgeI] = gfc[faceLabels[edgeI]];
+    }
+
+    return tfc;
 }
 
 
 Foam::tmp<Foam::vectorField> Foam::faPatch::delta() const
 {
-    // Use patch-normal delta for all non-coupled BCs
-    const vectorField nHat(edgeNormals());
-
-    vectorField edgePN(edgeCentres() - edgeFaceCentres());
-
-    // Do not allow any mag(val) < SMALL
-    for (vector& edgei : edgePN)
-    {
-        if (mag(edgei) < SMALL)
-        {
-            edgei = vector::uniform(SMALL);
-        }
-    }
-
-    return nHat*(nHat & edgePN);
+    return edgeNormals()*(edgeNormals() & (edgeCentres() - edgeFaceCentres()));
 }
 
 

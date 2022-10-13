@@ -124,7 +124,7 @@ public:
         solution
         (
             const objectRegistry& obr,
-            IOobjectOption::readOption rOpt,
+            const IOobject::readOption rOpt,
             const fileName& dictName,
             const dictionary* fallback = nullptr
         );

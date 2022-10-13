@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -51,7 +51,7 @@ Foam::solidParticle::solidParticle
 {
     if (readFields)
     {
-        if (is.format() == IOstreamOption::ASCII)
+        if (is.format() == IOstream::ASCII)
         {
             is  >> d_ >> U_;
         }
@@ -124,7 +124,7 @@ void Foam::solidParticle::writeFields(const Cloud<solidParticle>& c)
 
 Foam::Ostream& Foam::operator<<(Ostream& os, const solidParticle& p)
 {
-    if (os.format() == IOstreamOption::ASCII)
+    if (os.format() == IOstream::ASCII)
     {
         os  << static_cast<const particle&>(p)
             << token::SPACE << p.d_

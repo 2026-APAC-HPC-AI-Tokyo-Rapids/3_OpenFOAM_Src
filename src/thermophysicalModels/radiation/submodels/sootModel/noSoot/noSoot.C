@@ -67,7 +67,7 @@ void Foam::radiation::noSoot::correct()
 const Foam::volScalarField& Foam::radiation::noSoot::soot() const
 {
     NotImplemented;
-    return volScalarField::null();  // Placeholder
+    return tmp<volScalarField>();   // Placeholder
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

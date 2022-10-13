@@ -65,15 +65,15 @@ Foam::fa::externalHeatFluxSource::externalHeatFluxSource
     const word& sourceName,
     const word& modelType,
     const dictionary& dict,
-    const fvMesh& m
+    const fvPatch& patch
 )
 :
-    fa::faceSetOption(sourceName, modelType, dict, m),
+    fa::faceSetOption(sourceName, modelType, dict, patch),
     mode_(operationModeNames.get("mode", dict)),
     TName_(dict.getOrDefault<word>("T", "T")),
-    Q_(nullptr),
-    q_(nullptr),
-    h_(nullptr),
+    Q_(0),
+    q_(0),
+    h_(0),
     Ta_(nullptr),
     emissivity_(dict.getOrDefault<scalar>("emissivity", 0))
 {
@@ -97,98 +97,73 @@ void Foam::fa::externalHeatFluxSource::addSup
 {
     if (isActive())
     {
-        DebugInfo
-            << name() << ": applying source to "
+        DebugInfo<< name() << ": applying source to "
             << eqn.psi().name() << endl;
 
-        scalar qflux = 0;
+        IOobject io
+        (
+            "Q",
+            mesh_.time().timeName(),
+            mesh_,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        );
 
-        const scalar timeVal = mesh_.time().timeOutputValue();
-
-        switch (mode_)
-        {
-            case fixedPower:
-            {
-                // From [W] to [W/m2]
-                qflux = Q_->value(timeVal)/(faceSetOption::A() + VSMALL);
-                break;
-            }
-
-            case fixedHeatFlux:
-            {
-                qflux = q_->value(timeVal);
-                break;
-            }
-
-            default:
-            {
-                break;
-            }
-        }
+        auto tQ = tmp<areaScalarField>::New
+        (
+            io,
+            regionMesh(),
+            dimensionedScalar("q", dimPower/sqr(dimLength), 0),
+            zeroGradientFaPatchScalarField::typeName
+        );
+        areaScalarField& Q = tQ.ref();
 
         switch (mode_)
         {
             case fixedPower:
-            case fixedHeatFlux:
             {
-                auto tQ = DimensionedField<scalar, areaMesh>::New
-                (
-                    "Q",
-                    regionMesh(),
-                    dimensionedScalar(dimPower/sqr(dimLength), Zero)
-                );
-                auto& Q = tQ.ref();
-
-                if (faceSetOption::useSubMesh())
-                {
-                    UIndirectList<scalar>(Q.field(), faceSetOption::faces())
-                        = qflux;
-                }
-                else
-                {
-                    Q.field() = qflux;
-                }
-
+                Q.primitiveFieldRef() = Q_/regionMesh().S().field();
                 eqn += Q;
 
                 break;
             }
-
+            case fixedHeatFlux:
+            {
+                Q.primitiveFieldRef() = q_;
+                eqn += Q;
+                break;
+            }
             case fixedHeatTransferCoeff:
             {
                 const dimensionedScalar Ta
                 (
                     "Ta",
                     dimTemperature,
-                    Ta_->value(timeVal)
+                    Ta_->value(mesh_.time().timeOutputValue())
                 );
 
-                auto thp = DimensionedField<scalar, areaMesh>::New
+                areaScalarField hp
                 (
-                    "h",
+                    io,
                     regionMesh(),
                     dimensionedScalar
                     (
                         "h",
                         dimPower/sqr(dimLength)/dimTemperature,
-                        h_->value(timeVal)
+                        h_
                     )
                 );
-                auto& hp = thp.ref();
 
-                DimensionedField<scalar, areaMesh> hpTa(hp*Ta);
+                const areaScalarField hpTa(hp*Ta);
 
                 if (emissivity_ > 0)
                 {
                     hp -= emissivity_*sigma.value()*pow3(eqn.psi());
                 }
 
-                // Zero htc for non-mapped faces
-                faceSetOption::subsetFilter(hp.field());
-                faceSetOption::subsetFilter(hpTa.field());
-
                 eqn -= fam::SuSp(hp, eqn.psi()) - hpTa;
-                break;
+
             }
         }
     }
@@ -208,17 +183,17 @@ bool Foam::fa::externalHeatFluxSource::read(const dictionary& dict)
         {
             case fixedPower:
             {
-                Q_ = Function1<scalar>::New("Q", dict, &mesh_);
+                dict.readEntry("Q", Q_);
                 break;
             }
             case fixedHeatFlux:
             {
-                Q_ = Function1<scalar>::New("q", dict, &mesh_);
+                dict.readEntry("q", q_);
                 break;
             }
             case fixedHeatTransferCoeff:
             {
-                h_ = Function1<scalar>::New("h", dict, &mesh_);
+                dict.readEntry("h", h_);
                 Ta_ = Function1<scalar>::New("Ta", dict, &mesh_);
                 break;
             }
@@ -227,7 +202,7 @@ bool Foam::fa::externalHeatFluxSource::read(const dictionary& dict)
         return true;
     }
 
-    return false;
+     return false;
 }
 
 

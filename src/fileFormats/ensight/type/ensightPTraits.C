@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2015 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -41,20 +41,11 @@ Foam::ensightPTraits<Foam::label>::componentOrder[] = {0};
 
 template<>
 const char* const
-Foam::ensightPTraits<float>::typeName = "scalar";
+Foam::ensightPTraits<Foam::scalar>::typeName = "scalar";
 
 template<>
 const Foam::direction
-Foam::ensightPTraits<float>::componentOrder[] = {0};
-
-
-template<>
-const char* const
-Foam::ensightPTraits<double>::typeName = "scalar";
-
-template<>
-const Foam::direction
-Foam::ensightPTraits<double>::componentOrder[] = {0};
+Foam::ensightPTraits<Foam::scalar>::componentOrder[] = {0};
 
 
 template<>

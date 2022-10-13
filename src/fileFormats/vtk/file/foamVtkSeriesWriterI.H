@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,7 +56,7 @@ inline bool Foam::vtk::seriesWriter::append(const fileNameInstant& inst)
 inline bool Foam::vtk::seriesWriter::append(fileNameInstant&& inst)
 {
     // Strip out path before saving
-    inst.name().remove_path();
+    inst.name().removePath();
 
     return appendCheck(inst);
 }
@@ -80,7 +80,7 @@ inline bool Foam::vtk::seriesWriter::append
 )
 {
     // Strip out path before saving
-    file.remove_path();
+    file.removePath();
 
     return appendCheck(fileNameInstant(timeValue, std::move(file)));
 }

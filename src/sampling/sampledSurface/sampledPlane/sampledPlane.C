@@ -58,21 +58,37 @@ Foam::plane Foam::sampledPlane::definePlane
 {
     plane pln(dict);
 
-    // Optional (cartesian) coordinate transform.
-    // - with registry to allow lookup from globally defined systems
+    bool adjust = false;
+    const dictionary* dictptr = nullptr;
+    coordSystem::cartesian cs;
 
-    auto csysPtr = coordinateSystem::NewIfPresent(mesh, dict);
-
-    if (!csysPtr)
+    if (dict.found(coordinateSystem::typeName_(), keyType::LITERAL))
     {
-        csysPtr = coordinateSystem::NewIfPresent(dict, "transform");
+        // Create with registry to allow lookup from globally defined
+        // coordinate systems?
+
+        auto csPtr =
+            coordinateSystem::New(mesh, dict, coordinateSystem::typeName_());
+
+        if (csPtr)
+        {
+            adjust = true;
+            cs = csPtr();
+        }
+    }
+    else if
+    (
+        (dictptr = dict.findDict("transform", keyType::LITERAL)) != nullptr
+    )
+    {
+        adjust = true;
+        cs = coordSystem::cartesian(*dictptr);
     }
 
-    // Make plane relative to the Cartesian coordinate system
-    if (csysPtr)
-    {
-        coordSystem::cartesian cs(csysPtr());
 
+    // Make plane relative to the Cartesian coordinate system
+    if (adjust)
+    {
         const point  orig = cs.globalPosition(pln.origin());
         const vector norm = cs.globalVector(pln.normal());
 
@@ -150,7 +166,7 @@ Foam::sampledPlane::sampledPlane
     sampledSurface(name, mesh, dict),
     cuttingPlane(definePlane(mesh, dict)),
     zoneNames_(),
-    bounds_(dict.getOrDefault("bounds", boundBox::null())),
+    bounds_(dict.getOrDefault("bounds", boundBox::invertedBox)),
     triangulate_(dict.getOrDefault("triangulate", true)),
     needsUpdate_(true)
 {

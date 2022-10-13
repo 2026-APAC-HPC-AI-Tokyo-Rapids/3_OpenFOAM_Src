@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,10 +27,11 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "triangleFuncs.H"
-#include "triangle.H"
+#include "pointField.H"
 #include "treeBoundBox.H"
 #include "SortableList.H"
 #include "boolList.H"
+#include "triPointRef.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
@@ -149,7 +150,9 @@ bool Foam::triangleFuncs::intersectAxesBundle
 
 bool Foam::triangleFuncs::intersectBb
 (
-    const triPointRef& tri,
+    const point& p0,
+    const point& p1,
+    const point& p2,
     const treeBoundBox& cubeBb
 )
 {
@@ -157,10 +160,14 @@ bool Foam::triangleFuncs::intersectBb
     // to above intersectAxesBundle. However this function is not fully
     // correct and misses intersection between some triangles.
     {
+        const triPointRef tri(p0, p1, p2);
+
+        const edgeList& es = treeBoundBox::edges;
         const pointField points(cubeBb.points());
 
-        for (const edge& e : treeBoundBox::edges)
+        forAll(es, i)
         {
+            const edge& e = es[i];
             const point& start = points[e[0]];
             const point& end = points[e[1]];
 
@@ -181,27 +188,20 @@ bool Foam::triangleFuncs::intersectBb
 
     // Intersect triangle edges with bounding box
     point pInter;
+    if (cubeBb.intersects(p0, p1, pInter))
+    {
+        return true;
+    }
+    if (cubeBb.intersects(p1, p2, pInter))
+    {
+        return true;
+    }
+    if (cubeBb.intersects(p2, p0, pInter))
+    {
+        return true;
+    }
 
-    return
-    (
-        cubeBb.intersects(tri.a(), tri.b(), pInter)
-     || cubeBb.intersects(tri.b(), tri.c(), pInter)
-     || cubeBb.intersects(tri.c(), tri.a(), pInter)
-    );
-}
-
-
-bool Foam::triangleFuncs::intersectBb
-(
-    const point& p0,
-    const point& p1,
-    const point& p2,
-    const treeBoundBox& cubeBb
-)
-{
-    const triPointRef tri(p0, p1, p2);
-
-    return intersectBb(tri, cubeBb);
+    return false;
 }
 
 

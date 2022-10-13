@@ -251,18 +251,8 @@ void decomposeUniform
             << runTime.timePath()/uniformDir
             << endl;
 
-        // Bit of trickery to synthesise the correct directory base,
-        // e.g. processors4/0.01
-        const fileName timePath = fileHandler().objectPath
-        (
-            IOobject
-            (
-                "dummy",
-                runTime.timeName(),
-                processorDb
-            ),
-            word::null
-        ).path();
+        const fileName timePath =
+            fileHandler().filePath(processorDb.timePath());
 
         // If no fields have been decomposed the destination
         // directory will not have been created so make sure.
@@ -324,7 +314,7 @@ int main(int argc, char *argv[])
     (
         "decomposeParDict",
         "file",
-        "Alternative decomposePar dictionary file"
+        "Use specified file for decomposePar dictionary"
     );
 
     #include "addAllRegionOptions.H"
@@ -897,7 +887,9 @@ int main(int argc, char *argv[])
                         mesh,
                         runTime.timeName(),
                         cloud::prefix/cloudDir,
-                        IOobject::NO_REGISTER
+                        IOobject::MUST_READ,
+                        IOobject::NO_WRITE,
+                        false
                     );
 
                     // Note: look up "positions" for backwards compatibility
@@ -980,7 +972,9 @@ int main(int argc, char *argv[])
                             mesh,
                             runTime.timeName(),
                             cloud::prefix/cloudDirs[cloudI],
-                            IOobject::NO_REGISTER
+                            IOobject::MUST_READ,
+                            IOobject::NO_WRITE,
+                            false
                         );
 
                         lagrangianFieldCache.readAllFields
@@ -1020,9 +1014,7 @@ int main(int argc, char *argv[])
                                 Time::controlDictName,
                                 args.rootPath(),
                                 args.caseName()
-                              / ("processor" + Foam::name(proci)),
-                                args.allowFunctionObjects(),
-                                args.allowLibs()
+                              / ("processor" + Foam::name(proci))
                             )
                         );
                     }

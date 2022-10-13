@@ -24,3 +24,7 @@ bool adjustFringe
 (
     simple.dict().getOrDefault("oversetAdjustPhi", false)
 );
+bool massFluxInterpolation
+(
+    simple.dict().getOrDefault("massFluxInterpolation", false)
+);

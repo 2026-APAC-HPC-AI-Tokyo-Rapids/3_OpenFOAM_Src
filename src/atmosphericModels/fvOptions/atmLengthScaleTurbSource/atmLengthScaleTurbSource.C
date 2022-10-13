@@ -88,7 +88,7 @@ Foam::fv::atmLengthScaleTurbSource::atmLengthScaleTurbSource
 )
 :
     fv::cellSetOption(sourceName, modelType, dict, mesh),
-    isEpsilon_(false),
+    isEpsilon_(true),
     rhoName_(coeffs_.getOrDefault<word>("rho", "rho")),
     Lmax_
     (
@@ -139,9 +139,8 @@ Foam::fv::atmLengthScaleTurbSource::atmLengthScaleTurbSource
     tmp<volScalarField> tepsilon = turbPtr->epsilon();
     tmp<volScalarField> tomega = turbPtr->omega();
 
-    if (tepsilon.is_reference())
+    if (!tepsilon.isTmp())
     {
-        isEpsilon_ = true;
         fieldNames_[0] = tepsilon().name();
 
         const dictionary& turbDict = turbPtr->coeffDict();
@@ -150,7 +149,7 @@ Foam::fv::atmLengthScaleTurbSource::atmLengthScaleTurbSource
         C2_.read("C2", turbDict);
         C3_.read("C3", turbDict);
     }
-    else if (tomega.is_reference())
+    else if (!tomega.isTmp())
     {
         isEpsilon_ = false;
         fieldNames_[0] = tomega().name();

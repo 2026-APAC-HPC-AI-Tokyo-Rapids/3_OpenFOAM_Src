@@ -42,7 +42,7 @@ namespace Foam
     // - still needs some basic boundary conditions!!
     typedef GeometricField<uint8_t, fvPatchField, volMesh> volUint8Field;
 
-    defineTemplateTypeNameAndDebug(volUint8Field, 0);
+    defineTemplate2TypeNameAndDebug(volUint8Field, 0);
 
 } // End namespace Foam
 #endif

@@ -31,7 +31,7 @@ License
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-void Foam::ensightGeoFile::init()
+void Foam::ensightGeoFile::initialize()
 {
     writeBinaryHeader();
 
@@ -56,12 +56,12 @@ void Foam::ensightGeoFile::init()
 Foam::ensightGeoFile::ensightGeoFile
 (
     const fileName& pathname,
-    IOstreamOption::streamFormat fmt
+    IOstreamOption::streamFormat format
 )
 :
-    ensightFile(pathname, fmt)
+    ensightFile(pathname, format)
 {
-    init();
+    initialize();
 }
 
 
@@ -69,12 +69,12 @@ Foam::ensightGeoFile::ensightGeoFile
 (
     const fileName& path,
     const fileName& name,
-    IOstreamOption::streamFormat fmt
+    IOstreamOption::streamFormat format
 )
 :
-    ensightFile(path, name, fmt)
+    ensightFile(path, name, format)
 {
-    init();
+    initialize();
 }
 
 

@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
     Copyright (C) 2007-2019 PCOpt/NTUA
     Copyright (C) 2013-2019 FOSS GP
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -1190,13 +1190,15 @@ tmp<vector2DField> NURBS3DSurface::findClosestSurfacePoint
         paramCoors[pI].x() = u;
         paramCoors[pI].y() = v;
     }
-
+    reduce(nBoundedPoints, sumOp<label>());
+    reduce(maxResidual, maxOp<scalar>());
+    reduce(maxResidualDeriv, maxOp<scalar>());
     Info<< "Points that couldn't reach the residual limit::             "
-        << returnReduce(nBoundedPoints, sumOp<label>()) << nl
+        << nBoundedPoints   << endl
         << "Max residual after reaching iterations limit::              "
-        << returnReduce(maxResidual, maxOp<scalar>()) << nl
+        << maxResidual      << endl
         << "Max residual derivative after reaching iterations limit::   "
-        << returnReduce(maxResidualDeriv, maxOp<scalar>()) << nl
+        << maxResidualDeriv << endl
         << endl;
 
     return tparamCoors;

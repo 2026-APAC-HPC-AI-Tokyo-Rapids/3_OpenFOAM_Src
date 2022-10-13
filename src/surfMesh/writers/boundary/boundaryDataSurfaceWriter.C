@@ -55,9 +55,8 @@ namespace surfaceWriters
 Foam::surfaceWriters::boundaryDataWriter::boundaryDataWriter()
 :
     surfaceWriter(),
-    streamOpt_(),
     header_(true),
-    writeNormal_(false)
+    streamOpt_()
 {}
 
 
@@ -67,13 +66,12 @@ Foam::surfaceWriters::boundaryDataWriter::boundaryDataWriter
 )
 :
     surfaceWriter(options),
+    header_(options.getOrDefault("header", true)),
     streamOpt_
     (
         IOstreamOption::formatEnum("format", options, IOstreamOption::ASCII),
         IOstreamOption::compressionEnum("compression", options)
-    ),
-    header_(options.getOrDefault("header", true)),
-    writeNormal_(options.getOrDefault("normal", false))
+    )
 {}
 
 
@@ -132,63 +130,29 @@ void Foam::surfaceWriters::boundaryDataWriter::serialWriteGeometry
     // Like regIOobject::writeObject without instance() adaptation
     // since this would write to e.g. 0/ instead of postProcessing/
 
-    autoPtr<primitivePatch> ppPtr;
+    OFstream osGeom(iopts.objectPath(), streamOpt_);
 
+    if (header_)
     {
-        OFstream os(iopts.objectPath(), streamOpt_);
-
-        if (header_)
-        {
-            iopts.writeHeader(os);
-        }
-
-        if (this->isPointData())
-        {
-            // Just like writeData, but without copying beforehand
-            os << points;
-        }
-        else
-        {
-            ppPtr.reset(new primitivePatch(SubList<face>(faces), points));
-
-            // Just like writeData, but without copying beforehand
-            os << ppPtr().faceCentres();
-        }
-
-        if (header_)
-        {
-            IOobject::writeEndDivider(os);
-        }
+        iopts.writeHeader(osGeom);
     }
 
-    if (writeNormal_ && !this->isPointData())
+    if (this->isPointData())
     {
-        vectorIOField iofld
-        (
-            IOobject
-            (
-                iopts.objectPath().path()/"normal",
-                iopts.db(),
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                IOobject::NO_REGISTER
-            )
-        );
-        iofld.note() = "face data";
+        // Just like writeData, but without copying beforehand
+        osGeom << points;
+    }
+    else
+    {
+        primitivePatch pp(SubList<face>(faces), points);
 
-        OFstream os(iofld.objectPath(), streamOpt_);
+        // Just like writeData, but without copying beforehand
+        osGeom << pp.faceCentres();
+    }
 
-        if (header_)
-        {
-            iofld.writeHeader(os);
-        }
-
-        os << ppPtr().faceNormals();
-
-        if (header_)
-        {
-            IOobject::writeEndDivider(os);
-        }
+    if (header_)
+    {
+        iopts.writeEndDivider(osGeom);
     }
 }
 
@@ -203,7 +167,7 @@ Foam::fileName Foam::surfaceWriters::boundaryDataWriter::write()
     fileName surfaceDir = outputPath_;
 
     // Dummy Time to use as objectRegistry
-    refPtr<Time> timePtr(Time::New(argList::envGlobalPath()));
+    autoPtr<Time> dummyTimePtr(Time::New(argList::envGlobalPath()));
 
     // const meshedSurf& surf = surface();
     const meshedSurfRef& surf = adjustSurface();
@@ -221,10 +185,10 @@ Foam::fileName Foam::surfaceWriters::boundaryDataWriter::write()
             IOobject
             (
                 surfaceDir/"points",
-                *timePtr,
+                *dummyTimePtr,
                 IOobject::NO_READ,
                 IOobject::NO_WRITE,
-                IOobject::NO_REGISTER
+                false
             )
         );
         iopts.note() = (this->isPointData() ? "point data" : "face data");
@@ -265,7 +229,7 @@ Foam::fileName Foam::surfaceWriters::boundaryDataWriter::writeTemplate
 
 
     // Dummy Time to use as objectRegistry
-    refPtr<Time> timePtr(Time::New(argList::envGlobalPath()));
+    autoPtr<Time> dummyTimePtr(Time::New(argList::envGlobalPath()));
 
     // const meshedSurf& surf = surface();
     const meshedSurfRef& surf = adjustSurface();
@@ -284,10 +248,10 @@ Foam::fileName Foam::surfaceWriters::boundaryDataWriter::writeTemplate
                 IOobject
                 (
                     surfaceDir/"points",
-                    *timePtr,
+                    *dummyTimePtr,
                     IOobject::NO_READ,
                     IOobject::NO_WRITE,
-                    IOobject::NO_REGISTER
+                    false
                 )
             );
             iopts.note() = (this->isPointData() ? "point data" : "face data");
@@ -302,27 +266,27 @@ Foam::fileName Foam::surfaceWriters::boundaryDataWriter::writeTemplate
                 IOobject
                 (
                     outputFile,
-                    *timePtr,
+                    *dummyTimePtr,
                     IOobject::NO_READ,
                     IOobject::NO_WRITE,
-                    IOobject::NO_REGISTER
+                    false
                 )
             );
             iofld.note() = (this->isPointData() ? "point data" : "face data");
 
-            OFstream os(iofld.objectPath(), streamOpt_);
+            OFstream osField(iofld.objectPath(), streamOpt_);
 
             if (header_)
             {
-                iofld.writeHeader(os);
+                iofld.writeHeader(osField);
             }
 
             // Just like writeData, but without copying beforehand
-            os << tfield();
+            osField << tfield();
 
             if (header_)
             {
-                IOobject::writeEndDivider(os);
+                iofld.writeEndDivider(osField);
             }
         }
     }

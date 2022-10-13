@@ -271,8 +271,7 @@ public:
         //- Clear the zones
         void clear();
 
-        //- The zoneMap has been allocated
-        bool hasZoneMap() const noexcept { return bool(zoneMapPtr_); }
+        bool hasFaceAreas() const { return bool(zoneMapPtr_); }
 
 
     // Member Operators

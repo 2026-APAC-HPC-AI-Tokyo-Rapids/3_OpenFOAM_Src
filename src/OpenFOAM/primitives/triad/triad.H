@@ -70,7 +70,7 @@ public:
 
     // Constructors
 
-        //- Default construct as 'unset'
+        //- Default construct
         inline triad();
 
         //- Construct from components
@@ -92,7 +92,7 @@ public:
         inline triad(Istream&);
 
 
-    // Static Data Members
+    // Static data members
 
         static const triad I;
         static const triad unset;

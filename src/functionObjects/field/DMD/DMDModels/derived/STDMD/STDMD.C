@@ -188,8 +188,8 @@ void Foam::DMDModels::STDMD::compress()
             q.subColumn(i) = EVecs.subColumn(permutation[i]);
         }
     }
-    Pstream::broadcast(G_);
-    Pstream::broadcast(q);
+    Pstream::scatter(G_);
+    Pstream::scatter(q);
 
     // Update "Q"
     Q_ = Q_*q;
@@ -357,8 +357,8 @@ reducedKoopmanOperator()
             A1 = RxInv_*RMatrix(MatrixTools::pinv(Rx*(G_^Rx)));
             Rx.clear();
         }
-        Pstream::broadcast(RxInv_);
-        Pstream::broadcast(A1);
+        Pstream::scatter(RxInv_);
+        Pstream::scatter(A1);
 
         Info<< tab << "Computing A2" << endl;
         SMatrix A2(Qupper_ & Qlower_);
@@ -452,15 +452,15 @@ bool Foam::DMDModels::STDMD::eigendecomposition(SMatrix& Atilde)
             evals_ = cp;
         }
     }
-    Pstream::broadcast(fail);
+    Pstream::scatter(fail);
 
     if (fail)
     {
         return false;
     }
 
-    Pstream::broadcast(evals_);
-    Pstream::broadcast(evecs_);
+    Pstream::scatter(evals_);
+    Pstream::scatter(evecs_);
 
     return true;
 }
@@ -503,8 +503,8 @@ void Foam::DMDModels::STDMD::frequencies()
             it = std::find_if(std::next(it), freqs_.cend(), margin);
         }
     }
-    Pstream::broadcast(freqs_);
-    Pstream::broadcast(freqsi_);
+    Pstream::scatter(freqs_);
+    Pstream::scatter(freqsi_);
 }
 
 
@@ -567,7 +567,7 @@ void Foam::DMDModels::STDMD::amplitudes()
             }
         }
     }
-    Pstream::broadcast(amps_);
+    Pstream::scatter(amps_);
 }
 
 
@@ -648,8 +648,8 @@ void Foam::DMDModels::STDMD::magnitudes()
 
         std::sort(magsi_.begin(), magsi_.end(), descend);
     }
-    Pstream::broadcast(mags_);
-    Pstream::broadcast(magsi_);
+    Pstream::scatter(mags_);
+    Pstream::scatter(magsi_);
 }
 
 
@@ -742,7 +742,7 @@ void Foam::DMDModels::STDMD::writeToFile(const word& fileName) const
     // Write objects of dynamics
     {
         autoPtr<OFstream> osPtr =
-            newFileAtTime
+            createFile
             (
                 fileName + "_" + fieldName_,
                 mesh_.time().timeOutputValue()

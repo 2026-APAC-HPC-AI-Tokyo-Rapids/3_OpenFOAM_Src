@@ -66,12 +66,12 @@ public:
     //- Types of communications
     enum class commsTypes : char
     {
-        blocking,       //!< "blocking"    : (MPI_Bsend, MPI_Recv)
-        scheduled,      //!< "scheduled"   : (MPI_Send, MPI_Recv)
-        nonBlocking     //!< "nonBlocking" : (MPI_Isend, MPI_Irecv)
+        blocking,       //!< "blocking"
+        scheduled,      //!< "scheduled"
+        nonBlocking     //!< "nonBlocking"
     };
 
-    //- Enumerated names for the communication types
+    //- Names of the communication types
     static const Enum<commsTypes> commsTypeNames;
 
 
@@ -107,9 +107,9 @@ public:
                 commsStruct
                 (
                     const label above,
-                    const labelUList& below,
-                    const labelUList& allBelow,
-                    const labelUList& allNotBelow
+                    const labelList& below,
+                    const labelList& allBelow,
+                    const labelList& allNotBelow
                 );
 
                 //- Construct from components; construct allNotBelow_
@@ -118,15 +118,12 @@ public:
                     const label nProcs,
                     const label myProcID,
                     const label above,
-                    const labelUList& below,
-                    const labelUList& allBelow
+                    const labelList& below,
+                    const labelList& allBelow
                 );
 
 
             // Member Functions
-
-                //- Reset to default constructed state
-                void clear();
 
                 //- The procID of the processor directly above
                 label above() const noexcept
@@ -206,7 +203,7 @@ private:
         //- Names of all worlds
         static wordList allWorlds_;
 
-        //- Per processor the world index (into allWorlds_)
+        //- Per processor the name of the world
         static labelList worldIDs_;
 
 
@@ -219,7 +216,7 @@ private:
         static DynamicList<List<int>> procIDs_;
 
         //- Parent communicator
-        static DynamicList<label> parentComm_;
+        static DynamicList<label> parentCommunicator_;
 
         //- Free communicators
         static DynamicList<label> freeComms_;
@@ -236,6 +233,21 @@ private:
         //- Set data for parallel running
         static void setParRun(const label nProcs, const bool haveThreads);
 
+        //- Calculate linear communication schedule
+        static List<commsStruct> calcLinearComm(const label nProcs);
+
+        //- Calculate tree communication schedule
+        static List<commsStruct> calcTreeComm(const label nProcs);
+
+        //- Helper function for tree communication schedule determination
+        //  Collects all processorIDs below a processor
+        static void collectReceives
+        (
+            const label procID,
+            const List<DynamicList<label>>& receives,
+            DynamicList<label>& allReceives
+        );
+
         //- Allocate a communicator with index
         static void allocatePstreamCommunicator
         (
@@ -243,14 +255,16 @@ private:
             const label index
         );
 
-        //- Free MPI components of communicator.
-        //  Does not touch the first two communicators (SELF, WORLD)
-        static void freePstreamCommunicator(const label index);
+        //- Free a communicator
+        static void freePstreamCommunicator
+        (
+            const label index
+        );
 
 
 public:
 
-    //- Declare name of the class and its debug switch
+    // Declare name of the class and its debug switch
     ClassName("UPstream");
 
 
@@ -276,30 +290,11 @@ public:
         //- MPI buffer-size (bytes)
         static const int mpiBufferSize;
 
-
-    // Standard Communicators
-
-        //- Default world communicator (all processors).
-        //- May differ from globalComm if local worlds are in use
+        //- Default communicator (all processors)
         static label worldComm;
 
         //- Debugging: warn for use of any communicator differing from warnComm
         static label warnComm;
-
-        //- Communicator for all processors, irrespective of any local worlds
-        static constexpr label globalComm = 0;
-
-        //- A communicator within the current rank only
-        static constexpr label selfComm = 1;
-
-        //- Number of currently defined communicators
-        static label nComms() noexcept { return parentComm_.size(); }
-
-        //- True if communicator appears to be user-allocated
-        static bool isUserComm(label communicator) noexcept
-        {
-            return (communicator > worldComm && communicator > selfComm);
-        }
 
 
     // Constructors
@@ -313,21 +308,15 @@ public:
 
     // Member Functions
 
-        //- Allocate a new communicator with subRanks of parent communicator
+        //- Allocate a new communicator
         static label allocateCommunicator
         (
-            //! The parent communicator
             const label parent,
-
-            //! The sub-ranks of parent to use (ignore negative values)
-            const labelUList& subRanks,
-
-            //! Call allocatePstreamCommunicator
+            const labelList& subRanks,
             const bool doPstream = true
         );
 
-        //- Free a previously allocated communicator.
-        //  Ignores placeholder (negative) communicators.
+        //- Free a previously allocated communicator
         static void freeCommunicator
         (
             const label communicator,
@@ -337,13 +326,10 @@ public:
         //- Free all communicators
         static void freeCommunicators(const bool doPstream);
 
-
-        //- Wrapper class for allocating/freeing communicators
+        //- Helper class for allocating/freeing communicators
         class communicator
         {
             label comm_;
-
-        public:
 
             //- No copy construct
             communicator(const communicator&) = delete;
@@ -351,66 +337,32 @@ public:
             //- No copy assignment
             void operator=(const communicator&) = delete;
 
-            //- Default construct (a placeholder communicator)
-            communicator() noexcept : comm_(-1) {}
+        public:
 
-            //- Move construct, takes ownership
-            communicator(communicator&& c) : comm_(c.comm_) { c.comm_ = -1; }
-
-            //- Allocate a communicator based on given parent
             communicator
             (
-                //! The parent communicator
                 const label parent,
-
-                //! The sub-ranks of parent to use (ignore negative values)
-                const labelUList& subRanks,
-
-                //! Call allocatePstreamCommunicator
-                const bool doPstream = true
+                const labelList& subRanks,
+                const bool doPstream
             )
             :
                 comm_(allocateCommunicator(parent, subRanks, doPstream))
             {}
 
-            //- Free allocated communicator and group
-            ~communicator() { freeCommunicator(comm_); }
-
-            //- True if communicator is non-negative (ie, was allocated)
-            bool good() const noexcept { return (comm_ >= 0); }
-
-            //- The communicator label
-            label comm() const noexcept { return comm_; }
-
-            //- Free allocated communicator and group
-            void reset() { freeCommunicator(comm_); comm_ = -1; }
-
-            //- Allocate with subRanks of parent communicator
-            void reset(label parent, const labelUList& subRanks)
+            ~communicator()
             {
                 freeCommunicator(comm_);
-                comm_ = allocateCommunicator(parent, subRanks);
             }
 
-            //- Take ownership, free allocated communicator and group.
-            void reset(communicator&& c)
+            operator label() const noexcept
             {
-                if (comm_ != c.comm_) freeCommunicator(comm_);
-                comm_ = c.comm_;
-                c.comm_ = -1;
+                return comm_;
             }
-
-            //- Move assignment, takes ownership
-            void operator=(communicator&& c) { reset(std::move(c)); }
-
-            //- Cast to label - the same as comm()
-            operator label() const noexcept { return comm_; }
         };
 
-
         //- Return physical processor number (i.e. processor number in
-        //- worldComm) given communicator and processor
-        static int baseProcNo(label comm, int procID);
+        //- worldComm) given communicator and procssor
+        static int baseProcNo(const label myComm, const int procID);
 
         //- Return processor number in communicator (given physical processor
         //- number) (= reverse of baseProcNo)
@@ -420,7 +372,7 @@ public:
         //- and communicator)
         static label procNo
         (
-            const label comm,
+            const label myComm,
             const label currentComm,
             const int currentProcID
         );
@@ -444,28 +396,28 @@ public:
 
         // Non-blocking comms
 
-            //- Number of outstanding requests
-            static label nRequests() noexcept;
+            //- Get number of outstanding requests
+            static label nRequests();
 
-            //- Truncate outstanding requests to given length
-            static void resetRequests(const label n);
+            //- Truncate number of outstanding requests
+            static void resetRequests(const label sz);
 
             //- Wait until all requests (from start onwards) have finished.
-            //  A no-op if parRun() == false
             static void waitRequests(const label start = 0);
 
             //- Wait until request i has finished.
-            //  A no-op if parRun() == false
-            //  or for placeholder (negative) request indices
             static void waitRequest(const label i);
 
             //- Non-blocking comms: has request i finished?
-            //  A no-op and returns true if parRun() == false
-            //  or for placeholder (negative) request indices
             static bool finishedRequest(const label i);
 
-            static int allocateTag(const char* const msg = nullptr);
-            static void freeTag(const int tag, const char* const msg = nullptr);
+            static int allocateTag(const char*);
+
+            static int allocateTag(const std::string&);
+
+            static void freeTag(const char*, const int tag);
+
+            static void freeTag(const std::string&, const int tag);
 
 
         //- Set as parallel run on/off.
@@ -490,8 +442,7 @@ public:
             return haveThreads_;
         }
 
-        //- Number of ranks in parallel run (for given communicator)
-        //- is 1 for serial run
+        //- Number of processes in parallel run, and 1 for serial run
         static label nProcs(const label communicator = worldComm)
         {
             return procIDs_[communicator].size();
@@ -503,16 +454,10 @@ public:
             return 0;
         }
 
-        //- Am I the master rank
+        //- Am I the master process
         static bool master(const label communicator = worldComm)
         {
             return myProcNo_[communicator] == masterNo();
-        }
-
-        //- Is this process a sub-rank on the communicator
-        static bool is_subrank(const label communicator = worldComm)
-        {
-            return myProcNo_[communicator] > masterNo();
         }
 
         //- Number of this process (starting from masterNo() = 0)
@@ -521,14 +466,13 @@ public:
             return myProcNo_[communicator];
         }
 
-        //- The parent communicator
         static label parent(const label communicator)
         {
-            return parentComm_(communicator);
+            return parentCommunicator_(communicator);
         }
 
-        //- Process IDs within a given communicator
-        static List<int>& procID(const label communicator)
+        //- Process ID of given process index
+        static List<int>& procID(label communicator)
         {
             return procIDs_[communicator];
         }
@@ -542,7 +486,7 @@ public:
                 return allWorlds_;
             }
 
-            //- The indices into allWorlds for all processes
+            //- worldID (index in allWorlds) of all processes
             static const labelList& worldIDs() noexcept
             {
                 return worldIDs_;
@@ -551,13 +495,13 @@ public:
             //- My worldID
             static label myWorldID()
             {
-                return worldIDs_[myProcNo(globalComm)];
+                return worldIDs_[myProcNo(0)];
             }
 
             //- My world
             static const word& myWorld()
             {
-                return allWorlds_[worldIDs_[myProcNo(globalComm)]];
+                return allWorlds()[myWorldID()];
             }
 
 
@@ -762,23 +706,6 @@ public:
             const std::streamsize bufSize,
             const label communicator = worldComm,
             const int rootProcNo = masterNo()
-        );
-
-
-    // Logical reductions
-
-        //- Logical (and) reduction (cf. MPI AllReduce)
-        static void reduceAnd
-        (
-            bool& value,
-            const label communicator = worldComm
-        );
-
-        //- Logical (or) reduction (cf. MPI AllReduce)
-        static void reduceOr
-        (
-            bool& value,
-            const label communicator = worldComm
         );
 
 

@@ -85,12 +85,9 @@ Foam::surfaceTensionModels::constant::sigma() const
 bool Foam::surfaceTensionModels::constant::readDict(const dictionary& dict)
 {
     // Handle sub-dictionary format as a special case
-
-    const dictionary* subDictPtr = dict.findDict("sigma");
-
-    if (subDictPtr)
+    if (dict.isDict("sigma"))
     {
-        subDictPtr->readEntry("sigma", sigma_);
+        dict.subDict("sigma").readEntry("sigma", sigma_);
     }
     else
     {

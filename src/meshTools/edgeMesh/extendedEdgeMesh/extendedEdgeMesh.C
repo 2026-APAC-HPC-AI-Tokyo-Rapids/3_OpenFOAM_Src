@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2015-2022 OpenCFD Ltd.
+    Copyright (C) 2015-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -136,13 +136,11 @@ bool Foam::extendedEdgeMesh::canWriteType(const word& fileType, bool verbose)
 
 bool Foam::extendedEdgeMesh::canRead(const fileName& name, bool verbose)
 {
-    const word ext =
-    (
-        name.has_ext("gz")
-      ? name.stem().ext()
-      : name.ext()
-    );
-
+    word ext(name.ext());
+    if (ext == "gz")
+    {
+        ext = name.lessExt().ext();
+    }
     return canReadType(ext, verbose);
 }
 
@@ -628,12 +626,14 @@ Foam::extendedEdgeMesh::extendedEdgeMesh(const fileName& name)
 
 bool Foam::extendedEdgeMesh::read(const fileName& name)
 {
-    if (name.has_ext("gz"))
+    word ext(name.ext());
+    if (ext == "gz")
     {
-        return read(name.lessExt(), name.stem().ext());
+        fileName unzipName = name.lessExt();
+        return read(unzipName, unzipName.ext());
     }
 
-    return read(name, name.ext());
+    return read(name, ext);
 }
 
 
@@ -709,20 +709,29 @@ void Foam::extendedEdgeMesh::nearestFeatureEdgeByType
 {
     const PtrList<indexedOctree<treeDataEdge>>& edgeTrees = edgeTreesByType();
 
-    info.resize(edgeTrees.size());
+    info.setSize(edgeTrees.size());
+
+    labelList sliceStarts(edgeTrees.size());
+
+    sliceStarts[0] = externalStart_;
+    sliceStarts[1] = internalStart_;
+    sliceStarts[2] = flatStart_;
+    sliceStarts[3] = openStart_;
+    sliceStarts[4] = multipleStart_;
 
     forAll(edgeTrees, i)
     {
-        const auto& tree = edgeTrees[i];
-        const auto& treeData = edgeTrees[i].shapes();
-
-        info[i] = tree.findNearest(sample, searchDistSqr[i]);
+        info[i] = edgeTrees[i].findNearest
+        (
+            sample,
+            searchDistSqr[i]
+        );
 
         // The index returned by the indexedOctree is local to the slice of
         // edges it was supplied with, return the index to the value in the
         // complete edge list
 
-        info[i].setIndex(treeData.objectIndex(info[i].index()));
+        info[i].setIndex(info[i].index() + sliceStarts[i]);
     }
 }
 
@@ -743,11 +752,11 @@ void Foam::extendedEdgeMesh::allNearestFeaturePoints
 
     DynamicList<pointIndexHit> dynPointHit(elems.size());
 
-    const auto& treeData = pointTree().shapes();
-
-    for (const label index : elems)
+    forAll(elems, elemI)
     {
-        const point& pt = treeData.centre(index);
+        label index = elems[elemI];
+        label ptI = pointTree().shapes().pointLabels()[index];
+        const point& pt = points()[ptI];
 
         pointIndexHit nearHit(true, pt, index);
 
@@ -767,27 +776,46 @@ void Foam::extendedEdgeMesh::allNearestFeatureEdges
 {
     const PtrList<indexedOctree<treeDataEdge>>& edgeTrees = edgeTreesByType();
 
+    info.setSize(edgeTrees.size());
+
+    labelList sliceStarts(edgeTrees.size());
+
+    sliceStarts[0] = externalStart_;
+    sliceStarts[1] = internalStart_;
+    sliceStarts[2] = flatStart_;
+    sliceStarts[3] = openStart_;
+    sliceStarts[4] = multipleStart_;
+
     DynamicList<pointIndexHit> dynEdgeHit(edgeTrees.size()*3);
 
     // Loop over all the feature edge types
     forAll(edgeTrees, i)
     {
-        const auto& tree = edgeTrees[i];
-        const auto& treeData = tree.shapes();
-
         // Pick up all the edges that intersect the search sphere
-        labelList elems = tree.findSphere(sample, searchRadiusSqr);
+        labelList elems = edgeTrees[i].findSphere
+        (
+            sample,
+            searchRadiusSqr
+        );
 
-        for (const label index : elems)
+        forAll(elems, elemI)
         {
-            pointHit hitPoint = treeData.line(index).nearestDist(sample);
+            label index = elems[elemI];
+            label edgeI = edgeTrees[i].shapes().edgeLabels()[index];
+            const edge& e = edges()[edgeI];
 
-            // The index returned by indexedOctree is local its slice of
-            // edges. Return the index into the complete edge list
+            pointHit hitPoint = e.line(points()).nearestDist(sample);
 
-            const label hitIndex = treeData.objectIndex(index);
+            label hitIndex = index + sliceStarts[i];
 
-            dynEdgeHit.append(pointIndexHit(hitPoint, hitIndex));
+            pointIndexHit nearHit
+            (
+                hitPoint.hit(),
+                hitPoint.rawPoint(),
+                hitIndex
+            );
+
+            dynEdgeHit.append(nearHit);
         }
     }
 
@@ -806,8 +834,11 @@ Foam::extendedEdgeMesh::pointTree() const
         // geometry there are less face/edge aligned items.
         treeBoundBox bb
         (
-            treeBoundBox(points()).extend(rndGen, 1e-4, ROOTVSMALL)
+            treeBoundBox(points()).extend(rndGen, 1e-4)
         );
+
+        bb.min() -= point::uniform(ROOTVSMALL);
+        bb.max() += point::uniform(ROOTVSMALL);
 
         const labelList featurePointLabels = identity(nonFeatureStart_);
 
@@ -815,8 +846,11 @@ Foam::extendedEdgeMesh::pointTree() const
         (
             new indexedOctree<treeDataPoint>
             (
-                treeDataPoint(points(), featurePointLabels),
-
+                treeDataPoint
+                (
+                    points(),
+                    featurePointLabels
+                ),
                 bb,     // bb
                 8,      // maxLevel
                 10,     // leafsize
@@ -840,15 +874,25 @@ Foam::extendedEdgeMesh::edgeTree() const
         // geometry there are less face/edge aligned items.
         treeBoundBox bb
         (
-            treeBoundBox(points()).extend(rndGen, 1e-4, ROOTVSMALL)
+            treeBoundBox(points()).extend(rndGen, 1e-4)
         );
+
+        bb.min() -= point::uniform(ROOTVSMALL);
+        bb.max() += point::uniform(ROOTVSMALL);
+
+        labelList allEdges(identity(edges().size()));
 
         edgeTree_.reset
         (
             new indexedOctree<treeDataEdge>
             (
-                treeDataEdge(edges(), points()),  // All edges
-
+                treeDataEdge
+                (
+                    false,          // cachebb
+                    edges(),        // edges
+                    points(),       // points
+                    allEdges        // selected edges
+                ),
                 bb,     // bb
                 8,      // maxLevel
                 10,     // leafsize
@@ -872,25 +916,30 @@ Foam::extendedEdgeMesh::edgeTreesByType() const
         // geometry there are less face/edge aligned items.
         treeBoundBox bb
         (
-            treeBoundBox(points()).extend(rndGen, 1e-4, ROOTVSMALL)
+            treeBoundBox(points()).extend(rndGen, 1e-4)
         );
 
-        List<labelRange> sliceEdges(nEdgeTypes);
+        bb.min() -= point::uniform(ROOTVSMALL);
+        bb.max() += point::uniform(ROOTVSMALL);
+
+        labelListList sliceEdges(nEdgeTypes);
 
         // External edges
-        sliceEdges[0].reset(externalStart_, (internalStart_ - externalStart_));
+        sliceEdges[0] =
+            identity((internalStart_ - externalStart_), externalStart_);
 
         // Internal edges
-        sliceEdges[1].reset(internalStart_, (flatStart_ - internalStart_));
+        sliceEdges[1] = identity((flatStart_ - internalStart_), internalStart_);
 
         // Flat edges
-        sliceEdges[2].reset(flatStart_, (openStart_ - flatStart_));
+        sliceEdges[2] = identity((openStart_ - flatStart_), flatStart_);
 
         // Open edges
-        sliceEdges[3].reset(openStart_, (multipleStart_ - openStart_));
+        sliceEdges[3] = identity((multipleStart_ - openStart_), openStart_);
 
         // Multiple edges
-        sliceEdges[4].reset(multipleStart_, (edges().size() - multipleStart_));
+        sliceEdges[4] =
+            identity((edges().size() - multipleStart_), multipleStart_);
 
 
         edgeTreesByType_.resize(nEdgeTypes);
@@ -902,9 +951,13 @@ Foam::extendedEdgeMesh::edgeTreesByType() const
                 i,
                 new indexedOctree<treeDataEdge>
                 (
-                    // Selected edges
-                    treeDataEdge(edges(), points(), sliceEdges[i]),
-
+                    treeDataEdge
+                    (
+                        false,          // cachebb
+                        edges(),        // edges
+                        points(),       // points
+                        sliceEdges[i]   // selected edges
+                    ),
                     bb,     // bb
                     8,      // maxLevel
                     10,     // leafsize
@@ -1847,7 +1900,7 @@ void Foam::extendedEdgeMesh::writeObj(const fileName& prefix) const
         Info<< "Writing " << concaveStart_
             << " convex feature points to " << convexFtPtStr.name() << endl;
 
-        for (label i = 0; i < concaveStart_; i++)
+        for(label i = 0; i < concaveStart_; i++)
         {
             convexFtPtStr.write(points()[i]);
         }
@@ -1859,7 +1912,7 @@ void Foam::extendedEdgeMesh::writeObj(const fileName& prefix) const
             << " concave feature points to "
             << concaveFtPtStr.name() << endl;
 
-        for (label i = concaveStart_; i < mixedStart_; i++)
+        for(label i = concaveStart_; i < mixedStart_; i++)
         {
             concaveFtPtStr.write(points()[i]);
         }
@@ -1870,7 +1923,7 @@ void Foam::extendedEdgeMesh::writeObj(const fileName& prefix) const
         Info<< "Writing " << nonFeatureStart_-mixedStart_
             << " mixed feature points to " << mixedFtPtStr.name() << endl;
 
-        for (label i = mixedStart_; i < nonFeatureStart_; i++)
+        for(label i = mixedStart_; i < nonFeatureStart_; i++)
         {
             mixedFtPtStr.write(points()[i]);
         }
@@ -1883,14 +1936,18 @@ void Foam::extendedEdgeMesh::writeObj(const fileName& prefix) const
             << " mixed feature point structure to "
             << mixedFtPtStructureStr.name() << endl;
 
-        for (label i = mixedStart_; i < nonFeatureStart_; i++)
+        for(label i = mixedStart_; i < nonFeatureStart_; i++)
         {
             const labelList& ptEds = pointEdges()[i];
 
-            for (const label edgei : ptEds)
+            forAll(ptEds, j)
             {
-                const edge& e = edges()[edgei];
-                mixedFtPtStructureStr.write(e, points());
+                const edge& e = edges()[ptEds[j]];
+                mixedFtPtStructureStr.write
+                (
+                    linePointRef(points()[e[0]],
+                    points()[e[1]])
+                );
             }
         }
     }
@@ -1903,7 +1960,7 @@ void Foam::extendedEdgeMesh::writeObj(const fileName& prefix) const
         for (label i = externalStart_; i < internalStart_; i++)
         {
             const edge& e = edges()[i];
-            externalStr.write(e, points());
+            externalStr.write(linePointRef(points()[e[0]], points()[e[1]]));
         }
     }
 
@@ -1915,7 +1972,7 @@ void Foam::extendedEdgeMesh::writeObj(const fileName& prefix) const
         for (label i = internalStart_; i < flatStart_; i++)
         {
             const edge& e = edges()[i];
-            internalStr.write(e, points());
+            internalStr.write(linePointRef(points()[e[0]], points()[e[1]]));
         }
     }
 
@@ -1927,7 +1984,7 @@ void Foam::extendedEdgeMesh::writeObj(const fileName& prefix) const
         for (label i = flatStart_; i < openStart_; i++)
         {
             const edge& e = edges()[i];
-            flatStr.write(e, points());
+            flatStr.write(linePointRef(points()[e[0]], points()[e[1]]));
         }
     }
 
@@ -1939,7 +1996,7 @@ void Foam::extendedEdgeMesh::writeObj(const fileName& prefix) const
         for (label i = openStart_; i < multipleStart_; i++)
         {
             const edge& e = edges()[i];
-            openStr.write(e, points());
+            openStr.write(linePointRef(points()[e[0]], points()[e[1]]));
         }
     }
 
@@ -1951,7 +2008,7 @@ void Foam::extendedEdgeMesh::writeObj(const fileName& prefix) const
         for (label i = multipleStart_; i < edges().size(); i++)
         {
             const edge& e = edges()[i];
-            multipleStr.write(e, points());
+            multipleStr.write(linePointRef(points()[e[0]], points()[e[1]]));
         }
     }
 
@@ -1960,10 +2017,10 @@ void Foam::extendedEdgeMesh::writeObj(const fileName& prefix) const
         Info<< "Writing " << regionEdges_.size()
             << " region edges to " << regionStr.name() << endl;
 
-        for (const label edgei : regionEdges_)
+        forAll(regionEdges_, i)
         {
-            const edge& e = edges()[edgei];
-            regionStr.write(e, points());
+            const edge& e = edges()[regionEdges_[i]];
+            regionStr.write(linePointRef(points()[e[0]], points()[e[1]]));
         }
     }
 
@@ -1977,10 +2034,9 @@ void Foam::extendedEdgeMesh::writeObj(const fileName& prefix) const
             const vector& eVec = edgeDirections_[i];
             const edge& e = edges()[i];
 
-            edgeDirsStr.writeLine
+            edgeDirsStr.write
             (
-                points()[e.start()],
-                points()[e.start()] + eVec
+                linePointRef(points()[e.start()], eVec + points()[e.start()])
             );
         }
     }

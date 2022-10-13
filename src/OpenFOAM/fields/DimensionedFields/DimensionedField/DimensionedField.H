@@ -89,7 +89,7 @@ public:
         //- Type of the field from which this DimensionedField is derived
         typedef Field<Type> FieldType;
 
-        //- Component type of the field elements
+        //- Component type of the elements of the field
         typedef typename Field<Type>::cmptType cmptType;
 
 
@@ -282,7 +282,7 @@ public:
         tmp<DimensionedField<Type, GeoMesh>> clone() const;
 
 
-    // Factory Methods
+    // Static Constructors
 
         //- Return tmp field from name, mesh, dimensions,
         //- copy of internal field.
@@ -334,31 +334,7 @@ public:
         static tmp<DimensionedField<Type, GeoMesh>> New
         (
             const word& newName,
-            const tmp<DimensionedField<Type, GeoMesh>>& tfld
-        );
-
-        //- Construct tmp field based on mesh/registry information from
-        //- an existing field.
-        //  Created NO_READ, NO_WRITE, NO_REGISTER, using the instance
-        //  from the field
-        template<class AnyType>
-        static tmp<DimensionedField<Type, GeoMesh>> New
-        (
-            const DimensionedField<AnyType, GeoMesh>& fld,
-            const word& name,
-            const dimensionSet& dims
-        );
-
-        //- Construct tmp field based on mesh/registry information from
-        //- an existing field and initialise with value.
-        //  Created NO_READ, NO_WRITE, NO_REGISTER, using the instance
-        //  from the field
-        template<class AnyType>
-        static tmp<DimensionedField<Type, GeoMesh>> New
-        (
-            const DimensionedField<AnyType, GeoMesh>& fld,
-            const word& name,
-            const dimensioned<Type>& dt
+            const tmp<DimensionedField<Type, GeoMesh>>&
         );
 
 
@@ -375,31 +351,28 @@ public:
         );
 
         //- Return mesh
-        inline const Mesh& mesh() const noexcept;
+        inline const Mesh& mesh() const;
 
         //- Return dimensions
-        inline const dimensionSet& dimensions() const noexcept;
+        inline const dimensionSet& dimensions() const;
 
         //- Return non-const access to dimensions
-        inline dimensionSet& dimensions() noexcept;
+        inline dimensionSet& dimensions();
 
         //- Return oriented type
-        inline orientedType oriented() const noexcept;
+        inline const orientedType& oriented() const noexcept;
 
         //- Return non-const access to the oriented type
         inline orientedType& oriented() noexcept;
 
-        //- True if field is ORIENTED
-        inline bool is_oriented() const noexcept;
+        //- Set the oriented flag
+        inline void setOriented(const bool oriented = true) noexcept;
 
-        //- Set the oriented flag: on/off
-        inline void setOriented(bool on = true) noexcept;
+        //- Return field
+        inline const Field<Type>& field() const;
 
-        //- Return const-reference to the field values
-        inline const Field<Type>& field() const noexcept;
-
-        //- Return reference to the field values
-        inline Field<Type>& field() noexcept;
+        //- Return field
+        inline Field<Type>& field();
 
         //- Return a component field of the field
         tmp<DimensionedField<cmptType, GeoMesh>> component

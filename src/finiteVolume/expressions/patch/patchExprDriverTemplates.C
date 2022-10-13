@@ -58,7 +58,7 @@ Foam::expressions::patchExpr::parseDriver::getVariableIfAvailable
 
         const label len = (hasPointData ? this->pointSize() : this->size());
 
-        if (returnReduceAnd(vals.size() == len))
+        if (returnReduce((vals.size() == len), andOp<bool>()))
         {
             // Return a copy of the field
             return tmp<Field<Type>>::New(vals);

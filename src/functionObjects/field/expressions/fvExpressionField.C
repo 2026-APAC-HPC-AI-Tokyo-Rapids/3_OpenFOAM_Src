@@ -377,7 +377,7 @@ bool Foam::functionObjects::fvExpressionField::read(const dictionary& dict)
         case actionType::opModify:
         {
             // Optional <fieldMask> for modify
-            maskExpr_.readIfPresent("fieldMask", dict);
+            maskExpr_.readEntry("fieldMask", dict, false);
             [[fallthrough]];
         }
         case actionType::opNew:
@@ -393,7 +393,7 @@ bool Foam::functionObjects::fvExpressionField::read(const dictionary& dict)
 
     // "dimensions" is optional
     dimensions_.clear();
-    hasDimensions_ = dimensions_.readIfPresent("dimensions", dict);
+    hasDimensions_ = dimensions_.readEntry("dimensions", dict, false);
 
     if (action_ == actionType::opNew)
     {

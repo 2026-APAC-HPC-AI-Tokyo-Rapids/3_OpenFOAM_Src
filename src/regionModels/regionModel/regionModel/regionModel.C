@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -114,7 +114,7 @@ void Foam::regionModels::regionModel::initialise()
     primaryPatchIDs_.transfer(primaryPatchIDs);
     intCoupledPatchIDs_.transfer(intCoupledPatchIDs);
 
-    if (!returnReduceOr(nBoundaryFaces))
+    if (returnReduce(nBoundaryFaces, sumOp<label>()) == 0)
     {
         WarningInFunction
             << "Region model has no mapped boundary conditions - transfer "
@@ -489,7 +489,7 @@ void Foam::regionModels::regionModel::evolve()
         {
             outputProperties().writeObject
             (
-                IOstreamOption(IOstreamOption::ASCII, time_.writeCompression()),
+                IOstreamOption(IOstream::ASCII, time_.writeCompression()),
                 true
             );
         }

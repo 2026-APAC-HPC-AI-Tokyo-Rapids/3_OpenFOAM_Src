@@ -33,13 +33,13 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_cut_H
-#define Foam_cut_H
+#ifndef cut_H
+#define cut_H
 
 #include "plane.H"
 #include "FixedList.H"
-#include "tetrahedron.H"
-#include "triangle.H"
+#include "tetPointRef.H"
+#include "triPointRef.H"
 #include "zero.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -168,7 +168,7 @@ public:
         //- Operate on a triangle
         result operator()(const FixedList<point, 3>& p) const
         {
-            return result(triPointRef::areaNormal(p[0], p[1], p[2]));
+            return result(triPointRef(p[0], p[1], p[2]).areaNormal());
         }
 };
 

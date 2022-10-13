@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2017 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd.
+    Copyright (C) 2020-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -53,17 +53,6 @@ class uncollatedFileOperation
 :
     public fileOperation
 {
-    // Private Data
-
-        //- Communicator allocated/managed by us
-        label managedComm_;
-
-
-    // Private Member Functions
-
-        //- Any initialisation steps after constructing
-        void init(bool verbose);
-
 protected:
 
     // Protected Member Functions
@@ -101,7 +90,7 @@ public:
 
 
     //- Destructor
-    virtual ~uncollatedFileOperation();
+    virtual ~uncollatedFileOperation() = default;
 
 
     // Member Functions
@@ -216,15 +205,19 @@ public:
             virtual bool rm(const fileName&) const;
 
             //- Remove a directory and its contents
-            //  \param dir the directory to remove
-            //  \param silent do not report missing directory
-            //  \param emptyOnly only remove empty directories (recursive)
             virtual bool rmDir
             (
                 const fileName& dir,
-                const bool silent = false,
-                const bool emptyOnly = false
+                const bool silent = false
             ) const;
+
+//            //- Open a shared library. Return handle to library. Print error
+//            //  message if library cannot be loaded (check = true)
+//            virtual void* dlOpen
+//            (
+//                const fileName& lib,
+//                const bool check = true
+//            ) const;
 
 
         // (reg)IOobject functionality
@@ -289,15 +282,6 @@ public:
             //- Generate an OSstream that writes a file
             virtual autoPtr<OSstream> NewOFstream
             (
-                const fileName& pathname,
-                IOstreamOption streamOpt = IOstreamOption(),
-                const bool valid = true
-            ) const;
-
-            //- Generate an OSstream that writes a file
-            virtual autoPtr<OSstream> NewOFstream
-            (
-                IOstreamOption::atomicType,
                 const fileName& pathname,
                 IOstreamOption streamOpt = IOstreamOption(),
                 const bool valid = true

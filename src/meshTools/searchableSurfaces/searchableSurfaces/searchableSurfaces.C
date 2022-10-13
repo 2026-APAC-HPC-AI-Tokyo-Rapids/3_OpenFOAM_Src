@@ -510,7 +510,7 @@ bool Foam::searchableSurfaces::checkClosed(const bool report) const
         Info<< endl;
     }
 
-    return returnReduceOr(hasError);
+    return returnReduce(hasError, orOp<bool>());
 }
 
 
@@ -556,7 +556,7 @@ bool Foam::searchableSurfaces::checkNormalOrientation(const bool report) const
         Info<< endl;
     }
 
-    return returnReduceOr(hasError);
+    return returnReduce(hasError, orOp<bool>());
 }
 
 
@@ -604,7 +604,7 @@ bool Foam::searchableSurfaces::checkSizes
         Info<< endl;
     }
 
-    return returnReduceOr(hasError);
+    return returnReduce(hasError, orOp<bool>());
 }
 
 
@@ -679,7 +679,7 @@ bool Foam::searchableSurfaces::checkIntersection
                      && (i != j || !connected(s0, edgeI, hits[edgeI]))
                     )
                     {
-                        intersections.append(hits[edgeI].point());
+                        intersections.append(hits[edgeI].hitPoint());
                         intersectionEdge.append(edgeI);
                         nHits++;
                     }
@@ -744,7 +744,7 @@ bool Foam::searchableSurfaces::checkIntersection
         Info<< endl;
     }
 
-    return returnReduceOr(hasError);
+    return returnReduce(hasError, orOp<bool>());
 }
 
 
@@ -807,7 +807,7 @@ bool Foam::searchableSurfaces::checkQuality
         Info<< endl;
     }
 
-    return returnReduceOr(hasError);
+    return returnReduce(hasError, orOp<bool>());
 
 }
 

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -134,7 +134,7 @@ void writeZoning
     const labelList& faceZone,
     const word& fieldName,
     const fileName& surfFilePath,
-    const word& surfFileStem
+    const fileName& surfFileNameBase
 )
 {
     // Transcribe faces
@@ -145,7 +145,7 @@ void writeZoning
     (
         surf.points(),
         faces,
-        (surfFilePath / surfFileStem),
+        (surfFilePath / surfFileNameBase),
         false  // serial - already merged
     );
 
@@ -163,7 +163,7 @@ void writeParts
     const label nFaceZones,
     const labelList& faceZone,
     const fileName& surfFilePath,
-    const word& surfFileStem
+    const fileName& surfFileNameBase
 )
 {
     for (label zone = 0; zone < nFaceZones; zone++)
@@ -183,7 +183,7 @@ void writeParts
         fileName subName
         (
             surfFilePath
-          / surfFileStem + "_" + name(zone) + ".obj"
+          / surfFileNameBase + "_" + name(zone) + ".obj"
         );
 
         Info<< "writing part " << zone << " size " << subSurf.size()
@@ -334,7 +334,7 @@ int main(int argc, char *argv[])
 
     argList args(argc, argv);
 
-    const auto surfName = args.get<fileName>(1);
+    const auto surfFileName = args.get<fileName>(1);
     const bool checkSelfIntersect = args.found("checkSelfIntersection");
     const bool splitNonManifold = args.found("splitNonManifold");
     const label outputThreshold =
@@ -360,13 +360,12 @@ int main(int argc, char *argv[])
     }
 
 
-    Info<< "Reading surface from "
-        << args.relativePath(surfName) << " ..." << nl << endl;
+    Info<< "Reading surface from " << surfFileName << " ..." << nl << endl;
 
     // Read
     // ~~~~
 
-    triSurface surf(surfName);
+    triSurface surf(surfFileName);
 
 
     Info<< "Statistics:" << endl;
@@ -374,15 +373,17 @@ int main(int argc, char *argv[])
     Info<< endl;
 
 
-    // Split into path and stem (no extension)
-    const fileName surfFilePath(surfName.path());
-    word surfFileStem(surfName.stem());
-
-    // If originally ".gz", need to strip extension again
-    if (surfName.has_ext("gz"))
+    // Determine path and extension
+    fileName surfFileNameBase(surfFileName.name());
+    const word fileType = surfFileNameBase.ext();
+    // Strip extension
+    surfFileNameBase = surfFileNameBase.lessExt();
+    // If extension was .gz strip original extension
+    if (fileType == "gz")
     {
-        surfFileStem.remove_ext();
+        surfFileNameBase = surfFileNameBase.lessExt();
     }
+    const fileName surfFilePath(surfFileName.path());
 
 
     // write bounding box corners
@@ -483,7 +484,7 @@ int main(int argc, char *argv[])
                 (
                     subSurf.points(),
                     faces,
-                    (surfFilePath / surfFileStem),
+                    (surfFilePath / surfFileNameBase),
                     false // serial - already merged
                 );
 
@@ -606,7 +607,7 @@ int main(int argc, char *argv[])
             (
                 surf.points(),
                 faces,
-                (surfFilePath / surfFileStem),
+                (surfFilePath / surfFileNameBase),
                 false // serial - already merged
             );
 
@@ -809,27 +810,26 @@ int main(int argc, char *argv[])
 
         if (!edgeFormat.empty() && openEdges.size())
         {
-            const fileName outputName
+            const fileName openName
             (
-                surfName.lessExt()
+                surfFileName.lessExt()
               + "_open."
               + edgeFormat
             );
-            Info<< "Writing open edges to "
-                << args.relativePath(outputName) << " ..." << endl;
-            writeEdgeSet(outputName, surf, openEdges);
+            Info<< "Writing open edges to " << openName << " ..." << endl;
+            writeEdgeSet(openName, surf, openEdges);
         }
         if (!edgeFormat.empty() && multipleEdges.size())
         {
-            const fileName outputName
+            const fileName multName
             (
-                surfName.lessExt()
+                surfFileName.lessExt()
               + "_multiply."
               + edgeFormat
             );
             Info<< "Writing multiply connected edges to "
-                << args.relativePath(outputName) << " ..." << endl;
-            writeEdgeSet(outputName, surf, multipleEdges);
+                << multName << " ..." << endl;
+            writeEdgeSet(multName, surf, multipleEdges);
         }
     }
     else
@@ -878,7 +878,7 @@ int main(int argc, char *argv[])
                 faceZone,
                 "zone",
                 surfFilePath,
-                surfFileStem
+                surfFileNameBase
             );
 
             if (numZones > outputThreshold)
@@ -892,7 +892,7 @@ int main(int argc, char *argv[])
                 min(outputThreshold, numZones),
                 faceZone,
                 surfFilePath,
-                surfFileStem
+                surfFileNameBase
             );
         }
     }
@@ -944,7 +944,7 @@ int main(int argc, char *argv[])
                 normalZone,
                 "normal",
                 surfFilePath,
-                surfFileStem
+                surfFileNameBase
             );
 
             if (numNormalZones > outputThreshold)
@@ -958,7 +958,7 @@ int main(int argc, char *argv[])
                 min(outputThreshold, numNormalZones),
                 normalZone,
                 surfFilePath,
-                surfFileStem + "_normal"
+                surfFileNameBase + "_normal"
             );
         }
     }
@@ -1002,7 +1002,7 @@ int main(int argc, char *argv[])
 
                 if (intStreamPtr)
                 {
-                    intStreamPtr().write(hitInfo.point());
+                    intStreamPtr().write(hitInfo.hitPoint());
                 }
 
                 // Try and find from other side.
@@ -1014,7 +1014,7 @@ int main(int argc, char *argv[])
 
                     if (intStreamPtr)
                     {
-                        intStreamPtr().write(hitInfo2.point());
+                        intStreamPtr().write(hitInfo2.hitPoint());
                     }
                 }
             }
@@ -1044,7 +1044,7 @@ int main(int argc, char *argv[])
         //
         //        if (hitInfo.hit() && intStreamPtr)
         //        {
-        //            intStreamPtr().write(hitInfo.point());
+        //            intStreamPtr().write(hitInfo.hitPoint());
         //
         //            label nearFaceI = hitInfo.index();
         //            triPointRef nearTri(surf[nearFaceI].tri(surf.points()));

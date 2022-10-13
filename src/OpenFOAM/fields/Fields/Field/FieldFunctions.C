@@ -481,13 +481,13 @@ sumProd(const UList<Type>& f1, const UList<Type>& f2)
 template<class Type>
 Type sumCmptProd(const UList<Type>& f1, const UList<Type>& f2)
 {
-    Type result = Zero;
+    Type SumProd = Zero;
     if (f1.size() && (f1.size() == f2.size()))
     {
         TFOR_ALL_S_OP_FUNC_F_F
         (
             Type,
-            result,
+            SumProd,
             +=,
             cmptMultiply,
             Type,
@@ -496,7 +496,7 @@ Type sumCmptProd(const UList<Type>& f1, const UList<Type>& f2)
             f2
         )
     }
-    return result;
+    return SumProd;
 }
 
 
@@ -579,7 +579,7 @@ template<class Type>                                                           \
 ReturnType gFunc(const UList<Type>& f, const label comm)                       \
 {                                                                              \
     ReturnType res = Func(f);                                                  \
-    reduce(res, rFunc##Op<ReturnType>(), UPstream::msgType(), comm);           \
+    reduce(res, rFunc##Op<ReturnType>(), Pstream::msgType(), comm);            \
     return res;                                                                \
 }                                                                              \
 TMP_UNARY_FUNCTION(ReturnType, gFunc)
@@ -611,7 +611,7 @@ typename scalarProduct<Type, Type>::type gSumProd
     typedef typename scalarProduct<Type, Type>::type prodType;
 
     prodType result = sumProd(f1, f2);
-    reduce(result, sumOp<prodType>(), UPstream::msgType(), comm);
+    reduce(result, sumOp<prodType>(), Pstream::msgType(), comm);
     return result;
 }
 
@@ -624,7 +624,7 @@ Type gSumCmptProd
 )
 {
     Type SumProd = sumCmptProd(f1, f2);
-    reduce(SumProd, sumOp<Type>(), UPstream::msgType(), comm);
+    reduce(SumProd, sumOp<Type>(), Pstream::msgType(), comm);
     return SumProd;
 }
 
@@ -637,7 +637,7 @@ Type gAverage
 {
     label n = f.size();
     Type s = sum(f);
-    sumReduce(s, n, UPstream::msgType(), comm);
+    sumReduce(s, n, Pstream::msgType(), comm);
 
     if (n > 0)
     {

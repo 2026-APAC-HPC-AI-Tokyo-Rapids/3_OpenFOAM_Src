@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2019 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,6 +31,7 @@ License
 #include "volFields.H"
 #include "edgeHashes.H"
 #include "tetCell.H"
+#include "tetPointRef.H"
 #include "DynamicField.H"
 #include "syncTools.H"
 #include "indirectPrimitivePatch.H"
@@ -967,7 +968,7 @@ Foam::isoSurfaceTopo::isoSurfaceTopo
 
     if (debug && isA<fvMesh>(mesh))
     {
-        const auto& fvmesh = refCast<const fvMesh>(mesh);
+        const auto& fvmesh = dynamicCast<const fvMesh>(mesh);
 
         volScalarField debugField
         (
@@ -1587,7 +1588,7 @@ Foam::isoSurfaceTopo::isoSurfaceTopo
                     << " faces on " << nEdgeRemove << " open edges" << endl;
             }
 
-            if (returnReduceAnd(faceSelection.none()))
+            if (returnReduce(faceSelection.none(), andOp<bool>()))
             {
                 break;
             }

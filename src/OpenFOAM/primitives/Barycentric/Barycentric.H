@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,16 +28,16 @@ Class
     Foam::Barycentric
 
 Description
-    Templated 3D Barycentric derived from VectorSpace.
-    Has 4 components, one of which is redundant.
+    Templated 3D Barycentric derived from VectorSpace. Has 4 components, one of
+    which is redundant.
 
 SourceFiles
     BarycentricI.H
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_Barycentric_H
-#define Foam_Barycentric_H
+#ifndef Barycentric_H
+#define Barycentric_H
 
 #include "contiguous.H"
 #include "VectorSpace.H"
@@ -74,7 +74,7 @@ public:
     enum components { A, B, C, D };
 
 
-    // Generated Methods: copy construct/assignment
+    // Generated Methods
 
         //- Default construct
         Barycentric() = default;
@@ -94,29 +94,20 @@ public:
             const Cmpt& vd
         );
 
-        //- Construct from three components, calculate fourth component
-        inline Barycentric(const Cmpt& va, const Cmpt& vb, const Cmpt& vc);
-
 
     // Member Functions
 
-    // Component Access
+        // Access
 
-        const Cmpt& a() const noexcept { return this->v_[A]; }
-        const Cmpt& b() const noexcept { return this->v_[B]; }
-        const Cmpt& c() const noexcept { return this->v_[C]; }
-        const Cmpt& d() const noexcept { return this->v_[D]; }
+            inline const Cmpt& a() const;
+            inline const Cmpt& b() const;
+            inline const Cmpt& c() const;
+            inline const Cmpt& d() const;
 
-        Cmpt& a() noexcept { return this->v_[A]; }
-        Cmpt& b() noexcept { return this->v_[B]; }
-        Cmpt& c() noexcept { return this->v_[C]; }
-        Cmpt& d() noexcept { return this->v_[D]; }
-
-
-    // Operations
-
-        //- Scalar-product of \c this with another Barycentric.
-        inline Cmpt inner(const Barycentric<Cmpt>& b2) const;
+            inline Cmpt& a();
+            inline Cmpt& b();
+            inline Cmpt& c();
+            inline Cmpt& d();
 };
 
 

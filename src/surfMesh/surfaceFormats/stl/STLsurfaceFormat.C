@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -27,7 +27,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "STLsurfaceFormat.H"
-#include "triangle.H"
+#include "triPointRef.H"
 #include "ListOps.H"
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
@@ -42,7 +42,7 @@ inline void Foam::fileFormats::STLsurfaceFormat<Face>::writeShell
 {
     // Calculate the normal ourselves, for flexibility and speed
     const vector norm =
-        triPointRef::unitNormal(pts[f[0]], pts[f[1]], pts[f[2]]);
+        triPointRef(pts[f[0]], pts[f[1]], pts[f[2]]).unitNormal();
 
     // simple triangulation about f[0].
     // better triangulation should have been done before
@@ -76,7 +76,7 @@ inline void Foam::fileFormats::STLsurfaceFormat<Face>::writeShell
 {
     // Calculate the normal ourselves, for flexibility and speed
     const vector norm =
-        triPointRef::unitNormal(pts[f[0]], pts[f[1]], pts[f[2]]);
+        triPointRef(pts[f[0]], pts[f[1]], pts[f[2]]).unitNormal();
 
     // simple triangulation about f[0].
     // better triangulation should have been done before
@@ -207,7 +207,7 @@ void Foam::fileFormats::STLsurfaceFormat<Face>::writeAscii
     IOstreamOption::compressionType comp
 )
 {
-    OFstream os(filename, IOstreamOption(IOstreamOption::ASCII, comp));
+    OFstream os(filename, IOstreamOption(IOstream::ASCII, comp));
     if (!os.good())
     {
         FatalErrorInFunction
@@ -312,7 +312,7 @@ void Foam::fileFormats::STLsurfaceFormat<Face>::writeAscii
     // A single zone - we can skip sorting
     if (surf.zoneToc().size() == 1)
     {
-        OFstream os(filename, IOstreamOption(IOstreamOption::ASCII, comp));
+        OFstream os(filename, IOstreamOption(IOstream::ASCII, comp));
         if (!os.good())
         {
             FatalErrorInFunction
@@ -396,7 +396,7 @@ void Foam::fileFormats::STLsurfaceFormat<Face>::write
 {
     if
     (
-        streamOpt.format() == IOstreamOption::BINARY
+        streamOpt.format() == IOstream::BINARY
         // Detected "stlb" extension?
      || STLCore::isBinaryName(filename, STLCore::UNKNOWN)
     )
@@ -441,7 +441,7 @@ void Foam::fileFormats::STLsurfaceFormat<Face>::write
 {
     if
     (
-        streamOpt.format() == IOstreamOption::BINARY
+        streamOpt.format() == IOstream::BINARY
         // Detected "stlb" extension?
      || STLCore::isBinaryName(filename, STLCore::UNKNOWN)
     )

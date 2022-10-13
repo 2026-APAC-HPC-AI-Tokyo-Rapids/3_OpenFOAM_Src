@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2018 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -56,10 +56,10 @@ bool Foam::functionEntries::ifEntry::isTrue(ITstream& its)
 {
     Switch logic;
 
-    if (its.front().isScalar())
+    if (its.peekFirst().isScalar())
     {
         // Use default rounding tolerance
-        logic = Switch(its.front().scalarToken());
+        logic = Switch(its.first().scalarToken());
     }
     else
     {
@@ -81,7 +81,7 @@ bool Foam::functionEntries::ifEntry::execute
 {
     const label nNested = stack.size();
 
-    stack.push_back(filePos(is.name(), is.lineNumber()));
+    stack.append(filePos(is.name(), is.lineNumber()));
 
     // Read line
     string line;
@@ -94,8 +94,8 @@ bool Foam::functionEntries::ifEntry::execute
     const bool doIf = ifEntry::isTrue(e.stream());
 
     // Info<< "Using #" << typeName << " " << Switch::name(doIf)
-    //     << " at line " << stack.back().second()
-    //     << " in file " << stack.back().first() << endl;
+    //     << " at line " << stack.last().second()
+    //     << " in file " <<  stack.last().first() << endl;
 
     const bool ok = ifeqEntry::execute(doIf, stack, parentDict, is);
 
@@ -103,8 +103,8 @@ bool Foam::functionEntries::ifEntry::execute
     {
         FatalIOErrorInFunction(parentDict)
             << "Did not find matching #endif for condition starting"
-            << " at line " << stack.back().second()
-            << " in file " << stack.back().first() << exit(FatalIOError);
+            << " at line " << stack.last().second()
+            << " in file " <<  stack.last().first() << exit(FatalIOError);
     }
 
     return ok;

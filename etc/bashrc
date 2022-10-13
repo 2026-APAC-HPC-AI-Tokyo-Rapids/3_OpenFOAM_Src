@@ -55,7 +55,7 @@
 
 # [WM_PROJECT_VERSION] - A human-readable version name
 # A development version is often named 'com' - as in www.openfoam.com
-export WM_PROJECT_VERSION=com
+export WM_PROJECT_VERSION=v2206
 
 #------------------------------------------------------------------------------
 # Configuration environment variables.
@@ -79,18 +79,14 @@ export WM_PRECISION_OPTION=DP
 export WM_LABEL_SIZE=32
 
 # [WM_COMPILE_OPTION] - Optimised(default), debug, profiling, other:
-# = Opt | Dbg | Debug | Prof
+# = Opt | Debug | Prof
 export WM_COMPILE_OPTION=Opt
 
-# [WM_COMPILE_CONTROL] - additional control for compilation/linking
+# [WM_COMPILE_CONTROL] - additional control for compiler rules
 #   +gold   : with gold linker
 #   +lld    : with  lld linker (with clang)
 #   +mold   : with mold linker (with clang)
-#   ~libz   : without libz compression
-#   +openmp : with openmp
 #   ~openmp : without openmp
-#   +ccache : use ccache
-#   ccache=... : ccache command (unquoted, single/double or <> quoted)
 #   version=... : compiler suffix (eg, "11" for gcc-11)
 #export WM_COMPILE_CONTROL="+gold"
 

@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -31,12 +31,12 @@ Description
     A Cloud of streamLine particles
 
 SourceFiles
-    streamLineParticleCloud.C
+    streamLineCloud.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_streamLineParticleCloud_H
-#define Foam_streamLineParticleCloud_H
+#ifndef streamLineParticleCloud_H
+#define streamLineParticleCloud_H
 
 #include "Cloud.H"
 #include "streamLineParticle.H"
@@ -47,26 +47,26 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                   Class streamLineParticleCloud Declaration
+                      Class streamLineCloud Declaration
 \*---------------------------------------------------------------------------*/
 
 class streamLineParticleCloud
 :
     public Cloud<streamLineParticle>
 {
-public:
-
-    //- Type of parcel the cloud was instantiated for
-    typedef streamLineParticle parcelType;
-
-
-    // Generated Methods
+    // Private Member Functions
 
         //- No copy construct
         streamLineParticleCloud(const streamLineParticleCloud&) = delete;
 
         //- No copy assignment
         void operator=(const streamLineParticleCloud&) = delete;
+
+
+public:
+
+    //- Type of parcel the cloud was instantiated for
+    typedef streamLineParticle parcelType;
 
 
     // Constructors

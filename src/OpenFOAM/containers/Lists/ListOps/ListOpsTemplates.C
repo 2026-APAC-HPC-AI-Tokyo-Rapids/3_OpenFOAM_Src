@@ -26,6 +26,10 @@ License
 
 \*---------------------------------------------------------------------------*/
 
+#include <utility>
+#include "ListOps.H"
+#include "ListLoopM.H"
+
 // * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
 
 template<class IntListType>
@@ -1097,7 +1101,7 @@ void Foam::ListOps::uniqueEqOp<T>::operator()
             {
                 if (!x.found(val))
                 {
-                    x.push_back(val);
+                    x.append(val);
                 }
             }
         }
@@ -1320,14 +1324,15 @@ Foam::List<T> Foam::ListOps::create
 
     List<T> output(len);
 
-    // ie, std::transform(input.begin(), input.end(), output.begin(), op);
-
-    const T2* in = input.begin();
-    T* out = output.begin();
-
-    for (label i = 0; i < len; ++i)
+    if (len)
     {
-        out[i] = op(in[i]);
+        List_ACCESS(T, output, out);
+        List_CONST_ACCESS(T2, input, in);
+
+        for (label i = 0; i < len; ++i)
+        {
+            out[i] = op(in[i]);
+        }
     }
 
     return output;
@@ -1346,15 +1351,16 @@ Foam::List<T> Foam::ListOps::create
 
     List<T> output(len);
 
-    // ie, std::transform(first, last, output.begin(), op);
-
-    T* out = output.begin();
-
-    while (first != last)
+    if (len)
     {
-        *out = op(*first);
-        ++first;
-        ++out;
+        T* out = output.begin();
+
+        while (first != last)
+        {
+            *out = op(*first);
+            ++first;
+            ++out;
+        }
     }
 
     return output;

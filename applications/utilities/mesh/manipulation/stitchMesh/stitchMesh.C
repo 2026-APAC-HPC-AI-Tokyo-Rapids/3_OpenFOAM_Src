@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2017-2022 OpenCFD Ltd.
+    Copyright (C) 2017-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -564,7 +564,7 @@ int main(int argc, char *argv[])
 
             mesh.faceZones()
             (
-                mergePatchName + "Side0Zone",
+                mergePatchName + "MasterZone",
                 true // verbose
             ).resetAddressing(std::move(faceIds), false);
 
@@ -574,7 +574,7 @@ int main(int argc, char *argv[])
 
             mesh.faceZones()
             (
-                mergePatchName + "Side1Zone",
+                mergePatchName + "SlaveZone",
                 true // verbose
             ).resetAddressing(std::move(faceIds), false);
 
@@ -595,8 +595,8 @@ int main(int argc, char *argv[])
                     "couple" + Foam::name(actioni),
                     0,
                     stitcher,
-                    mergePatchName + "Side0Zone",
-                    mergePatchName + "Side1Zone",
+                    mergePatchName + "MasterZone",
+                    mergePatchName + "SlaveZone",
                     mergePatchName + "CutPointZone",
                     cutZoneName,
                     masterPatchName,

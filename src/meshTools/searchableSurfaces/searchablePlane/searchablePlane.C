@@ -6,7 +6,6 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -165,7 +164,7 @@ void Foam::searchablePlane::findNearest
     {
         info[i].setPoint(nearestPoint(samples[i]));
 
-        if (info[i].point().distSqr(samples[i]) > nearestDistSqr[i])
+        if (magSqr(samples[i]-info[i].rawPoint()) > nearestDistSqr[i])
         {
             info[i].setIndex(-1);
             info[i].setMiss();

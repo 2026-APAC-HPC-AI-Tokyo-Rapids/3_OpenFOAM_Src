@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,12 +32,12 @@ Description
     writing.
 
 SourceFiles
-    pointZoneSet.C
+    pointZone.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_pointZoneSet_H
-#define Foam_pointZoneSet_H
+#ifndef pointZoneSet_H
+#define pointZoneSet_H
 
 #include "pointSet.H"
 
@@ -74,8 +74,8 @@ public:
         (
             const polyMesh& mesh,
             const word& name,
-            IOobjectOption::readOption rOpt = IOobjectOption::MUST_READ,
-            IOobjectOption::writeOption wOpt = IOobjectOption::NO_WRITE
+            readOption r=MUST_READ,
+            writeOption w=NO_WRITE
         );
 
         //- Construct empty with initial size for labelHashSet
@@ -84,7 +84,7 @@ public:
             const polyMesh& mesh,
             const word& name,
             const label size,
-            IOobjectOption::writeOption wOpt = IOobjectOption::NO_WRITE
+            writeOption w=NO_WRITE
         );
 
         //- Copy construct from existing set
@@ -93,7 +93,7 @@ public:
             const polyMesh& mesh,
             const word& name,
             const topoSet& set,
-            IOobjectOption::writeOption wOpt = IOobjectOption::NO_WRITE
+            writeOption w=NO_WRITE
         );
 
 

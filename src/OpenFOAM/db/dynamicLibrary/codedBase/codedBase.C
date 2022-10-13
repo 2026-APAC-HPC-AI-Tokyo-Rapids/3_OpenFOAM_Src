@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2016 OpenFOAM Foundation
-    Copyright (C) 2016-2022 OpenCFD Ltd.
+    Copyright (C) 2016-2021 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -332,8 +332,7 @@ void Foam::codedBase::createLibrary
             << " after waiting: have masterSize:" << masterSize
             << " and localSize:" << mySize << endl;
     }
-
-    Pstream::reduceOr(create);  // MPI barrier
+    reduce(create, orOp<bool>());
 }
 
 

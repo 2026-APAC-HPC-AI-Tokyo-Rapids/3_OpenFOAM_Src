@@ -283,7 +283,7 @@ void Foam::processorFvPatchField<Type>::evaluate
             if
             (
                 outstandingRecvRequest_ >= 0
-             && outstandingRecvRequest_ < UPstream::nRequests()
+             && outstandingRecvRequest_ < Pstream::nRequests()
             )
             {
                 UPstream::waitRequest(outstandingRecvRequest_);
@@ -416,7 +416,7 @@ void Foam::processorFvPatchField<Type>::updateInterfaceMatrix
         if
         (
             outstandingRecvRequest_ >= 0
-         && outstandingRecvRequest_ < UPstream::nRequests()
+         && outstandingRecvRequest_ < Pstream::nRequests()
         )
         {
             UPstream::waitRequest(outstandingRecvRequest_);
@@ -506,7 +506,7 @@ void Foam::processorFvPatchField<Type>::initInterfaceMatrixUpdate
 
         receiveBuf_.setSize(sendBuf_.size());
         outstandingRecvRequest_ = UPstream::nRequests();
-        UIPstream::read
+        IPstream::read
         (
             Pstream::commsTypes::nonBlocking,
             procPatch_.neighbProcNo(),
@@ -517,7 +517,7 @@ void Foam::processorFvPatchField<Type>::initInterfaceMatrixUpdate
         );
 
         outstandingSendRequest_ = UPstream::nRequests();
-        UOPstream::write
+        OPstream::write
         (
             Pstream::commsTypes::nonBlocking,
             procPatch_.neighbProcNo(),
@@ -565,7 +565,7 @@ void Foam::processorFvPatchField<Type>::updateInterfaceMatrix
         if
         (
             outstandingRecvRequest_ >= 0
-         && outstandingRecvRequest_ < UPstream::nRequests()
+         && outstandingRecvRequest_ < Pstream::nRequests()
         )
         {
             UPstream::waitRequest(outstandingRecvRequest_);
@@ -606,10 +606,11 @@ bool Foam::processorFvPatchField<Type>::ready() const
     if
     (
         outstandingSendRequest_ >= 0
-     && outstandingSendRequest_ < UPstream::nRequests()
+     && outstandingSendRequest_ < Pstream::nRequests()
     )
     {
-        if (!UPstream::finishedRequest(outstandingSendRequest_))
+        bool finished = UPstream::finishedRequest(outstandingSendRequest_);
+        if (!finished)
         {
             return false;
         }
@@ -619,10 +620,11 @@ bool Foam::processorFvPatchField<Type>::ready() const
     if
     (
         outstandingRecvRequest_ >= 0
-     && outstandingRecvRequest_ < UPstream::nRequests()
+     && outstandingRecvRequest_ < Pstream::nRequests()
     )
     {
-        if (!UPstream::finishedRequest(outstandingRecvRequest_))
+        bool finished = UPstream::finishedRequest(outstandingRecvRequest_);
+        if (!finished)
         {
             return false;
         }

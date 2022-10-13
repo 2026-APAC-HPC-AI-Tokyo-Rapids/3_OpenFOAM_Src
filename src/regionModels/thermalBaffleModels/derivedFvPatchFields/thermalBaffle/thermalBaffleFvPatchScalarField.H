@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2020-2022 OpenCFD Ltd
+    Copyright (C) 2020 OpenCFD Ltd
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -229,15 +229,7 @@ class thermalBaffleFvPatchScalarField
 :
     public turbulentTemperatureRadCoupledMixedFvPatchScalarField
 {
-    // Typedefs
-
-        //- The baffle region model
-        typedef
-            regionModels::thermalBaffleModels::thermalBaffleModel
-            baffleType;
-
-
-    // Private Data
+    // Private data
 
         //- Enumeration of patch IDs
         enum patchID
@@ -254,7 +246,7 @@ class thermalBaffleFvPatchScalarField
         bool internal_;
 
         //- Thermal baffle
-        autoPtr<baffleType> baffle_;
+        autoPtr<regionModels::thermalBaffleModels::thermalBaffleModel> baffle_;
 
         //- Dictionary
         dictionary dict_;
@@ -263,7 +255,7 @@ class thermalBaffleFvPatchScalarField
         autoPtr<extrudePatchMesh> extrudeMeshPtr_;
 
 
-    // Private Member Functions
+    // Private member functions
 
         //- Extrude mesh
         void createPatchMesh();
@@ -331,7 +323,7 @@ public:
         }
 
 
-    // Member Functions
+    // Member functions
 
         //- Update the coefficients associated with the patch field
         virtual void updateCoeffs();

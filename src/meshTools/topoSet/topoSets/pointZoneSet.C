@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
-    Copyright (C) 2018-2022 OpenCFD Ltd.
+    Copyright (C) 2018-2020 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -62,8 +62,8 @@ Foam::pointZoneSet::pointZoneSet
 (
     const polyMesh& mesh,
     const word& name,
-    IOobjectOption::readOption rOpt,
-    IOobjectOption::writeOption wOpt
+    readOption r,
+    writeOption w
 )
 :
     pointSet(mesh, name, 1024),  // do not read pointSet
@@ -75,8 +75,9 @@ Foam::pointZoneSet::pointZoneSet
 
     if
     (
-         IOobjectOption::isReadRequired(rOpt)
-     || (IOobjectOption::isReadOptional(rOpt) && zoneID != -1)
+        r == IOobject::MUST_READ
+     || r == IOobject::MUST_READ_IF_MODIFIED
+     || (r == IOobject::READ_IF_PRESENT && zoneID != -1)
     )
     {
         const pointZone& fz = pointZones[zoneID];
@@ -94,10 +95,10 @@ Foam::pointZoneSet::pointZoneSet
     const polyMesh& mesh,
     const word& name,
     const label size,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 :
-    pointSet(mesh, name, size, wOpt),
+    pointSet(mesh, name, size, w),
     mesh_(mesh),
     addressing_()
 {
@@ -110,10 +111,10 @@ Foam::pointZoneSet::pointZoneSet
     const polyMesh& mesh,
     const word& name,
     const topoSet& set,
-    IOobjectOption::writeOption wOpt
+    writeOption w
 )
 :
-    pointSet(mesh, name, set.size(), wOpt),
+    pointSet(mesh, name, set.size(), w),
     mesh_(mesh),
     addressing_(refCast<const pointZoneSet>(set).addressing())
 {

@@ -43,6 +43,7 @@ Foam::ensightCase::newData
     if (Pstream::master())
     {
         const ensight::VarName varName(name);
+
         output = createDataFile(varName);
 
         // Description
@@ -89,7 +90,7 @@ Foam::ensightCase::newCloudData
     const word& name
 ) const
 {
-    autoPtr<ensightFile> output;
+    autoPtr<Foam::ensightFile> output;
 
     if (Pstream::master())
     {
