@@ -6,6 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2017 OpenFOAM Foundation
+    Copyright (C) 2022 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -32,7 +33,6 @@ inline Foam::solidArrheniusReactionRate::solidArrheniusReactionRate
     const scalar A,
     const scalar Ta,
     const scalar Tcrit
-    //const scalar nReact
 )
 :
     A_(A),
@@ -62,18 +62,12 @@ inline Foam::scalar Foam::solidArrheniusReactionRate::operator()
     const scalarField&
 ) const
 {
-    scalar ak = A_;
-
     if (T < Tcrit_)
     {
-        ak *= 0.0;
-    }
-    else
-    {
-        ak *= exp(-Ta_/T);
+        return 0;
     }
 
-    return ak;
+    return A_*exp(-Ta_/T);
 }
 
 
