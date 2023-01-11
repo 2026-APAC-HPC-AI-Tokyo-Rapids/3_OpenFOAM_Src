@@ -29,15 +29,14 @@ License
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
+Foam::DynamicList<MPI_Comm> Foam::PstreamGlobals::MPICommunicators_;
+Foam::DynamicList<MPI_Group> Foam::PstreamGlobals::MPIGroups_;
+
 Foam::DynamicList<MPI_Request> Foam::PstreamGlobals::outstandingRequests_;
 Foam::DynamicList<Foam::label> Foam::PstreamGlobals::freedRequests_;
 
 int Foam::PstreamGlobals::nTags_ = 0;
-
 Foam::DynamicList<int> Foam::PstreamGlobals::freedTags_;
-
-Foam::DynamicList<MPI_Comm> Foam::PstreamGlobals::MPICommunicators_;
-Foam::DynamicList<MPI_Group> Foam::PstreamGlobals::MPIGroups_;
 
 
 // * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
