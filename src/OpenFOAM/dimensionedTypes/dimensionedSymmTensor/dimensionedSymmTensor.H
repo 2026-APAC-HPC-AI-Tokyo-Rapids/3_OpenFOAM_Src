@@ -34,8 +34,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef dimensionedSymmTensor_H
-#define dimensionedSymmTensor_H
+#ifndef Foam_dimensionedSymmTensor_H
+#define Foam_dimensionedSymmTensor_H
 
 #include "dimensionedVector.H"
 #include "symmTensor.H"
