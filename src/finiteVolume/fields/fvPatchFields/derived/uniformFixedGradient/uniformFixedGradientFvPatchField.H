@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2013-2016 OpenFOAM Foundation
-    Copyright (C) 2020 OpenCFD Ltd.
+    Copyright (C) 2020-2023 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -62,8 +62,8 @@ SourceFiles
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef uniformFixedGradientFvPatchField_H
-#define uniformFixedGradientFvPatchField_H
+#ifndef Foam_uniformFixedGradientFvPatchField_H
+#define Foam_uniformFixedGradientFvPatchField_H
 
 #include "fixedGradientFvPatchFields.H"
 #include "PatchFunction1.H"
@@ -84,8 +84,8 @@ class uniformFixedGradientFvPatchField
 {
     // Private Data
 
-        //- Gradient
-        autoPtr<PatchFunction1<Type>> uniformGradient_;
+        //- Function providing the gradient
+        autoPtr<PatchFunction1<Type>> refGradFunc_;
 
 
 public:

@@ -73,11 +73,7 @@ Foam::uniformFixedValueFaPatchField<Type>::uniformFixedValueFaPatchField
         )
     )
 {
-    if (this->readValueEntry(dict))
-    {
-        // Full restart
-    }
-    else
+    if (!this->readValueEntry(dict))
     {
         this->evaluate();
     }
