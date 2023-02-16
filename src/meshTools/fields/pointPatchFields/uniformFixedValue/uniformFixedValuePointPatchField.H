@@ -39,17 +39,17 @@ Description
     }
     \endverbatim
 
-    The uniformValue entry is a Function1 type, able to describe time
-    varying functions.  The example above gives the usage for supplying a
-    constant value.
+    The uniformValue entry is a PatchFunction1 type,
+    able to describe time and spatial varying functions.
+    The example above gives the usage for supplying a constant value.
 
 SourceFiles
     uniformFixedValuePointPatchField.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef uniformFixedValuePointPatchField_H
-#define uniformFixedValuePointPatchField_H
+#ifndef Foam_uniformFixedValuePointPatchField_H
+#define Foam_uniformFixedValuePointPatchField_H
 
 #include "fixedValuePointPatchField.H"
 #include "PatchFunction1.H"
@@ -59,10 +59,8 @@ SourceFiles
 namespace Foam
 {
 
-class polyPatch;
-
 /*---------------------------------------------------------------------------*\
-          Class uniformFixedValuePointPatchField Declaration
+              Class uniformFixedValuePointPatchField Declaration
 \*---------------------------------------------------------------------------*/
 
 template<class Type>
@@ -70,14 +68,15 @@ class uniformFixedValuePointPatchField
 :
     public fixedValuePointPatchField<Type>
 {
+    // Private Data
+
+        //- Function providing the value
+        autoPtr<PatchFunction1<Type>> refValueFunc_;
+
+
     // Private Member Functions
 
         static const polyPatch& getPatch(const pointPatch&);
-
-
-    // Private data
-
-        autoPtr<PatchFunction1<Type>> uniformValue_;
 
 
 public:
@@ -155,16 +154,7 @@ public:
         }
 
 
-    // Member functions
-
-        // Access
-
-            //- Return the uniform value
-            const Function1<Type>& uniformValue() const
-            {
-                return uniformValue_;
-            }
-
+    // Member Functions
 
         // Mapping functions
 

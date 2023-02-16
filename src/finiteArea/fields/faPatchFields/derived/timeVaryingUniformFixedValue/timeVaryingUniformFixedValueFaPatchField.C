@@ -60,6 +60,10 @@ timeVaryingUniformFixedValueFaPatchField
     {
         updateCoeffs();
     }
+
+    DeprecatedInFunction(2212)
+        << "Use uniformFixedValue instead." << nl
+        << "    This boundary condition will be removed in the future" << endl;
 }
 
 
