@@ -54,7 +54,7 @@ extrapolatedCalculatedFvPatchField
 :
     calculatedFvPatchField<Type>(p, iF, dict, IOobjectOption::NO_READ)
 {
-    evaluate();
+    calculatedFvPatchField<Type>::operator==(this->patchInternalField());
 }
 
 
