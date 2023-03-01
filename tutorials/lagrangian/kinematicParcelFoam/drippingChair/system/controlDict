@@ -52,5 +52,10 @@ regionFaMaxCo   1;
 
 maxDeltaT       0.1;
 
+functions
+{
+    #include "areaWrite"
+}
+
 
 // ************************************************************************* //
