@@ -40,8 +40,8 @@ Foam::inletOutletFaPatchField<Type>::inletOutletFaPatchField
     mixedFaPatchField<Type>(p, iF),
     phiName_("phi")
 {
-    this->refValue() = pTraits<Type>::zero;
-    this->refGrad() = pTraits<Type>::zero;
+    this->refValue() = Zero;
+    this->refGrad() = Zero;
     this->valueFraction() = 0.0;
 }
 
@@ -71,21 +71,16 @@ Foam::inletOutletFaPatchField<Type>::inletOutletFaPatchField
     mixedFaPatchField<Type>(p, iF),
     phiName_(dict.getOrDefault<word>("phi", "phi"))
 {
-    this->refValue() = Field<Type>("inletValue", dict, p.size());
+    faPatchFieldBase::readDict(dict);
 
-    if (dict.found("value"))
-    {
-        faPatchField<Type>::operator=
-        (
-            Field<Type>("value", dict, p.size())
-        );
-    }
-    else
+    this->refValue().assign("inletValue", dict, p.size());
+
+    if (!this->readValueEntry(dict))
     {
         faPatchField<Type>::operator=(this->refValue());
     }
 
-    this->refGrad() = pTraits<Type>::zero;
+    this->refGrad() = Zero;
     this->valueFraction() = 0.0;
 }
 
