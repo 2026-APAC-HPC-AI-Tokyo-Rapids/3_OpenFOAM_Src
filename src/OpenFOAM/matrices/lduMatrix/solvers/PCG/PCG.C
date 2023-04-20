@@ -157,7 +157,7 @@ Foam::solverPerformance Foam::PCG::scalarSolve
             }
             else
             {
-                solveScalar beta = wArA/wArAold;
+                const solveScalar beta = wArA/wArAold;
 
                 for (label cell=0; cell<nCells; cell++)
                 {
@@ -177,7 +177,7 @@ Foam::solverPerformance Foam::PCG::scalarSolve
 
             // --- Update solution and residual:
 
-            solveScalar alpha = wArA/wApA;
+            const solveScalar alpha = wArA/wApA;
 
             for (label cell=0; cell<nCells; cell++)
             {
