@@ -96,8 +96,6 @@ class hostCollatedFileOperation
         //- Any initialisation steps after constructing
         void init(bool verbose);
 
-        //- Get the list of processors part of this set
-        static labelList subRanks(const label n);
 
 public:
 
@@ -109,6 +107,14 @@ public:
 
         //- Default construct
         explicit hostCollatedFileOperation(bool verbose = false);
+
+        //- Construct from communicator with specified io-ranks
+        explicit hostCollatedFileOperation
+        (
+            const Tuple2<label, labelList>& commAndIORanks,
+            const bool distributedRoots,
+            bool verbose = false
+        );
 
 
     //- Destructor

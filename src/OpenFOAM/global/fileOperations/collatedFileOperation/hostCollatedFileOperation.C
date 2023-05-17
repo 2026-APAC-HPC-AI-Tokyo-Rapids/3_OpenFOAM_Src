@@ -28,7 +28,6 @@ License
 
 #include "hostCollatedFileOperation.H"
 #include "addToRunTimeSelectionTable.H"
-#include "bitSet.H"
 
 /* * * * * * * * * * * * * * * Static Member Data  * * * * * * * * * * * * * */
 
@@ -42,6 +41,12 @@ namespace fileOperations
         fileOperation,
         hostCollatedFileOperation,
         word
+    );
+    addToRunTimeSelectionTable
+    (
+        fileOperation,
+        hostCollatedFileOperation,
+        comm
     );
 
     // Register initialisation routine. Signals need for threaded mpi and
@@ -57,24 +62,40 @@ namespace fileOperations
 }
 
 
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
 
-Foam::labelList Foam::fileOperations::hostCollatedFileOperation::subRanks
-(
-    const label n
-)
+namespace Foam
 {
-    labelList mainIOranks(fileOperation::getGlobalIORanks());
+// Construction helper: self/world/local communicator and IO ranks
+static Tuple2<label, labelList> getCommPattern()
+{
+    // Default is COMM_WORLD (single master)
+    Tuple2<label, labelList> commAndIORanks
+    (
+        UPstream::worldComm,
+        fileOperation::getGlobalIORanks()
+    );
 
-    if (mainIOranks.empty())
+    if (commAndIORanks.second().empty())
     {
-        mainIOranks = fileOperation::getGlobalHostIORanks();
+        // Default: one master per host
+        commAndIORanks.second() = fileOperation::getGlobalHostIORanks();
     }
 
-    labelRange subRange = fileOperation::subRanks(mainIOranks);
+    if (UPstream::parRun() && commAndIORanks.second().size() > 1)
+    {
+        // Multiple masters: ranks for my IO range
+        commAndIORanks.first() = UPstream::allocateCommunicator
+        (
+            UPstream::worldComm,
+            fileOperation::subRanks(commAndIORanks.second())
+        );
+    }
 
-    return identity(subRange);
+    return commAndIORanks;
 }
+
+} // End namespace Foam
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -97,15 +118,30 @@ Foam::fileOperations::hostCollatedFileOperation::hostCollatedFileOperation
 :
     collatedFileOperation
     (
-        UPstream::allocateCommunicator
-        (
-            UPstream::worldComm,
-            subRanks(UPstream::nProcs())
-        ),
-        (UPstream::parRun() ? labelList() : getGlobalIORanks()),
-        false  // verbose
+        getCommPattern(),
+        false,  // distributedRoots
+        false   // verbose
     ),
     managedComm_(getManagedComm(comm_))  // Possibly locally allocated
+{
+    init(verbose);
+}
+
+
+Foam::fileOperations::hostCollatedFileOperation::hostCollatedFileOperation
+(
+    const Tuple2<label, labelList>& commAndIORanks,
+    const bool distributedRoots,
+    bool verbose
+)
+:
+    collatedFileOperation
+    (
+        commAndIORanks,
+        distributedRoots,
+        false   // verbose
+    ),
+    managedComm_(-1)  // Externally managed
 {
     init(verbose);
 }
