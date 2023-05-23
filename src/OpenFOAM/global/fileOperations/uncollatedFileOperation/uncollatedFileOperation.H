@@ -285,7 +285,7 @@ public:
                 regIOobject&,
                 const fileName&,
                 const word& typeName,
-                const bool procValid = true
+                const bool readOnProc = true
             ) const;
 
             //- Top-level read
