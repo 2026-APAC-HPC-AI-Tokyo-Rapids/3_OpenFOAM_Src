@@ -29,21 +29,148 @@ License
 #include "List.H"
 #include "Istream.H"
 #include "token.H"
-#include "SLList.H"
 #include "contiguous.H"
+#include <memory>
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template<class T>
 Foam::List<T>::List(Istream& is)
 :
-    UList<T>(nullptr, 0)
+    UList<T>()
 {
     this->readList(is);
 }
 
 
-// * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
+// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
+
+template<class T>
+bool Foam::List<T>::readBracketList(Istream& is)
+{
+    List<T>& list = *this;
+
+    is.fatalCheck(FUNCTION_NAME);
+
+    token tok(is);
+
+    is.fatalCheck
+    (
+        "List<T>::readBracketList(Istream&) : reading first token"
+    );
+
+    if (!tok.isPunctuation(token::BEGIN_LIST))
+    {
+        is.putBack(tok);
+        return false;
+    }
+
+    {
+        // "(...)" : read element-wise.
+        // Uses chunk-wise reading to avoid too many re-allocations
+        // and avoids relocation of contiguous memory until all of the reading
+        // is completed. Chunks are wrapped as unique_ptr to ensure proper
+        // cleanup on failure.
+
+        // The choice of chunk-size is somewhat arbitrary...
+        constexpr label chunkSize = 128;
+        typedef std::unique_ptr<List<T>> chunkType;
+
+        is >> tok;
+        is.fatalCheck(FUNCTION_NAME);
+
+        if (tok.isPunctuation(token::END_LIST))
+        {
+            // Trivial case, an empty list
+            list.clear();
+            return true;
+        }
+
+        // Use all storage
+        list.resize(list.capacity());
+
+        // Start with a few slots, recover current memory where possible
+        List<chunkType> chunks(16);
+        if (list.empty())
+        {
+            chunks[0] = chunkType(new List<T>(chunkSize));
+        }
+        else
+        {
+            chunks[0] = chunkType(new List<T>(std::move(list)));
+        }
+
+        label nChunks = 1;      // Active number of chunks
+        label totalCount = 0;   // Total number of elements
+        label localIndex = 0;   // Chunk-local index
+
+        while (!tok.isPunctuation(token::END_LIST))
+        {
+            is.putBack(tok);
+
+            if (chunks[nChunks-1]->size() <= localIndex)
+            {
+                // Increase number of slots (doubling)
+                if (nChunks >= chunks.size())
+                {
+                    chunks.resize(2*chunks.size());
+                }
+
+                chunks[nChunks] = chunkType(new List<T>(chunkSize));
+                ++nChunks;
+                localIndex = 0;
+            }
+
+            is  >> chunks[nChunks-1]->operator[](localIndex);
+            ++localIndex;
+            ++totalCount;
+
+            is.fatalCheck
+            (
+                "List<T>::readBracketList(Istream&) : "
+                "reading entry"
+            );
+
+            is >> tok;
+            is.fatalCheck(FUNCTION_NAME);
+        }
+
+        // Simple case
+        if (nChunks == 1)
+        {
+            list = std::move(*(chunks[0]));
+            list.resize(totalCount);
+            return true;
+        }
+
+        // Destination
+        list.setCapacity_nocopy(totalCount);
+        list.resize_nocopy(totalCount);
+        auto dest = list.begin();
+
+        for (label chunki = 0; chunki < nChunks; ++chunki)
+        {
+            List<T> currChunk(std::move(*(chunks[chunki])));
+            chunks[chunki].reset(nullptr);
+
+            const label localLen = min(currChunk.size(), totalCount);
+
+            dest = std::move
+            (
+                currChunk.begin(),
+                currChunk.begin(localLen),
+                dest
+            );
+
+            totalCount -= localLen;
+        }
+    }
+
+    return true;
+}
+
+
+// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 template<class T>
 Foam::Istream& Foam::List<T>::readList(Istream& is)
@@ -142,15 +269,9 @@ Foam::Istream& Foam::List<T>::readList(Istream& is)
     }
     else if (tok.isPunctuation(token::BEGIN_LIST))
     {
-        // "(...)" : read as SLList and transfer contents
-
-        list.clear();  // Clear old contents
-
-        is.putBack(tok);    // Putback the opening bracket
-        SLList<T> sll(is);  // Read as singly-linked list
-
-        // Reallocate and move assign list elements
-        list = std::move(sll);
+        // "(...)" : read as bracketed list
+        is.putBack(tok);
+        this->readBracketList(is);
     }
     else
     {
