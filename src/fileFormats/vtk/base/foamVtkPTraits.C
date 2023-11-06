@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2016-2018 OpenCFD Ltd.
+    Copyright (C) 2016-2023 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -26,7 +26,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "foamVtkPTraits.H"
-#include "endian.H"
+#include "foamEndianFwd.H"  // For big/little endian defines
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
