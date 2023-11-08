@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2022 OpenCFD Ltd.
+    Copyright (C) 2019-2023 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -82,6 +82,13 @@ Foam::labelList Foam::randomDecomp::randomMap(const label nCells) const
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
+Foam::randomDecomp::randomDecomp(const label numDomains)
+:
+    decompositionMethod(numDomains),
+    agglom_(0)
+{}
+
+
 Foam::randomDecomp::randomDecomp
 (
     const dictionary& decompDict,
@@ -90,7 +97,7 @@ Foam::randomDecomp::randomDecomp
 )
 :
     decompositionMethod(decompDict, regionName),
-    agglom_(1)
+    agglom_(0)
 {
     const dictionary& coeffs = findCoeffsDict(typeName + "Coeffs", select);
 
@@ -104,16 +111,7 @@ Foam::randomDecomp::randomDecomp
 Foam::labelList Foam::randomDecomp::decompose
 (
     const pointField& points,
-    const scalarField& pointWeights
-) const
-{
-    return randomMap(points.size());
-}
-
-
-Foam::labelList Foam::randomDecomp::decompose
-(
-    const pointField& points
+    const scalarField&
 ) const
 {
     return randomMap(points.size());
@@ -127,7 +125,18 @@ Foam::labelList Foam::randomDecomp::decompose
     const scalarField&
 ) const
 {
-    return randomMap(mesh.nCells());  // or cc.size()
+    return randomMap(mesh.nCells());
+}
+
+
+Foam::labelList Foam::randomDecomp::decompose
+(
+    const CompactListList<label>& globalCellCells,
+    const pointField&,
+    const scalarField&
+) const
+{
+    return randomMap(globalCellCells.size());
 }
 
 
@@ -138,7 +147,7 @@ Foam::labelList Foam::randomDecomp::decompose
     const scalarField&
 ) const
 {
-    return randomMap(globalCellCells.size());  // or cc.size()
+    return randomMap(globalCellCells.size());
 }
 
 
