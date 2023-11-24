@@ -62,7 +62,6 @@ adjointManagers
                             weight          1.; 
                             type            PtLosses;
                             patches         (inlet "outlet.*");
-                            normalize       true;
                         }
                         mass
                         {
@@ -71,7 +70,6 @@ adjointManagers
                             inletPatches      (inlet);
                             outletPatches     (outlet outlet-right);
                             targetPercentages (0.5 0.5);
-                            normalize         true;
                         }
                     }
                 }
@@ -96,32 +94,5 @@ adjointManagers
         }
     }
 }
-
-/*
-optimisation
-{
-    designVariables
-    {
-        type dynamicTopO;
-        sensitivityType topO;
-        marchingCoeffs
-        {
-            seedPatches  (designWall);
-            marchingStep 2;
-        }
-        fixedZeroPorousZones   (IEntranceSet OEntranceSet OREntranceSet);
-        regularisation
-        {
-            regularise    false;
-        }
-        betaMax    2500;
-    }
-    updateMethod
-    {
-        method MMA;
-        eta 1;
-    }
-}
-*/
 
 // ************************************************************************* //
