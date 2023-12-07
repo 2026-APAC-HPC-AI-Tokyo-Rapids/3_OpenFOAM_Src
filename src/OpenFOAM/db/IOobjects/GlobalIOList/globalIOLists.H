@@ -32,8 +32,8 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef globalIOLists_H
-#define globalIOLists_H
+#ifndef Foam_globalIOLists_H
+#define Foam_globalIOLists_H
 
 #include "primitiveFields.H"
 #include "GlobalIOList.H"
@@ -48,43 +48,6 @@ namespace Foam
     typedef GlobalIOList<sphericalTensor> sphericalTensorGlobalIOList;
     typedef GlobalIOList<symmTensor> symmTensorGlobalIOList;
     typedef GlobalIOList<tensor> tensorGlobalIOList;
-
-    //- Template function for obtaining global status
-    template<>
-    inline bool typeGlobal<labelGlobalIOList>()
-    {
-        return true;
-    }
-
-    template<>
-    inline bool typeGlobal<scalarGlobalIOList>()
-    {
-        return true;
-    }
-
-    template<>
-    inline bool typeGlobal<vectorGlobalIOList>()
-    {
-        return true;
-    }
-
-    template<>
-    inline bool typeGlobal<sphericalTensorGlobalIOList>()
-    {
-        return true;
-    }
-
-    template<>
-    inline bool typeGlobal<symmTensorGlobalIOList>()
-    {
-        return true;
-    }
-
-    template<>
-    inline bool typeGlobal<tensorGlobalIOList>()
-    {
-        return true;
-    }
 }
 
 
