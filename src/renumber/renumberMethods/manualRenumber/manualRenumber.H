@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2011-2015 OpenFOAM Foundation
-    Copyright (C) 2022 OpenCFD Ltd.
+    Copyright (C) 2022-2024 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -55,22 +55,16 @@ class manualRenumber
 
         fileName dataFile_;
 
-
-    // Private Member Functions
-
-        //- No copy construct
-        manualRenumber(const manualRenumber&) = delete;
-
-        //- No copy assignment
-        void operator=(const manualRenumber&) = delete;
-
 public:
 
     //- Runtime type information
-    TypeName("manual");
+    TypeNameNoDebug("manual");
 
 
     // Constructors
+
+        //- Construct with given data file
+        explicit manualRenumber(const fileName& file);
 
         //- Construct given the renumber dictionary
         explicit manualRenumber(const dictionary& dict);
@@ -81,6 +75,10 @@ public:
 
 
     // Member Functions
+
+        //- The renumbering method needs a polyMesh (for its IOobject)
+        virtual bool needs_mesh() const { return true; }
+
 
         //- Return the order in which cells need to be visited
         //- (ie. from ordered back to original cell label).
