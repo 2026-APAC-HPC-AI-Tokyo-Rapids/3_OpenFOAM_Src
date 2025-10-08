@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2021 OpenCFD Ltd.
+    Copyright (C) 2021-2025 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -24,9 +24,10 @@ See Also
 {
     Foam::argList::addBoolOption
     (
-        "allRegions",
+        "all-regions",
         "Use all regions in regionProperties"
     );
+    Foam::argList::addOptionCompat("all-regions", { "allRegions", -2506 });
 
     Foam::argList::addOption
     (
