@@ -99,7 +99,7 @@ public:
     // Constructors
 
         //- Construct initialized to zero
-        inline SphericalTensor(const Foam::zero);
+        inline SphericalTensor(Foam::zero);
 
         //- Construct given VectorSpace
         template<class Cmpt2>
