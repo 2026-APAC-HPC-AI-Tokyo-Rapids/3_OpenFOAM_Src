@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2019-2023 OpenCFD Ltd.
+    Copyright (C) 2025 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -23,41 +23,57 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Implementation of IO operators for Foam::OffsetRange
+
 \*---------------------------------------------------------------------------*/
 
-#include "UList.H"
-#include "Ostream.H"
+#ifndef Foam_OffsetRangeIO_H
+#define Foam_OffsetRangeIO_H
+
+#include "OffsetRange.H"
 #include "token.H"
-#include <vector>
+#include "Istream.H"
+#include "Ostream.H"
 
 // * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
 
 template<class T>
-Foam::Ostream& Foam::operator<<(Ostream& os, const std::vector<T>& list)
+Foam::Istream& Foam::operator>>
+(
+    Foam::Istream& is,
+    Foam::OffsetRange<T>& range
+)
 {
-    auto iter = list.cbegin();
-    const auto last = list.cend();
+    is.readBegin("OffsetRange");
+    is >> range.start() >> range.size() >> range.total();
+    is.readEnd("OffsetRange");
 
-    // Write ascii list contents, no line breaks
+    is.check(FUNCTION_NAME);
+    return is;
+}
 
-    os << label(list.size()) << token::BEGIN_LIST;
 
-    // Contents
-    if (iter != last)
-    {
-        os << *iter;
-
-        for (++iter; (iter != last); (void)++iter)
-        {
-            os << token::SPACE << *iter;
-        }
-    }
-
-    os << token::END_LIST;
+template<class T>
+Foam::Ostream& Foam::operator<<
+(
+    Foam::Ostream& os,
+    const Foam::OffsetRange<T>& range
+)
+{
+    os  << Foam::token::BEGIN_LIST
+        << range.start() << Foam::token::SPACE
+        << range.size() << Foam::token::SPACE
+        << range.total()
+        << Foam::token::END_LIST;
 
     os.check(FUNCTION_NAME);
     return os;
 }
 
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#endif
 
 // ************************************************************************* //
