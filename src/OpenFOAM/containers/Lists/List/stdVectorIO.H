@@ -5,7 +5,7 @@
     \\  /    A nd           | www.openfoam.com
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
-    Copyright (C) 2025 OpenCFD Ltd.
+    Copyright (C) 2019-2023 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -25,67 +25,45 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "OffsetRange.H"
-#include "token.H"
-#include "Istream.H"
+#ifndef Foam_stdVectorIO_H
+#define Foam_stdVectorIO_H
+
+#include <vector>
 #include "Ostream.H"
+#include "token.H"
 
-// * * * * * * * * * * * * * * * Local Functions * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
 
-namespace
+template<class T>
+Foam::Ostream& Foam::operator<<(Ostream& os, const std::vector<T>& list)
 {
+    auto iter = list.cbegin();
+    const auto last = list.cend();
 
-template<class IS, class T>
-inline IS& input(IS& is, Foam::OffsetRange<T>& range)
-{
-    is.readBegin("OffsetRange");
-    is >> range.start() >> range.size() >> range.total();
-    is.readEnd("OffsetRange");
+    // Write ascii list contents, no line breaks
 
-    is.check(FUNCTION_NAME);
-    return is;
-}
+    os << static_cast<label>(list.size()) << token::BEGIN_LIST;
 
-template<class OS, class T>
-inline OS& output(OS& os, const Foam::OffsetRange<T>& range)
-{
-    os  << Foam::token::BEGIN_LIST
-        << range.start() << Foam::token::SPACE
-        << range.size() << Foam::token::SPACE
-        << range.total()
-        << Foam::token::END_LIST;
+    // Contents
+    if (iter != last)
+    {
+        os << *iter;
+
+        for (++iter; (iter != last); (void)++iter)
+        {
+            os << token::SPACE << *iter;
+        }
+    }
+
+    os << token::END_LIST;
 
     os.check(FUNCTION_NAME);
     return os;
 }
 
-} // End anonymous namespace
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// * * * * * * * * * * * * * * * IOstream Operators  * * * * * * * * * * * * //
-
-Foam::Istream& Foam::operator>>(Istream& is, OffsetRange<int32_t>& range)
-{
-    return input(is, range);
-}
-
-
-Foam::Istream& Foam::operator>>(Istream& is, OffsetRange<int64_t>& range)
-{
-    return input(is, range);
-}
-
-
-Foam::Ostream& Foam::operator<<(Ostream& os, const OffsetRange<int32_t>& range)
-{
-    return output(os, range);
-}
-
-
-Foam::Ostream& Foam::operator<<(Ostream& os, const OffsetRange<int64_t>& range)
-{
-    return output(os, range);
-}
-
+#endif
 
 // ************************************************************************* //
