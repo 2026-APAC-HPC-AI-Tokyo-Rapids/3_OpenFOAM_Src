@@ -6,7 +6,7 @@
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
     Copyright (C) 2016-2017 OpenFOAM Foundation
-    Copyright (C) 2016-2023 OpenCFD Ltd.
+    Copyright (C) 2016-2025 OpenCFD Ltd.
 -------------------------------------------------------------------------------
 License
     This file is part of OpenFOAM.
@@ -28,31 +28,47 @@ Class
     Foam::functionObjects::wallHeatFlux
 
 Group
-    grpForcesFunctionObjects
 
 Description
-    Computes the wall-heat flux at selected wall patches.
-
-    \table
-      Operand        | Type              | Location
-      input          | -                 | -
-      output file    | dat               | postProcessing/<FO>/<time>/field
-      output field   | volScalarField (only boundaryField) <!--
-                     --> | postProcessing/<FO>/<time>/outField
-    \endtable
+    This function object calculates the wall heat flux based on a custom model
+    defined in the dictionary. The model can be specified to compute the heat
+    flux according to user-defined criteria or equations.
 
 Usage
     Minimal example by using \c system/controlDict.functions:
     \verbatim
-    wallHeatFluxFO
+    wallHeatFlux1
     {
         // Mandatory entries
         type        wallHeatFlux;
         libs        (fieldFunctionObjects);
 
         // Optional entries
-        patches     (<patch1> ... <patchN>); // (wall1 "(wall2|wall3)");
-        qr          <word>;;
+        model       <word>;
+
+        // Conditional entries
+
+            // Option-1: when 'model' is 'wall' - previous 'wallHeatFlux' state
+
+            // Optional entries
+            patches     (<patch1> ... <patchN>); // (wall1 "(wall2|wall3)");
+            qr          <word>;
+
+
+            // Option-2: when 'model' is 'gauge'
+            // Mandatory entries
+            patch       <word>;
+            Tgauge      <scalar>;
+
+            // Optional entries
+            absorptivity  <scalar>;
+            emissivity    <scalar>;
+            T             <word>;
+            qin           <word>;
+            alphat        <word>;
+            convective    <bool>;
+            radiative     <bool>;
+            writeFields   <bool>;
 
         // Inherited entries
         ...
@@ -64,31 +80,45 @@ Usage
       Property     | Description                           | Type | Reqd | Deflt
       type         | Type name: wallHeatFlux               | word |  yes  | -
       libs         | Library name: fieldFunctionObjects    | word |  yes  | -
+      model      | Model name                              | word |  no  | wall
       patches    | Names of operand patches   | wordList | no | all wall patches
       qr         | Name of radiative heat flux field       | word | no | qr
+      patch      | Name of the patch to probe              | word | yes  | -
+      Tgauge     | Gauge temperature (K)                  | scalar | yes | -
+      absorptivity | Absorptivity of the gauge              | scalar | no | 1
+      emissivity   | Emissivity of the gauge                | scalar | no | 1
+      T           | Name of the temperature field          | word | no  | T
+      qin | Name of the incident radiative heat flux field | word | no | qin
+      alphat | Name of turbulent thermal diffusivity field | word | no | alphat
+      convective  | Write convective heat flux into file   | bool | no | true
+      radiative   | Write radiative heat flux into file    | bool | no | true
+      writeFields | Write the fields 'qConv' and 'qRad'    | bool | no | true
     \endtable
 
     The inherited entries are elaborated in:
-      - \link functionObject.H \endlink
-      - \link writeFile.H \endlink
+     - \link fvMeshFunctionObject.H \endlink
+     - \link writeFile.H \endlink
+     - \link probeModel.H \endlink
+     - \link patchFieldProbe.H \endlink
 
 SourceFiles
-    wallHeatFlux.C
+    wallHeatFlux.cxx
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef Foam_functionObjects_wallHeatFlux_H
-#define Foam_functionObjects_wallHeatFlux_H
+#ifndef functionObjects_wallHeatFlux_H
+#define functionObjects_wallHeatFlux_H
 
 #include "fvMeshFunctionObject.H"
-#include "writeFile.H"
-#include "volFieldsFwd.H"
-#include "HashSet.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
+
+// Forward Declarations
+class wallHeatFluxModel;
+
 namespace functionObjects
 {
 
@@ -98,32 +128,12 @@ namespace functionObjects
 
 class wallHeatFlux
 :
-    public fvMeshFunctionObject,
-    public writeFile
+    public fvMeshFunctionObject
 {
-protected:
+    // Private Data
 
-    // Protected Data
-
-        //- Wall patches to process (optionally filtered by name)
-        labelList patchIDs_;
-
-        //- Name of radiative heat flux name
-        word qrName_;
-
-
-    // Protected Member Functions
-
-        //- File header information
-        virtual void writeFileHeader(Ostream& os) const;
-
-        //- Calculate the heat-flux
-        void calcHeatFlux
-        (
-            const volScalarField& alpha,
-            const volScalarField& he,
-            volScalarField& wallHeatFlux
-        );
+        //- Heat-flux model
+        autoPtr<wallHeatFluxModel> qModelPtr_;
 
 
 public:
@@ -139,14 +149,8 @@ public:
         (
             const word& name,
             const Time& runTime,
-            const dictionary&
+            const dictionary& dict
         );
-
-        //- No copy construct
-        wallHeatFlux(const wallHeatFlux&) = delete;
-
-        //- No copy assignment
-        void operator=(const wallHeatFlux&) = delete;
 
 
     //- Destructor
@@ -155,13 +159,13 @@ public:
 
     // Member Functions
 
-        //- Read the function-object dictionary
+        //- Read the settings
         virtual bool read(const dictionary& dict);
 
-        //- Execute the function-object operations
+        //- Calculate the heat-flux data
         virtual bool execute();
 
-        //- Write the function-object results
+        //- Write the heat-flux data
         virtual bool write();
 };
 
