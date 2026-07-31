@@ -1,4 +1,4 @@
-CPP        = /lib/cpp -traditional-cpp $(GFLAGS)
+CPP        = icx -E -traditional-cpp $(GFLAGS)
 
 include $(GENERAL_RULES)/standard
 include $(GENERAL_RULES)/Icx/openmp

@@ -247,7 +247,8 @@ then
         echo 1>&2
         exec wmake $wmakeOpt_frontend "$wmakeOpt_frontend_arg" "$wmakeOpt_all" \
             $wmakeOpt_debug $wmakeOpt_strict $wmakeOpt_queue $wmakeOpt_openmp $* 2>&1 | \
-            /usr/bin/tee $wmakeOpt_log
+            awk '{ print strftime("%Y-%m-%d %H:%M:%S"), $0; fflush() }' | \
+            /usr/bin/tee "$wmakeOpt_log"
         # Need to cleanup after the tee
         rc=$? # Error code from tee (not wmake), but not entirely important
         echo "Done logging to '$wmakeOpt_log'" 1>&2
