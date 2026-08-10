@@ -285,6 +285,9 @@ $(Pstreams)/OPstreams.C
 $(Pstreams)/IPBstreams.C
 $(Pstreams)/OPBstreams.C
 
+global/metrics/PstreamMetricsWriter.C
+global/metrics/PstreamMetrics.C
+
 dictionary = db/dictionary
 $(dictionary)/dictionary.C
 $(dictionary)/dictionaryIO.C

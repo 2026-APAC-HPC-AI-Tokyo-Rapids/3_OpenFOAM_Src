@@ -32,6 +32,7 @@ License
 #include "profilingPstream.H"
 #include "UPstreamWrapping.H"
 #include "collatedFileOperation.H"
+#include "PstreamMetrics.H"
 
 #include <algorithm>
 #include <cstdlib>
@@ -47,6 +48,9 @@ constexpr int minBufLen = 20000000;
 
 // Track size of attached MPI buffer
 static int attachedBufLen = 0;
+
+// Positive MPI_BUFFER_SIZE value accepted by attachOurBuffers(), if any
+static std::optional<int> environmentMpiBufferBytesApplied;
 
 // Track if we initialized MPI
 static bool ourMpi = false;
@@ -69,7 +73,11 @@ static void attachOurBuffers()
     int len = 0;
 
     const std::string str(Foam::getEnv("MPI_BUFFER_SIZE"));
-    if (str.empty() || !Foam::read(str, len) || len <= 0)
+    if (!str.empty() && Foam::read(str, len) && len > 0)
+    {
+        environmentMpiBufferBytesApplied = len;
+    }
+    else
     {
         len = Foam::UPstream::mpiBufferSize;
     }
@@ -643,6 +651,13 @@ bool Foam::UPstream::init(int& argc, char**& argv, const bool needsThread)
     }
 
     attachOurBuffers();
+
+    Foam::pstreamMetrics::startupApplied
+    (
+        UPstream::mpiBufferSize,
+        environmentMpiBufferBytesApplied,
+        attachedBufLen
+    );
 
     return true;
 }

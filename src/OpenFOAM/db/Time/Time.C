@@ -34,6 +34,7 @@ License
 #include "profiling.H"
 #include "IOdictionary.H"
 #include "registerSwitch.H"
+#include "PstreamMetrics.H"
 #include <sstream>
 
 // * * * * * * * * * * * * * Static Member Data  * * * * * * * * * * * * * * //
@@ -344,6 +345,8 @@ void Foam::Time::setControls()
             }
         }
     }
+
+    pstreamMetrics::runtimeCurrent();
 }
 
 

@@ -36,6 +36,7 @@ License
 #include "fileOperation.H"
 #include "fstreamPointer.H"
 #include "Field.H"  // Ugly handling of localBoundaryConsistency switches
+#include "PstreamMetrics.H"
 
 #include <iomanip>
 
@@ -502,6 +503,8 @@ void Foam::Time::readModifiedObjects()
         {
             objectRegistry::readModifiedObjects();
         }
+
+        pstreamMetrics::runtimeChanged();
     }
 }
 
