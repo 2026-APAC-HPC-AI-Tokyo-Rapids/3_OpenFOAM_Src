@@ -73,7 +73,10 @@ void Foam::lduMatrix::Amul
 
     const label nCells = diag().size();
 
-    if (hasLowerCSR())
+    // Symmetric matrices only store upper coefficients. Materialize their
+    // lower coefficients in CSR order on first use and retain them for later
+    // multiplications.
+    if (symmetric() || hasLowerCSR())
     {
         // Use cell-based looping
         if (debug == 2) PoutInFunction<< "cell-based looping" << endl;
