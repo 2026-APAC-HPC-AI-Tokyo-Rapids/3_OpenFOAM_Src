@@ -180,16 +180,26 @@ Foam::solverPerformance Foam::PCG::scalarSolve
             // --- Update solution and residual:
 
             const solveScalar alpha = wArA/wApA;
+            solveScalar residualSum = Zero;
 
             for (label cell=0; cell<nCells; cell++)
             {
                 psiPtr[cell] += alpha*pAPtr[cell];
                 rAPtr[cell] -= alpha*wAPtr[cell];
+
+                // Sum in the same cell order as sumMag while rA is hot
+                residualSum += mag(rAPtr[cell]);
             }
 
-            solverPerf.finalResidual() =
-                gSumMag(rA, matrix().mesh().comm())
-               /normFactor;
+            Foam::reduce
+            (
+                residualSum,
+                sumOp<solveScalar>(),
+                UPstream::msgType(),
+                matrix().mesh().comm()
+            );
+
+            solverPerf.finalResidual() = residualSum/normFactor;
 
         } while
         (
