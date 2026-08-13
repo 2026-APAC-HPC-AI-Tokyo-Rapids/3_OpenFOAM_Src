@@ -106,26 +106,53 @@ void Foam::DICPreconditioner::precondition
         solver_.matrix().lduAddr().upperAddr().begin();
     const label* const __restrict__ lPtr =
         solver_.matrix().lduAddr().lowerAddr().begin();
+    const label* const __restrict__ losortPtr =
+        solver_.matrix().lduAddr().losortAddr().begin();
+    const label* const __restrict__ losortStartPtr =
+        solver_.matrix().lduAddr().losortStartAddr().begin();
+    const label* const __restrict__ ownerStartPtr =
+        solver_.matrix().lduAddr().ownerStartAddr().begin();
     const scalar* const __restrict__ upperPtr =
         solver_.matrix().upper().begin();
 
     const label nCells = wA.size();
-    const label nFaces = solver_.matrix().upper().size();
-    const label nFacesM1 = nFaces - 1;
 
+    // Forward substitution, gathering lower-neighbour contributions by cell.
+    // losort retains the original face order within each upper-cell group.
     for (label cell=0; cell<nCells; cell++)
     {
-        wAPtr[cell] = rDPtr[cell]*rAPtr[cell];
+        solveScalar w = rDPtr[cell]*rAPtr[cell];
+
+        for
+        (
+            label i=losortStartPtr[cell];
+            i<losortStartPtr[cell + 1];
+            i++
+        )
+        {
+            const label face = losortPtr[i];
+            w -= rDPtr[cell]*upperPtr[face]*wAPtr[lPtr[face]];
+        }
+
+        wAPtr[cell] = w;
     }
 
-    for (label face=0; face<nFaces; face++)
+    // Backward substitution. Faces are already grouped by lower cell; visit
+    // each group in reverse to retain the original reverse-face order.
+    for (label cell=nCells; cell-- > 0;)
     {
-        wAPtr[uPtr[face]] -= rDPtr[uPtr[face]]*upperPtr[face]*wAPtr[lPtr[face]];
-    }
+        solveScalar w = wAPtr[cell];
 
-    for (label face=nFacesM1; face>=0; face--)
-    {
-        wAPtr[lPtr[face]] -= rDPtr[lPtr[face]]*upperPtr[face]*wAPtr[uPtr[face]];
+        for
+        (
+            label face=ownerStartPtr[cell + 1];
+            face-- > ownerStartPtr[cell];
+        )
+        {
+            w -= rDPtr[cell]*upperPtr[face]*wAPtr[uPtr[face]];
+        }
+
+        wAPtr[cell] = w;
     }
 }
 
