@@ -29,6 +29,7 @@ License
 #include "lduMatrix.H"
 #include "diagonalSolver.H"
 #include "PrecisionAdaptor.H"
+#include "issue33Trace.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -252,10 +253,15 @@ Foam::solveScalarField::cmptType Foam::lduMatrix::solver::normFactor
         case lduMatrix::normTypes::L1_SCALED_NORM :
         {
             // --- Calculate A dot reference value of psi
+            issue33TraceMark("normFactor.sumA.begin");
             matrix_.sumA(tmpField, interfaceBouCoeffs_, interfaces_);
+            issue33TraceMark("normFactor.sumA.end");
 
+            issue33TraceMark("normFactor.gAverage.begin");
             tmpField *= gAverage(psi, matrix_.mesh().comm());
+            issue33TraceMark("normFactor.gAverage.end");
 
+            issue33TraceMark("normFactor.gSum.begin");
             return
                 gSum
                 (

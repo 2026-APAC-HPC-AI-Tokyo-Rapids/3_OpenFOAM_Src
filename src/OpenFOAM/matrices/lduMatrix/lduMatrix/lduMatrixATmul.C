@@ -31,6 +31,7 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "lduMatrix.H"
+#include "issue33Trace.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -43,6 +44,7 @@ void Foam::lduMatrix::Amul
     const direction cmpt
 ) const
 {
+    issue33TraceMark("Amul.begin");
     const auto& addr = lduAddr();
 
     solveScalar* __restrict__ ApsiPtr = Apsi.begin();
@@ -70,11 +72,13 @@ void Foam::lduMatrix::Amul
         Apsi,
         cmpt
     );
+    issue33TraceMark("Amul.interfaces.initialised");
 
     const label nCells = diag().size();
 
     if (hasLowerCSR())
     {
+        issue33TraceMark("Amul.csr.begin");
         // Use cell-based looping
         if (debug == 2) PoutInFunction<< "cell-based looping" << endl;
 
@@ -118,25 +122,31 @@ void Foam::lduMatrix::Amul
                 }
             }
         }
+        issue33TraceMark("Amul.csr.end");
     }
     else
     {
+        issue33TraceMark("Amul.diagonal.begin");
         for (label cell=0; cell<nCells; cell++)
         {
             ApsiPtr[cell] = diagPtr[cell]*psiPtr[cell];
         }
+        issue33TraceMark("Amul.diagonal.end");
 
 
         const label nFaces = upper().size();
 
+        issue33TraceMark("Amul.faces.begin");
         for (label face=0; face<nFaces; face++)
         {
             ApsiPtr[uPtr[face]] += lowerPtr[face]*psiPtr[lPtr[face]];
             ApsiPtr[lPtr[face]] += upperPtr[face]*psiPtr[uPtr[face]];
         }
+        issue33TraceMark("Amul.faces.end");
     }
 
     // Update interface interfaces
+    issue33TraceMark("Amul.interfaces.update.begin");
     updateMatrixInterfaces
     (
         true,
@@ -147,6 +157,7 @@ void Foam::lduMatrix::Amul
         cmpt,
         startRequest
     );
+    issue33TraceMark("Amul.interfaces.update.end");
 
     tpsi.clear();
 }
