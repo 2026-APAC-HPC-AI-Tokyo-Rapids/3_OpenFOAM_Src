@@ -69,6 +69,7 @@ Description
 #include "turbulentTransportModel.H"
 #include "simpleControl.H"
 #include "fvOptions.H"
+#include "issue33Trace.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -109,12 +110,22 @@ int main(int argc, char *argv[])
 
         // --- Pressure-velocity SIMPLE corrector
         {
+            issue33TraceMark("simpleFoam.UEqn.begin");
             #include "UEqn.H"
+            issue33TraceMark("simpleFoam.UEqn.end");
+
+            issue33TraceMark("simpleFoam.pEqn.begin");
             #include "pEqn.H"
+            issue33TraceMark("simpleFoam.pEqn.end");
         }
 
+        issue33TraceMark("simpleFoam.laminarTransport.begin");
         laminarTransport.correct();
+        issue33TraceMark("simpleFoam.laminarTransport.end");
+
+        issue33TraceMark("simpleFoam.turbulence.begin");
         turbulence->correct();
+        issue33TraceMark("simpleFoam.turbulence.end");
 
         runTime.write();
 
