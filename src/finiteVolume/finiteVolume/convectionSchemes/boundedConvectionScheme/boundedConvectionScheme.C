@@ -29,11 +29,32 @@ License
 #include "fvcSurfaceIntegrate.H"
 #include "fvMatrices.H"
 #include "fvmSup.H"
+#include "issue33Trace.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
+
+namespace
+{
+
+template<class Function>
+auto issue33TraceDivPart
+(
+    bool enabled,
+    const char* begin,
+    const char* end,
+    Function&& function
+) -> decltype(function())
+{
+    if (enabled) issue33TraceMark(begin);
+    auto result = function();
+    if (enabled) issue33TraceMark(end);
+    return result;
+}
+
+}
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -81,9 +102,36 @@ boundedConvectionScheme<Type>::fvmDiv
     const GeometricField<Type, fvPatchField, volMesh>& vf
 ) const
 {
+    const bool traceOmega = vf.name() == "omega";
+
     return
-        scheme_().fvmDiv(faceFlux, vf)
-      - fvm::Sp(fvc::surfaceIntegrate(faceFlux), vf);
+        issue33TraceDivPart
+        (
+            traceOmega,
+            "omegaDiv.gauss.begin",
+            "omegaDiv.gauss.end",
+            [&]() { return scheme_().fvmDiv(faceFlux, vf); }
+        )
+      - issue33TraceDivPart
+        (
+            traceOmega,
+            "omegaDiv.Sp.begin",
+            "omegaDiv.Sp.end",
+            [&]()
+            {
+                return fvm::Sp
+                (
+                    issue33TraceDivPart
+                    (
+                        traceOmega,
+                        "omegaDiv.surfaceIntegrate.begin",
+                        "omegaDiv.surfaceIntegrate.end",
+                        [&]() { return fvc::surfaceIntegrate(faceFlux); }
+                    ),
+                    vf
+                );
+            }
+        );
 }
 
 

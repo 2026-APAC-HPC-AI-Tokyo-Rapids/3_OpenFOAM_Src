@@ -28,6 +28,8 @@ License
 #include "gaussConvectionScheme.H"
 #include "fvcSurfaceIntegrate.H"
 #include "fvMatrices.H"
+#include "issue33Trace.H"
+#include <cstdio>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -81,9 +83,14 @@ gaussConvectionScheme<Type>::fvmDiv
     const GeometricField<Type, fvPatchField, volMesh>& vf
 ) const
 {
+    const bool traceOmega = vf.name() == "omega";
+
+    if (traceOmega) issue33TraceMark("omegaDiv.weights.begin");
     tmp<surfaceScalarField> tweights = tinterpScheme_().weights(vf);
     const surfaceScalarField& weights = tweights();
+    if (traceOmega) issue33TraceMark("omegaDiv.weights.end");
 
+    if (traceOmega) issue33TraceMark("omegaDiv.matrixAlloc.begin");
     tmp<fvMatrix<Type>> tfvm
     (
         new fvMatrix<Type>
@@ -93,25 +100,44 @@ gaussConvectionScheme<Type>::fvmDiv
         )
     );
     fvMatrix<Type>& fvm = tfvm.ref();
+    if (traceOmega) issue33TraceMark("omegaDiv.matrixAlloc.end");
 
+    if (traceOmega) issue33TraceMark("omegaDiv.internalFaces.begin");
     fvm.lower() = -weights.primitiveField()*faceFlux.primitiveField();
     fvm.upper() = fvm.lower() + faceFlux.primitiveField();
-    fvm.negSumDiag();
+    if (traceOmega) issue33TraceMark("omegaDiv.internalFaces.end");
 
+    if (traceOmega) issue33TraceMark("omegaDiv.negSumDiag.begin");
+    fvm.negSumDiag();
+    if (traceOmega) issue33TraceMark("omegaDiv.negSumDiag.end");
+
+    if (traceOmega) issue33TraceMark("omegaDiv.boundaryCoeffs.begin");
     forAll(vf.boundaryField(), patchi)
     {
+        char patchIndex[32];
+        if (traceOmega)
+        {
+            std::snprintf(patchIndex, sizeof(patchIndex), "%lld", static_cast<long long>(patchi));
+            issue33TraceMark("omegaDiv.boundaryPatch.begin", patchIndex);
+        }
+
         const fvPatchField<Type>& psf = vf.boundaryField()[patchi];
         const fvsPatchScalarField& patchFlux = faceFlux.boundaryField()[patchi];
         const fvsPatchScalarField& pw = weights.boundaryField()[patchi];
 
         fvm.internalCoeffs()[patchi] = patchFlux*psf.valueInternalCoeffs(pw);
         fvm.boundaryCoeffs()[patchi] = -patchFlux*psf.valueBoundaryCoeffs(pw);
-    }
 
+        if (traceOmega) issue33TraceMark("omegaDiv.boundaryPatch.end", patchIndex);
+    }
+    if (traceOmega) issue33TraceMark("omegaDiv.boundaryCoeffs.end");
+
+    if (traceOmega) issue33TraceMark("omegaDiv.correction.begin");
     if (tinterpScheme_().corrected())
     {
         fvm += fvc::surfaceIntegrate(faceFlux*tinterpScheme_().correction(vf));
     }
+    if (traceOmega) issue33TraceMark("omegaDiv.correction.end");
 
     return tfvm;
 }
