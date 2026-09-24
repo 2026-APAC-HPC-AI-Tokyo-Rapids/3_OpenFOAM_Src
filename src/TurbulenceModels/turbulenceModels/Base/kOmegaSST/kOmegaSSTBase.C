@@ -31,6 +31,7 @@ License
 #include "fvOptions.H"
 #include "bound.H"
 #include "wallDist.H"
+#include "issue33Trace.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -504,6 +505,8 @@ void kOmegaSSTBase<BasicEddyViscosityModel>::correct()
         return;
     }
 
+    issue33TraceMark("kOmegaSST.correct.begin");
+
     // Local references
     const alphaField& alpha = this->alpha_;
     const rhoField& rho = this->rho_;
@@ -513,6 +516,7 @@ void kOmegaSSTBase<BasicEddyViscosityModel>::correct()
     fv::options& fvOptions(fv::options::New(this->mesh_));
 
     BasicEddyViscosityModel::correct();
+    issue33TraceMark("kOmegaSST.baseCorrect.end");
 
     const volScalarField::Internal divU
     (
@@ -523,6 +527,7 @@ void kOmegaSSTBase<BasicEddyViscosityModel>::correct()
     const volScalarField S2(this->S2(tgradU()));
     volScalarField::Internal GbyNu0(this->GbyNu0(tgradU(), S2));
     volScalarField::Internal G(this->GName(), nut*GbyNu0);
+    issue33TraceMark("kOmegaSST.velocityGradients.end");
 
 
     // - boundary condition changes a cell value
@@ -539,11 +544,13 @@ void kOmegaSSTBase<BasicEddyViscosityModel>::correct()
     //- 1. Explicitly swap values on coupled boundary conditions
     // Update omega and G at the wall
     omega_.boundaryFieldRef().updateCoeffs();
+    issue33TraceMark("kOmegaSST.omegaBoundaryCoeffs.end");
     // omegaWallFunctions change the cell value! Make sure to push these to
     // coupled neighbours. Note that we want to avoid the re-updateCoeffs
     // of the wallFunctions so make sure to bypass the evaluate on
     // those patches and only do the coupled ones.
     omega_.boundaryFieldRef().template evaluateCoupled<coupledFvPatch>();
+    issue33TraceMark("kOmegaSST.omegaCoupledBoundary.end");
 
     ////- 2. Make sure the boundary condition calls updateCoeffs from
     ////     initEvaluate
@@ -559,6 +566,7 @@ void kOmegaSSTBase<BasicEddyViscosityModel>::correct()
 
     const volScalarField F1(this->F1(CDkOmega));
     const volScalarField F23(this->F23());
+    issue33TraceMark("kOmegaSST.blendingFunctions.end");
 
     {
         const volScalarField::Internal gamma(this->gamma(F1));
@@ -586,10 +594,12 @@ void kOmegaSSTBase<BasicEddyViscosityModel>::correct()
           + omegaSource()
           + fvOptions(alpha, rho, omega_)
         );
+        issue33TraceMark("kOmegaSST.omegaMatrixAssembly.end");
 
         omegaEqn.ref().relax();
         fvOptions.constrain(omegaEqn.ref());
         omegaEqn.ref().boundaryManipulate(omega_.boundaryFieldRef());
+        issue33TraceMark("kOmegaSST.omegaMatrixReady.end");
         solve(omegaEqn);
         fvOptions.correct(omega_);
         bound(omega_, this->omegaMin_);
