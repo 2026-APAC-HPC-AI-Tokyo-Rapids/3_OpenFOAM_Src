@@ -38,6 +38,20 @@ License
 namespace Foam
 {
 
+namespace
+{
+
+template<class Function>
+auto issue33TraceOmegaTerm(const char* begin, const char* end, Function&& function) -> decltype(function())
+{
+    issue33TraceMark(begin);
+    auto result = function();
+    issue33TraceMark(end);
+    return result;
+}
+
+}
+
 // * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * * //
 
 template<class BasicEddyViscosityModel>
@@ -573,26 +587,23 @@ void kOmegaSSTBase<BasicEddyViscosityModel>::correct()
         const volScalarField::Internal beta(this->beta(F1));
 
         GbyNu0 = GbyNu(GbyNu0, F23(), S2());
+        issue33TraceMark("kOmegaSST.omegaCoefficients.end");
 
         // Turbulent frequency equation
         tmp<fvScalarMatrix> omegaEqn
         (
-            fvm::ddt(alpha, rho, omega_)
-          + fvm::div(alphaRhoPhi, omega_)
-          - fvm::laplacian(alpha*rho*DomegaEff(F1), omega_)
+            issue33TraceOmegaTerm("kOmegaSST.omegaDdt.begin", "kOmegaSST.omegaDdt.end", [&]() { return fvm::ddt(alpha, rho, omega_); })
+          + issue33TraceOmegaTerm("kOmegaSST.omegaDiv.begin", "kOmegaSST.omegaDiv.end", [&]() { return fvm::div(alphaRhoPhi, omega_); })
+          - issue33TraceOmegaTerm("kOmegaSST.omegaLaplacian.begin", "kOmegaSST.omegaLaplacian.end", [&]() { return fvm::laplacian(alpha*rho*DomegaEff(F1), omega_); })
          ==
-            alpha()*rho()*gamma*GbyNu0
-          - fvm::SuSp((2.0/3.0)*alpha()*rho()*gamma*divU, omega_)
-          - fvm::Sp(alpha()*rho()*beta*omega_(), omega_)
-          - fvm::SuSp
-            (
-                alpha()*rho()*(F1() - scalar(1))*CDkOmega()/omega_(),
-                omega_
-            )
-          + alpha()*rho()*beta*sqr(omegaInf_)
-          + Qsas(S2(), gamma, beta)
-          + omegaSource()
-          + fvOptions(alpha, rho, omega_)
+            issue33TraceOmegaTerm("kOmegaSST.omegaProduction.begin", "kOmegaSST.omegaProduction.end", [&]() { return alpha()*rho()*gamma*GbyNu0; })
+          - issue33TraceOmegaTerm("kOmegaSST.omegaDivUSuSp.begin", "kOmegaSST.omegaDivUSuSp.end", [&]() { return fvm::SuSp((2.0/3.0)*alpha()*rho()*gamma*divU, omega_); })
+          - issue33TraceOmegaTerm("kOmegaSST.omegaBetaSp.begin", "kOmegaSST.omegaBetaSp.end", [&]() { return fvm::Sp(alpha()*rho()*beta*omega_(), omega_); })
+          - issue33TraceOmegaTerm("kOmegaSST.omegaCrossDiffusion.begin", "kOmegaSST.omegaCrossDiffusion.end", [&]() { return fvm::SuSp(alpha()*rho()*(F1() - scalar(1))*CDkOmega()/omega_(), omega_); })
+          + issue33TraceOmegaTerm("kOmegaSST.omegaInfSource.begin", "kOmegaSST.omegaInfSource.end", [&]() { return alpha()*rho()*beta*sqr(omegaInf_); })
+          + issue33TraceOmegaTerm("kOmegaSST.omegaQsas.begin", "kOmegaSST.omegaQsas.end", [&]() { return Qsas(S2(), gamma, beta); })
+          + issue33TraceOmegaTerm("kOmegaSST.omegaSource.begin", "kOmegaSST.omegaSource.end", [&]() { return omegaSource(); })
+          + issue33TraceOmegaTerm("kOmegaSST.omegaFvOptions.begin", "kOmegaSST.omegaFvOptions.end", [&]() { return fvOptions(alpha, rho, omega_); })
         );
         issue33TraceMark("kOmegaSST.omegaMatrixAssembly.end");
 
