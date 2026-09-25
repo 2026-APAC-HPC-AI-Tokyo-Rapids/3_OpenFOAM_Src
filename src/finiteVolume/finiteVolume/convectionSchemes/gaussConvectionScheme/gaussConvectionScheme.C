@@ -102,9 +102,28 @@ gaussConvectionScheme<Type>::fvmDiv
     fvMatrix<Type>& fvm = tfvm.ref();
     if (traceOmega) issue33TraceMark("omegaDiv.matrixAlloc.end");
 
+    auto tracedLower = [&]() -> scalarField&
+    {
+        if (traceOmega) issue33TraceMark("omegaDiv.lowerAccess.begin");
+        scalarField& field = fvm.lower();
+        if (traceOmega) issue33TraceMark("omegaDiv.lowerAccess.end");
+        return field;
+    };
+    auto tracedUpper = [&]() -> scalarField&
+    {
+        if (traceOmega) issue33TraceMark("omegaDiv.upperAccess.begin");
+        scalarField& field = fvm.upper();
+        if (traceOmega) issue33TraceMark("omegaDiv.upperAccess.end");
+        return field;
+    };
+
     if (traceOmega) issue33TraceMark("omegaDiv.internalFaces.begin");
-    fvm.lower() = -weights.primitiveField()*faceFlux.primitiveField();
-    fvm.upper() = fvm.lower() + faceFlux.primitiveField();
+    if (traceOmega) issue33TraceMark("omegaDiv.lowerExpression.begin");
+    tracedLower() = -weights.primitiveField()*faceFlux.primitiveField();
+    if (traceOmega) issue33TraceMark("omegaDiv.lowerExpression.end");
+    if (traceOmega) issue33TraceMark("omegaDiv.upperExpression.begin");
+    tracedUpper() = fvm.lower() + faceFlux.primitiveField();
+    if (traceOmega) issue33TraceMark("omegaDiv.upperExpression.end");
     if (traceOmega) issue33TraceMark("omegaDiv.internalFaces.end");
 
     if (traceOmega) issue33TraceMark("omegaDiv.negSumDiag.begin");
